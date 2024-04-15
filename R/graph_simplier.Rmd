@@ -32,9 +32,14 @@ toy_mat_ctc <- read.csv2(file = file.path(observed_path, "toy_mat_ctc.csv"), hea
 chosen_ward <- "Menard 1" ## Ward of our choice
 
 
-admission <- dplyr::filter(toy_admission, ward == chosen_ward) 
-agenda <- dplyr::filter(toy_agenda, ward == chosen_ward)
-mat_ctc <- dplyr::filter(toy_mat_ctc, from %in% admission$id & to %in% admission$id) ## Both induviduals must be from the same ward
+admission <- filter(toy_admission, ward == chosen_ward)
+write.csv2(admission, file = file.path(wd, "..", "data-simplified", "admission.csv"), sep = ";", row.names = FALSE)
+
+agenda <- filter(toy_agenda, ward == chosen_ward)
+write.csv2(agenda, file = file.path(wd, "..", "data-simplified", "agenda.csv"), sep = ";", row.names = FALSE)
+
+mat_ctc <- filter(toy_mat_ctc, from %in% admission$id & to %in% admission$id) ## Both induviduals must be from the same ward
+write.csv2(mat_ctc, file = file.path(wd, "..", "data-simplified", "mat_ctc.csv"), sep = ";", row.names = FALSE)
 ```
 
 
@@ -42,12 +47,18 @@ mat_ctc <- dplyr::filter(toy_mat_ctc, from %in% admission$id & to %in% admission
 ```{r}
 synthetic_path <- file.path(wd, "..", "data-synthetic-graphs")
 list_graph <- list.files(path = file.path(synthetic_path))
+dir.create(file.path(wd,"..", "data-simplified"))
 
 for (i in seq_along(list_graph)){
-  index <- gsub("[^0-9]", "", list_graph[i]) ## Graphs are not listed in order
-  ## Both induviduals must be from the same ward
-  assign(paste0("graph_", index), dplyr::filter(read.csv2(file = file.path(synthetic_path, list_graph[i]), header = TRUE), from %in% admission$id & to %in% admission$id)) ##  & Assigning graph's index number
+  index <- gsub("[^0-9]", "", list_graph[i])
+  df <- filter(read.csv2(file = file.path(synthetic_path, list_graph[i]), header = TRUE), 
+                      from %in% admission$id & to %in% admission$id) %>% 
+                      mutate(date_posix = as.POSIXct(date_posix))
+  
+  write.csv2(df, file = file.path(wd, "..", "data-simplified", paste0("graph_", index, ".csv")), sep = ";", row.names = FALSE)
 }
+
+
 
 # ## Example of a synthetic graph before reducing it to only a ward
 # toy_graph <- read.csv2(file = file.path(synthetic_path, list_graph[1]), header = TRUE)
@@ -64,7 +75,7 @@ for (i in seq_along(list_graph)){
 # time_spent <- end_date - begin_date
 # 
 # ## Dimensions
-# n_individuals <- as.integer(dplyr::count(dplyr::distinct(admission, id))) ##SELECT DISTINCT INDIVIDUAL FROM       ADMISSION?
+# n_individuals <- as.integer(count(distinct(admission, id))) ##SELECT DISTINCT INDIVIDUAL FROM       ADMISSION?
 # n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * minutes * 2 (number of time subdivisions)
 
 # for (i in seq_along(list_graph)){
@@ -82,142 +93,6 @@ for (i in seq_along(list_graph)){
 ```
 
 
-## Model
-```{r}
-## Dimensions
 
-begin_date <- as.POSIXct("2009-07-06 00:00:00")
-end_date <- as.POSIXct("2009-09-28 00:00:00")
-time_spent <- end_date - begin_date
-
-n_individuals <- as.integer(admission %>%
-  distinct(id) %>%
-  count())
-
-n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * minutes * 2 (number of time subdivisions)
-
-
-## Room environment stores the viral load of each room
-## Assuming each patient is in an individual room
-
-room_environment <- admission %>%
-  distinct(id) %>%
-  filter(substr(id, 1, 2) == "PA") %>%
-  mutate(room = as.factor(row_number())) %>%
-  mutate(environment = NA) %>%
-  select(room, environment, id) %>%
-  bind_rows(admission %>%
-              distinct(id) %>%
-              filter(substr(id, 1, 2) == "PE") %>%
-              mutate(room = "Restroom") %>%
-              mutate(environment = NA)) %>%
-  bind_rows(data.frame(room = "Corridor", environment = NA, id = "ALL"))
-
-
-
-individual_location <- room_environment %>%
-  distinct(id) %>%
-  filter(substr(id, 1, 2) == "PA") %>%
-  mutate(previous_location = room) %>%
-  mutate(future_location = NA) %>%
-  select(id, previous_location, future_location) 
-
-
-
-# Loop every subdivision of time (30s)
-for (t in 0:20) {
-  # Get the interactions happening at the time begin_date + t*30
-  interactions <- graph_1 %>%
-    filter(as.POSIXct(date_posix) <= begin_date + t*30, (as.POSIXct(date_posix) + length) >= begin_date + t*30)
-  
-  # Update the environment
-  for (i in 1:nrow(interactions)) {
-    if  ( (interaction[i] %>% substr(from, 1, 2) == "PA" && interaction[i] %>% substr(to, 1, 2) == "PE") | (interaction[i] %>% substr(from, 1, 2) == "PE") && interaction[i] %>% substr(to, 1, 2) == "PA"){ ## Interactions between HCW & Patients take place in patient's room
-     
-    }
-    
-    
-    if  (interaction[i] %>% substr(from, 1, 2) == "PA" && interaction[i] %>% substr(to, 1, 2) == "PA"){ ## Interactions between patients take place in the corridor
-      
-    }
-    
-    
-    
-    if  (interaction[i] %>% substr(from, 1, 2) == "PE" && interaction[i] %>% substr(to, 1, 2) == "PE"){ ## Interactions between HCW take place in the HCW's rest room
-      
-    }
-    
-    
-    
-    individu <- interactions[i, "individu"]
-    room_environnement[individu] <- interactions[i, "piece"]
-  }
-  
-  # Actualiser l'état des individus
-  # Variables alpha, epsilon et b
-  alpha <- 0.1
-  epsilon <- 0.2
-  b <- 0.3
-  
-  for (i in 1:length(environnement)) {
-    if (runif(1) < alpha * epsilon * length(data$piece[data$piece == environnement[i]])) {
-      # Individu infecté
-      # Mettre à jour son statut
-      statut <- "infecte"
-    } else {
-      # Individu non infecté
-      # Mettre à jour son statut avec une probabilité dépendant de b
-      if (runif(1) < b * length(data$piece[data$piece == environnement[i]])) {
-        statut <- "infecte"
-      } else {
-        statut <- "non infecte"
-      }
-    }
-    
-    # Mettre à jour le statut dans l'environnement
-    environnement[i] <- statut
-  }
-}
-
-
-
-# # Loop every subdivision of time (30s)
-# for (t in 0:n_subdivisions) {
-#   # Filtrer les interactions qui sont en cours au temps t
-#   interactions <- graph_1 %>%
-#     filter(date_posix <= begin_date + t*30, (date_posix + length) >= begin_date + t*30)
-#   
-#   # Update the environment
-#   for (i in 1:nrow(interactions)) {
-#     individu <- interactions[i, "individu"]
-#     environnement[individu] <- interactions[i, "piece"]
-#   }
-#   
-#   # Actualiser l'état des individus
-#   # Variables alpha, epsilon et b
-#   alpha <- 0.1
-#   epsilon <- 0.2
-#   b <- 0.3
-#   
-#   for (i in 1:length(environnement)) {
-#     if (runif(1) < alpha * epsilon * length(data$piece[data$piece == environnement[i]])) {
-#       # Individu infecté
-#       # Mettre à jour son statut
-#       statut <- "infecte"
-#     } else {
-#       # Individu non infecté
-#       # Mettre à jour son statut avec une probabilité dépendant de b
-#       if (runif(1) < b * length(data$piece[data$piece == environnement[i]])) {
-#         statut <- "infecte"
-#       } else {
-#         statut <- "non infecte"
-#       }
-#     }
-#     
-#     # Mettre à jour le statut dans l'environnement
-#     environnement[i] <- statut
-#   }
-# }
-```
 
 
