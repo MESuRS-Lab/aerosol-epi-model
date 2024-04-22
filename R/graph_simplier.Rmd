@@ -16,6 +16,7 @@ wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
 observed_path <- file.path(wd,"..", "data", "data-observed")
 simplified_path <- file.path(wd,"..", "data", "data-simplified")
+synthetic_path <- file.path(wd, "..", "data", "data-synthetic-graphs")
 
 ## xlsx files
 cat_groupings <- read_excel(path = file.path(observed_path,"cat_groupings.xlsx"), col_names= TRUE)
@@ -46,20 +47,19 @@ write.csv2(mat_ctc, file = file.path(simplified_path, "mat_ctc.csv"), sep = ";",
 
 ## Sorting the synthetic graphs according to our assumptions
 ```{r}
-synthetic_path <- file.path(wd, "..", "data", "data-synthetic-graphs")
+
+simpli
 list_graph <- list.files(path = file.path(synthetic_path))
 dir.create(file.path(wd,"..", "data", "data-simplified"))
 
 for (i in seq_along(list_graph)){
   index <- gsub("[^0-9]", "", list_graph[i])
-  df <- filter(read.csv2(file = file.path(synthetic_path, list_graph[i]), header = TRUE), 
-                      from %in% admission$id & to %in% admission$id) %>% 
-                      mutate(date_posix = as.POSIXct(date_posix))
-  
-  write.csv2(df, file = file.path(wd, "..", "data", "data-simplified", paste0("graph_", index, ".csv")), sep = ";", row.names = FALSE)
+  df <- read.csv2(file = file.path(synthetic_path, list_graph[i]), header = TRUE)
+  df <- df %>% mutate(date_posix = as.POSIXct(date_posix))
+  df <- df %>% filter(from %in% admission$id & to %in% admission$id) 
+  write.csv2(df, file = file.path(simplified_path, paste0("graph_", index, ".csv")), row.names = FALSE)
+  print(paste0("File ", index, " written in: ", file.path(simplified_path, paste0("graph_", index, ".csv"))))
 }
-
-
 
 # ## Example of a synthetic graph before reducing it to only a ward
 # toy_graph <- read.csv2(file = file.path(synthetic_path, list_graph[1]), header = TRUE)
@@ -69,29 +69,6 @@ for (i in seq_along(list_graph)){
 ```
 
 
-## Initialisation of our data arrays
-```{r}
-# begin_date <- as.POSIXct("2009-07-06 00:00:00")
-# end_date <- as.POSIXct("2009-09-28 00:00:00")
-# time_spent <- end_date - begin_date
-# 
-# ## Dimensions
-# n_individuals <- as.integer(count(distinct(admission, id))) ##SELECT DISTINCT INDIVIDUAL FROM       ADMISSION?
-# n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * minutes * 2 (number of time subdivisions)
-
-# for (i in seq_along(list_graph)){
-#   index <- gsub("[^0-9]", "", list_graph[i]) ## Graphs are not listed in order
-#   
-#   ## Create our 3D array P containing the interactions between our individuals, the room where this interaction takes place and when
-#   assign(paste0("P_", index), array(data = NA, dim = c(n_individuals, n_individuals, n_subdivisions))) ## n_individuals * n_individuals * n_subdivisions 
-#   
-#   ## Create our 2D array I containing the information whether our individual is susceptible (0), infected (1), recovered (2) or not in the ward anymore (-1)
-#   assign(paste0("I_", index), array(data = -1, dim = c(n_individuals, n_subdivisions))) ## n_individuals *
-# }
-
-## 
-## Erreur : impossible d'allouer un vecteur de taille 9.9 Go
-```
 
 
 
