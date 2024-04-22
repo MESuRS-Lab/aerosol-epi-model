@@ -218,7 +218,7 @@ graph_1  %>% filter(hour(graph_1$date_posix) <=  hour_thresold) %>%
 
 ```{r}
 ## set de condition pour assigner à une chambre
-graph1 %>%
+graph_1 %>%
 mutate(localisation = case_when(cond1 ~ "chambre1",
                                 cond2 ~ "chambre2",
                                 cond3 ~ "chambre3",
