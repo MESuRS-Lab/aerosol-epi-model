@@ -36,6 +36,10 @@ n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * m
 ## NA when the individual is still in the hospital --> we fill these NAs
 admission <- read.csv2(file = file.path(simplified_path, "admission.csv"))
 admission <- admission %>% mutate(lastDate = ifelse(nchar(lastDate) == 0, "2999-01-01", lastDate))
+admission <- admission %>% mutate(firstDate = as.POSIXct(firstDate, tz="GMT"), lastDate = as.POSIXct(lastDate, tz="GMT") ) 
+admission <- admission %>% filter(!lastDate < begin_date)  ## unnecessary data
+admission <- admission %>% filter(!firstDate > end_date) ## unnecessary data
+
 
 ## id of all individuals in the 84 days range
 id_individual <- admission %>% distinct(id)
@@ -89,10 +93,14 @@ rm(k_300)
 ## ROOM INFERENCE BASED ON NIGHT INTERACTIONS
 
 
-## Night interactions (0am-5am)
+
+
+
+
+## Night interactions (22pm-6am)
 ```{r}
 night_data <- data  %>%
-  filter(hour(data$date_posix) <= 4) 
+  filter(hour(data$date_posix) <= 5 | hour(data$date_posix) >= 22) 
 
 ## Check if there is PE in night's interactions
 which(substr(night_data$from, 1, 2) == "PE" | substr(night_data$to, 1, 2) == "PE" )
@@ -107,26 +115,39 @@ night_data <- data %>%
 tot <- NULL
 ## Range of amount of interactions happening at night + distinct individuals involved + number of days there is less than n_beds individuals interacting at night
 for (i in 1:60){
-  temp <- data  %>% filter(hour(data$date_posix) <=  4) %>%
+  temp <- data  %>% filter(hour(data$date_posix) <=  5 | hour(data$date_posix) >= 22)  %>%
   filter (length >= 60 * 5 * i) %>%
   group_by(date(date_posix)) %>%
   summarise(count = n(), count_distinct = length(unique(c(from, to)))) %>%
   summarise(min_count = min(count),
+            median_count = median(count),
             max_count = max(count),
             min_distinct = min(count_distinct),
+            median_distinct = median(count_distinct),
             max_distinct = max(count_distinct),
-            count_under = sum((count_distinct) < n_beds))
+            count_under_beds = sum((count_distinct) < n_beds)
+            )
   
   temp$time_night_s <- 60 * 5 * i
   temp$time_night_min <- i * 5
   tot <- bind_rows(tot, temp)
+  rm(temp)
 }
-tot <- tot %>% select(time_night_min, min_count, max_count, min_distinct, max_distinct,count_under)
+
+tot <- tot %>% select(time_night_min,
+                      min_count,
+                      median_count,
+                      max_count,
+                      min_distinct,
+                      median_distinct,
+                      max_distinct,
+                      count_under_beds)
 
 
 ## ELBOW RULE TO FIND TIME
 
-ggplot(data = tot) +
+ggplot(data = tot[1:30,]) +
+#ggplot(data = tot) +
   geom_point(mapping = aes(x = time_night_min, y = min_count, color = "Minimum Count"), show.legend = TRUE) +
   geom_line(mapping = aes(x = time_night_min, y = min_count), linetype = "dashed") +
   
@@ -160,8 +181,49 @@ print(tot)
 ## WE CHOOSE TO SET THE THRESHOLD OF LENGTH FOR A NIGHT INTERACTION TO 40 minutes -> 2400 seconds
 
 length_thresold <- 40 * 60
-hour_thresold <- 4
+hour_thresold <- 5
 
+
+## TEMP
+# admission$id == ind & between(date_posix, lastDate, firstDate) # --> check which admission of the individual is 
+admission <- admission %>% mutate(room = NA)
+
+
+## ALL INTERACTIONS
+for (ind in id_individual %>% filter(substr(id,1,2) == "PA") %>% pull(id)){
+  #all_ind <- data %>% filter(length > length_thresold & hour(date_posix) < hour_thresold) %>% filter(from == ind | to == ind) ## SOME IND DONT HAVE INT DURING NIGHT
+  all_ind <- data  %>% filter(from == ind | to == ind)
+  for (adm in seq_len(admission %>% filter(id == ind) %>% nrow())) {
+    date_adm <- admission %>% filter(id == ind) %>% nth(adm) %>% pull(firstDate)
+    date_departure <- admission %>% filter(id == ind) %>% nth(adm) %>% pull(lastDate)
+    assign(paste0("int_",adm), night_ind %>% filter(between(date_posix, date_adm, date_departure)))
+    print(paste0("ALL INTERACTIONS : ", ind," -> ",adm, " nb int = ", night_ind %>% filter(between(date_posix, date_adm, date_departure) ) %>% nrow()))
+    
+    if(night_ind %>% filter(between(date_posix, date_adm, date_departure) ) %>% nrow() == 0){
+      print(paste0("Individual id: ", ind, " has 0 interaction during his admission n° ", adm))
+    }
+  }
+}
+
+
+for (ind in id_individual %>% filter(substr(id,1,2) == "PA") %>% pull(id)){
+  night_ind <- data %>% filter((hour(date_posix) < hour_thresold | hour(date_posix) > 21)) %>% filter(from == ind | to == ind)
+  for (adm in seq_len(admission %>% filter(id == ind) %>% nrow())) {
+    date_adm <- admission %>% filter(id == ind) %>% nth(adm) %>% pull(firstDate)
+    date_departure <- admission %>% filter(id == ind) %>% nth(adm) %>% pull(lastDate)
+    assign(paste0("int_",adm), night_ind %>% filter(between(date_posix, date_adm, date_departure)))
+    print(paste0("NIGHT TIME : ", ind," -> ",adm, " nb int = ", night_ind %>% filter(between(date_posix, date_adm, date_departure) ) %>% nrow()))
+    
+    if(night_ind %>% filter(between(date_posix, date_adm, date_departure) ) %>% nrow() == 0){
+      print(paste0("Individual id: ", ind, " has 0 interaction during night in his admission n° ", adm))
+    }
+  }
+}
+```
+
+
+
+```{r}
 ## Inspection (for 1 day = begin_date)
 test_graph <- data  %>%
   filter(hour(data$date_posix) <= hour_thresold) %>%
