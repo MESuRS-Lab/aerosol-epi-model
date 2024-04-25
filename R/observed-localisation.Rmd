@@ -206,19 +206,30 @@ for (ind in id_individual %>% filter(substr(id,1,2) == "PA") %>% pull(id)){
 }
 
 
+
 for (ind in id_individual %>% filter(substr(id,1,2) == "PA") %>% pull(id)){
   night_ind <- data %>% filter((hour(date_posix) < hour_thresold | hour(date_posix) > 21)) %>% filter(from == ind | to == ind)
+  night_ind <- night_ind %>%  filter(length > 2*3600)
   for (adm in seq_len(admission %>% filter(id == ind) %>% nrow())) {
     date_adm <- admission %>% filter(id == ind) %>% nth(adm) %>% pull(firstDate)
     date_departure <- admission %>% filter(id == ind) %>% nth(adm) %>% pull(lastDate)
     assign(paste0("int_",adm), night_ind %>% filter(between(date_posix, date_adm, date_departure)))
-    print(paste0("NIGHT TIME : ", ind," -> ",adm, " nb int = ", night_ind %>% filter(between(date_posix, date_adm, date_departure) ) %>% nrow()))
+    #(paste0("NIGHT TIME : ", ind," -> ",adm, " nb int = ", night_ind %>% filter(between(date_posix, date_adm, date_departure) ) %>% nrow()))
+    
+    #print(paste0("MEDIAN NB OF INT DURING NIGHT FOR INDIVIDUAL " , ind, " IS EQUAL TO = ", night_ind %>%
+            # filter(between(date_posix, date_adm, date_departure) ) %>%
+            # group_by(date(date_posix)) %>%
+            #   summarise(count = n()) %>%
+            #   summarise(median_count =median(count)) %>%
+            #   pull()))
     
     if(night_ind %>% filter(between(date_posix, date_adm, date_departure) ) %>% nrow() == 0){
       print(paste0("Individual id: ", ind, " has 0 interaction during night in his admission n° ", adm))
     }
   }
 }
+
+View(data %>% filter(from == "PA-053-CHK" | to == "PA-053-CHK") %>% filter(substr(from,1,2) == "PA" & substr(to,1,2) == "PA") %>% filter((hour(date_posix) < hour_thresold | hour(date_posix) > 21))  )
 ```
 
 
