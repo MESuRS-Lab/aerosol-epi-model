@@ -25,20 +25,37 @@ localisation Update_localisation(
     interaction_loc int_loc_current
 );
 
-environment Update_environment(
+
+
+environment Update_environment_bis(
     environment env_prev,
-    localisation loc_current,
-    status status_prev,
-    double mu,
-    double nu
+    const localisation loc_prev,
+    const status status_prev,
+    const double mu,
+    const double nu,
+    const integer dt
 ){
-    for (int r = 1; t < sizeof(env_prev); ++t) {
-        if (r ==)
 
-    }
+        for (const auto& room : env_prev) {
+            int n_inf = 0;
+            for (const auto& ind : loc_prev){
+                if (ind.location == room.position){
+                    int identifiant = ind.id;
+                    if (status_prev[identifiant].status == 1){
+                        n_inf +=1;
+                    }
+                }
+            }
+            room.env = room.env * Rcpp:exp(- mu * dt) + n_inf * nu * dt;
+        }
 
+    
 
+    return env_prev; 
 }
+
+
+
 
 status Update_status(
     localisation loc_current,
@@ -52,3 +69,22 @@ status Update_status(
 
 
     }
+
+
+// environment Update_environment(
+//     environment env_prev,
+//     localisation loc_current,
+//     status status_prev,
+//     double mu,
+//     double nu
+// ){
+//     for (int i = 1; t < sizeof(status_prev); ++t) {
+//         if (status_prev[i].status == 1) {
+
+
+//         }
+
+//     }
+
+
+// }
