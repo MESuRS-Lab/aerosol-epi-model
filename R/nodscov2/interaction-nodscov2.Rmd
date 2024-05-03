@@ -177,18 +177,25 @@ list_rea <- lapply(list_rea, function(x) {
 
 ## Night interaction distribution
 ```{r}
+# admission_keep %>% filter(hospital != "APHP - RAYMOND POINCARÉ") %>% group_by(status) %>% summarise(count = n())
+# 
+# admission_keep %>% filter(hospital == "APHP - RAYMOND POINCARÉ") %>% group_by(status) %>% summarise(count = n())
+
+
 poincare <- "Raymond_Poincare-Reanimation-20200506-20200507"
 herriot <- "Edouard_Herriot-Reanimation-20200609-20200610"
 
-temp_RP <- list_rea[[poincare]] 
+temp_RP <- list_rea[[poincare]] #%>% filter(length > 300)
 
-temp_EH <- list_rea[[herriot]]
+temp_EH <- list_rea[[herriot]] #%>% filter(length > 300)
 
 k_RP = temp_RP 
 table(k_RP$from_status, k_RP$to_status)
+k_RP %>% filter(from_status == "PA" & to_status == "PA")
 
 k_EH = temp_EH  
 table(k_EH$from_status, k_EH$to_status)
+k_EH %>% filter(from_status == "PA" & to_status == "PA")
 ```
 
 
