@@ -32,18 +32,38 @@ load("Y:/ogaufres/pacri-project/data/data-nodscov2/admission_ctc_nodscov2.RData"
 load("Y:/ogaufres/pacri-project/data/data-nodscov2/list_ward.RData")
 ```
 
-```{r}
-write.csv2(admission, file = file.path(nodscov2_path, "admission-nodscov2.csv"), row.names = FALSE)
-
-sapply(names(list_ward), 
- function (x) write.csv2(list_ward[[x]], file = paste(x, "csv", sep=".") )   )
-```
-
-
 ## FIXING ENCODING
 ```{r}
 Encoding(admission$hospital) <- 'latin1'
 ```
+## (TEMP)
+```{r, include = FALSE}
+write.csv2(admission, file = file.path(nodscov2_path, "nodscov2-csv","admission-nodscov2.csv"), row.names = FALSE)
+
+sapply(names(list_ward),
+ function (x) write.csv2(list_ward[[x]],
+                         file = file.path(nodscov2_path,"nodscov2-csv",paste(x,"csv",sep="." )),
+                         row.names = FALSE)   )
+```
+
+## MODIFY INDIVIDUAL IDS (include PA/PE in id)
+```{r}
+ldf <- lapply(names(list_ward), function(x) {
+  df <- list_ward[[x]]
+  df <- mutate(df, 
+               from = paste0(admission[admission$id %in% df$from, "status"], "-", df$from),
+               to = paste0(admission[admission$id %in% df$to, "status"], "-", df$to))
+  return(df)
+})
+names(ldf) <- names(list_ward)
+
+## Remove visitors
+## Remove admin
+## Remove investigators
+##Remove logistics
+
+```
+
 
 ## Data structure
 ```{r}
@@ -100,4 +120,27 @@ admission %>%
 ```
 
 
+### "Edouard_Herriot-ReaChirurgie-20200616-20200617"
+```{r}
+
+EH_ReaChir <- list_ward$`Edouard_Herriot-ReaChirurgie-20200616-20200617`
+```
+
+
+### "Edouard_Herriot-Reanimation-20200609-20200610"
+```{r}
+EH_Rea <- list_ward$`Edouard_Herriot-Reanimation-20200609-20200610`
+```
+
+
+### "Necker-Reanimation-20200525-20200526"
+```{r}
+Necker_Rea <- list_ward$`Edouard_Herriot-Reanimation-20200609-20200610`
+```
+
+
+### "Raymond_Poincare-Reanimation-20200506-20200507"
+```{r}
+EH_Rea <- list_ward$`Edouard_Herriot-Reanimation-20200609-20200610`
+```
 
