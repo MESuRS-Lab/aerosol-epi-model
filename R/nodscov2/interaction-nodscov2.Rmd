@@ -38,17 +38,6 @@ load("Y:/ogaufres/projet-pacri/data/data-nodscov2/list_ward.RData")
 Encoding(admission$hospital) <- 'latin1'
 ```
 
-## (TEMP)
-```{r, include = FALSE}
-# write.csv2(admission, file = file.path(nodscov2_path, "nodscov2-csv","admission-nodscov2.csv"), row.names = FALSE)
-# 
-# sapply(names(list_ward),
-#  function (x) write.csv2(list_ward[[x]],
-#                          file = file.path(nodscov2_path,"nodscov2-csv",paste(x,"csv",sep="." )),
-#                          row.names = FALSE)   )
-```
-
-
 ## Data structure
 ```{r}
 ### ADMISSION = Individual's info
@@ -215,10 +204,7 @@ data_rea %>%
 
 ## PA-PA INTERACTIONS
 ```{r}
-
-
 k_RP <- list_rea[[poincare]] #%>% filter(length > 300)
-
 k_EH <- list_rea[[herriot]] #%>% filter(length > 300)
 
 table(k_RP$from_status, k_RP$to_status)
