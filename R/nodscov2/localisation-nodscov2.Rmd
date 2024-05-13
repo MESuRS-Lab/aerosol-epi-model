@@ -11,6 +11,7 @@ library(dplyr)
 #library(tidyverse)
 library(ggplot2)
 library(lubridate)
+library(igraph)
 ```
 
 ```{r}
@@ -69,6 +70,7 @@ time_spent <- end_date - begin_date
 
 n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * minutes * 2 (number of time subdivisions)
 
+# TO CREATE DETAILLED INTERACTIONS CSV
 data_tot <- data.frame()
 lin_a <- Sys.time()
 for(t in 1:n_subdivisions){
@@ -83,17 +85,24 @@ for(t in 1:n_subdivisions){
 }
 lin_b <- Sys.time()
 print(lin_b-lin_a)
-#data_tot <- read.csv2(file = file.path(wd,"..", "..", "data", "data-nodscov2", "int_tot_RP_test.csv"), row.names = F, header = T)
+write.csv2(x = data_tot, file = file.path(nodscov2_path, "int_tot_RP_test.csv"), row.names = F)
+
+
+## TO READ IT
+#data_tot <- read.csv2(file = file.path(nodscov2_path, "int_tot_RP_test.csv"), row.names = F)
 ```
 
 ## DOUBLE ROOMS
 ```{r}
-## RP reanimation ward has 2 double rooms -> individuals are always in contact (c.f. R/nodscov2/interaction-nodscov2.Rmd)
-for(t in 1:n_subdivisions){
-  a_df <- data.frame(from = "001-0038-B-S", to = "001-0039-B-F", time = t, from_status = "PA", to_status = "PA")
-  b_df <- data.frame(from = "001-0127-B-A", to = "001-0128-Z-K", time = t, from_status = "PA", to_status = "PA")
-  data_tot <- bind_rows(data_tot, a_df, b_df)
-}
+## EITHER CHOOSE TO REMOVE THE INTERACTION BETWEEN THE INDUVIDUALS OR PUT A PERMANENT INTERACTION BETWEEN THE INDIVIDUALS
+
+##PERMANENT INTERACTION
+# ## RP reanimation ward has 2 double rooms -> individuals are always in contact (c.f. R/nodscov2/interaction-nodscov2.Rmd)
+# for(t in 1:n_subdivisions){
+#   a_df <- data.frame(from = "001-0038-B-S", to = "001-0039-B-F", time = t, from_status = "PA", to_status = "PA")
+#   b_df <- data.frame(from = "001-0127-B-A", to = "001-0128-Z-K", time = t, from_status = "PA", to_status = "PA")
+#   data_tot <- bind_rows(data_tot, a_df, b_df)
+# }
 ```
 
 ## ROOMS
@@ -109,6 +118,7 @@ rooms <- rooms %>%
   bind_rows(data.frame(room = "Restroom", id = "PE", id_room = as.factor(nrow(rooms) + 1))) %>%
   bind_rows(data.frame(room = "Corridor", id = "ALL", id_room = as.factor(nrow(rooms) + 2)))
 
+### DOUBLE ROOMS
 ## "001-0038-B-S" and = "001-0039-B-F" are in the same room
 ## "001-0127-B-A" and "001-0128-Z-K" are in the same room
 rooms <-rooms %>% mutate(room = ifelse(id == "001-0038-B-S", rooms[rooms$id == "001-0039-B-F", "room"], room),
@@ -137,30 +147,103 @@ data_tot <- data_tot %>%
     from_status == "PE" & to_status == "PA" ~ id_room.y,
   )) %>%
   select(-room.x, -id_room.x, -room.y, -id_room.y)
+
+## Remove duplicated interactions (there is sometimes interactions recorded multiple times)
+data_tot <- unique(data_tot)
+#duplicate_rows <- data_tot[duplicated(data_tot), ]
 ```
 
-## LOCALISATION INFERENCE
+
+## LOCALISATION INFERENCE (only for PE, PAs stay in their room)
 ```{r}
 global_localisation <- data.frame()
 
+## CREATE INTERACTION CLUSTERS FOR EACH TIME t
+clusters <- lapply(split(data_tot, data_tot$time), function(data) {
+  # non oriented graph based on interaction happening at time t
+  graph <- graph_from_data_frame(data, directed = FALSE)
+  # Extract connected component
+  clusters <- clusters(graph)$membership
+  # clusters to list transformation
+  clusters_list <- lapply(unique(clusters), function(i) {
+    as.character(V(graph)[clusters == i]$name)
+  })
+  return(clusters_list)
+})
 
-ta <- Sys.time()
-overlap <- data.frame()
+
 for (t in 1:n_subdivisions){
-  for (individual in admission$id){
-    if (dim(data_tot %>% filter(from == individual | to == individual) %>% filter(time == t) %>% distinct(localisation))[1] > 1){
-      overlap <- bind_rows(overlap, data_tot %>% filter(from == individual | to == individual) %>% filter(time == t) )
+  a <- data_tot %>% filter(time == t)
+  for (cluster_i in clusters[[t]]){
+    for (individual in cluster_i){
+      
     }
   }
 }
-tb <- Sys.time()
-print(tb-ta)
-## 18min 07/05/24
 
-    # previous_int <- data_tot %>% filter(from == individual | to == individual) %>% filter(time == t-1)
-    # current_int <- data_tot %>% filter(from == individual | to == individual) %>% filter(time == t)
-    # future_int <- data_tot %>% filter(from == individual | to == individual) %>% filter(time == t+1)
-    # overlap <- current_int %>% distinct(localisation)
+df <- data_tot %>% filter(time == 500)
+
+
+
+
+```
+
+<!-- ################################# GARBAGE ############################## -->
+
+## OVERLAP
+```{r}
+
+# ta <- Sys.time()
+# overlap <- data.frame()
+# 
+# 
+# 
+# for (t in 1:n_subdivisions){
+#   for (individual in admission$id){
+#     if (dim(data_tot %>% filter(from == individual | to == individual) %>% filter(time == t) %>% distinct(localisation))[1] > 1){
+#       overlap <- bind_rows(overlap, data_tot %>% filter(from == individual | to == individual) %>% filter(time == t) )
+#     }
+#   }
+# }
+# tb <- Sys.time()
+# print(tb-ta)
+# 
+# ## 18min 07/05/24
+# 
+#     # previous_int <- data_tot %>% filter(from == individual | to == individual) %>% filter(time == t-1)
+#     # current_int <- data_tot %>% filter(from == individual | to == individual) %>% filter(time == t)
+#     # future_int <- data_tot %>% filter(from == individual | to == individual) %>% filter(time == t+1)
+#     # overlap <- current_int %>% distinct(localisation)
+# write.csv2(data = overlap, file = file.path(nodscov2_path, "overlap-RP-test.csv"), row.names = F, header = T)
+
+overlap <- read.csv2(file = file.path(nodscov2_path, "overlap-RP-test.csv"))
+```
+
+
+```{r}
+## Only checking for multiple CHAMBER assignation
+overlap_bis <- overlap %>%
+  filter(!(from_status == "PE" & to_status == "PE")) %>% 
+  filter(!(from_status == "PA" & to_status == "PA")) %>%
+  mutate(id = if_else(from_status == "PE", from, to)) ## ID OF THE HCW
+
+
+result <- overlap_bis %>%
+  group_by(id, time) %>%
+  mutate(unique_loc = n_distinct(localisation)) %>% # Nb of distinct localisation assigned to each HCWs 
+  filter(unique_loc > 1) %>%
+  select(-unique_loc)
+
+View(result)
+
+## Distinct nb of room each HCW is assigned to during the 
+result %>% group_by(id) %>% distinct(localisation, .keep_all = T) %>% summarise( n = n())
+```
+
+
+## LOCALISATION INFERENCE
+```{r}
+
 ```
 
 ```{r}
@@ -230,6 +313,4 @@ for(t in 234:234){
   }
 }
 ```
-
-
 
