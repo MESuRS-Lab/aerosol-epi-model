@@ -440,12 +440,15 @@ for (t in 3:n_subdivisions){
 ```
 
 
-
-
 <!-- ################################# GARBAGE ############################## -->
 
 ## OVERLAP
 ```{r}
+## MULTIPLE PATIENTS IN INTERACTION CLUSTERS (without double rooms)
+u = do.call(rbind, cluster_info_list)
+
+
+## TEMPORARY
 
 # ta <- Sys.time()
 # overlap <- data.frame()
@@ -471,12 +474,6 @@ for (t in 3:n_subdivisions){
 # write.csv2(data = overlap, file = file.path(nodscov2_path, "overlap-RP-test.csv"), row.names = F, header = T)
 
 overlap <- read.csv2(file = file.path(nodscov2_path, "overlap-RP-test.csv"))
-```
-
-
-```{r}
-u = do.call(rbind, cluster_info_list)
-
 ## Only checking for multiple CHAMBER assignation
 overlap_bis <- overlap %>%
   filter(!(from_status == "PE" & to_status == "PE")) %>% 
@@ -500,189 +497,5 @@ result %>% group_by(id) %>% distinct(localisation, .keep_all = T) %>% summarise(
 
 
 
-```{r}
-for(t in 234:234){
-  localisation_ti <- data.frame(id = admission$id, loc = NA)
-  interactions <- data_tot %>% filter(time == t)
-  id_no_int <- admission %>% filter(!(id %in% interactions$from) & !(id %in% interactions$to))
-  id_int <- admission %>% filter(!(id %in% id_no_int$id))
-  
-  
-  
-  unique_individuals <- unique(c(interactions$from, interactions$to))
-  individual_network <- lapply(unique_individuals, function(individual) {
-    a = interactions %>%
-      filter(from == individual | to == individual)
-    a = c(a$from,a$to) %>% setdiff(individual)
-    })
-    names(individual_network) <- unique_individuals
 
-    for (j in id_int$id){
-      status <- admission[admission$id == j, "status"]
-    
-      if  (status == "PA"){
-      localisation_ti[admission$id == j, "loc"] <- rooms[rooms$id == j, "id_room"]
-      }
-      
-      if  (status == "PE"){
-        if( length(individual_network[[j]]) == 1){## j is only interacting with 1 individual
-        localisation_ti[admission$id == j, "loc"] <- interactions %>% filter(from == j | to == j) %>% distinct(localisation) %>% pull(localisation) ##### TEMPORARY ISSUS SAME INTERACTION TWICE
-        }
-      
-        if (  dim(interactions %>% filter(from == j | to == j) %>% filter(localisation < 19) %>% select(localisation))[1] != 0) {
-          localisation_ti[admission$id == j, "loc"] <- interactions %>% filter(from == j | to == j) %>% filter(localisation < 19) %>% pull(localisation)
-        }
-        else{
-          localisation_ti[admission$id == j, "loc"] <- rooms[rooms$id == "PE", "id_room"]
-        }
-      }
-    }
-    
-  for (i in id_no_int$id){
-    status <- admission[admission$id == i, "status"]
-    
-    if  (status == "PA"){
-      ## Rules for patients that don't have an interaction
-      ## Patients stay in their room (thus if not in Restroom (chamber or corridor), they will go to their room)
-      room_assigned <- rooms[admission$id == i, "id_room"]
-      localisation_ti[admission$id == i, "loc"] <- room_assigned
-    }
-    
-    if  (status == "PE"){
-      ## Rules for HCWs that don't have an interaction
-      # If at t-1, the HCW is either in the corridor/restroom, he will go/stay to the restroom and if he was in a patient's room, he will go to the corridor
-      room_assigned <- rooms[rooms$id == "PE", "id_room"]
-      room_prev <- global_localisation %>% filter(time == t-1, id == i) %>% pull(loc)
-      # If HCW was in a patient's room -> Corridor
-      if (room_prev <= 19 & room_prev >= 1){ # 19 -> id of restroom/corridor /!\ TEMPORARY
-        localisation_ti[admission$id == i, "loc"] <- rooms[rooms$id == "PE", "id_room"]
-      }
-      # If HCW is in the Corridor/Restroom  -> Restroom /!\ TEMPORARY because ind. are leaving (ti-2 etc?)
-      else{
-        localisation_ti[admission$id == i, "loc"] <- rooms[rooms$id == "PE", "id_room"]
-      }
-    }
-  }
-}
-```
-
-## SUBDIVIDING EVERY 30s (dataframe) - OUTDATED (LIST OF DATAFRAMES NOW)
-```{r}
-begin_date <- as.POSIXct(min(data$date_posix_first))
-end_date <- as.POSIXct(max(data$date_posix_first + data$length))
-time_spent <- end_date - begin_date
-
-n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * minutes * 2 (number of time subdivisions)
-
-# TO CREATE DETAILLED INTERACTIONS CSV
-data_tot <- data.frame()
-lin_a <- Sys.time()
-for(t in 1:n_subdivisions){
-  interactions_t <- data %>%
-    filter(date_posix_first <= begin_date + (t)*30 & date_posix_first + length >= begin_date + (t+1)*30) %>%
-    mutate(time = t) %>%
-    select(from, to, time, from_status, to_status)
-
-  if (dim(interactions_t)[1]!= 0){
-  data_tot <- data_tot %>% bind_rows(interactions_t)
-  }
-}
-lin_b <- Sys.time()
-print(lin_b-lin_a)
-write.csv2(x = data_tot, file = file.path(nodscov2_path, "int_tot_RP_test.csv"), row.names = F)
-rm(interactions_t)
-
-## TO READ IT
-#data_tot <- read.csv2(file = file.path(nodscov2_path, "int_tot_RP_test.csv"), row.names = F)
-```
-
-## INTERACTION LOCALISATION
-```{r}
-data_tot <- data_tot %>% 
-  mutate(localisation = NA)  # Initialize localisation column with NA
-
-# Join data_tot with rooms based on the common column (id) for 'from'
-data_tot <- data_tot %>%
-  left_join(rooms, by = c("from" = "id")) %>%  ## .x join
-  left_join(rooms, by = c("to" = "id")) %>% ## .y join
-  mutate(localisation = case_when(
-    from %in% c("001-0038-B-S", "001-0039-B-F") | to %in% c("001-0038-B-S", "001-0039-B-F") ~ rooms[rooms$id == "001-0038-B-S", "id_room"],
-    from %in% c("001-0127-B-A", "001-0128-Z-K") | to %in% c("001-0127-B-A", "001-0128-Z-K") ~ rooms[rooms$id == "001-0127-B-A", "id_room"],
-    from_status == "PE" & to_status == "PE" ~ rooms[rooms$id == "PE" , "id_room"],
-    from_status == "PA" & to_status == "PE" ~ id_room.x,
-    from_status == "PE" & to_status == "PA" ~ id_room.y,
-  )) %>%
-  select(-room.x, -id_room.x, -room.y, -id_room.y)
-
-## Remove duplicated interactions (there is sometimes interactions recorded multiple times)
-data_tot <- unique(data_tot)
-#duplicate_rows <- data_tot[duplicated(data_tot), ]
-```
-
-## ISSUE WITH LAPPLY (NOT DOING IT IN ORDER, IT MUST BE ITERATIVE)
-```{r}
-
-global_localisation <- lapply(1:n_subdivisions, function(t) {
-  if (t == 1){ 
-    return (global_localisation[[1]])
-  } else if (t == 2) {
-    return (global_localisation[[2]])
-  } else {
-  
-  localisation_t <- global_localisation[[t]]
-  localisation_tm1 <- global_localisation[[t-1]]
-  
-  id_not_interacting_t <- localisation_t %>% filter(is.na(localisation)) %>% pull(id)
-  
-  id_room_tm1 <- localisation_tm1 %>% filter(localisation != rooms[rooms$id == "PE", "id_room"] &
-                                           localisation != rooms[rooms$id == "ALL", "id_room"] &
-                                           localisation != "NOT HERE" &
-                                           !is.na(localisation)
-                                         ) %>% pull(id)
-  
-
-  id_corridor_tm1 <- localisation_tm1 %>% filter(localisation == rooms[rooms$id == "ALL", "id_room"]) %>% pull(id)
-  id_restroom_tm1 <- localisation_tm1 %>% filter(localisation == rooms[rooms$id == "PE", "id_room"]) %>% pull(id)
-  id_not_here_tm1 <- localisation_tm1 %>% filter(localisation == "NOT HERE") %>% pull(id)
-  
-  
-  ## ITERATE ON THE INDIVIDUALS NOT INTERACTING at time t
-  for (individual in id_not_interacting_t){
-    ## 1. IF INDIVIDUAL IS INTERACTING AT t-1 (localisation_tm1$localisation != "NOT HERE")
-    if (individual %in% id_room_tm1){
-      #IF IN ROOM -> CORRIDOR
-      ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
-    } else if (individual %in% id_corridor_tm1){
-      #IF IN CORRIDOR -> RESTROOM
-      ind_loc_t <- rooms[rooms$id == "PE", "id_room"]
-    } else if (individual %in% id_restroom_tm1){
-      #IF RESTROOM --> STAYS IN RESTROOM #### TEMPORARY #########
-      ind_loc_t <- rooms[rooms$id == "PE", "id_room"]
-      ## 2. IF INDIVIDUAL NOT INTERACTING AT t-1 --> (localisation_tm1$localisation == "NOT HERE") --> "NOT HERE"
-    } else if (individual %in% id_not_here_tm1){
-      ind_loc_t <- "NOT HERE"
-    }  else {
-      ind_loc_t <- "ERROR"
-    }
-    ## ASSIGN THE LOCALISATION OF THE INDIVIDUAL AT t==2
-    localisation_t[localisation_t$id == individual, "localisation"] <- ind_loc_t
-  }
-  
-  return(localisation_t)}
-})
-
-```
-
-
-```{r}
-
-## TEMPORARY -> MIGHT EXCLUDE THEM COMPLETELY 
-# ## ASSIGN THE LOCALISATION TO HCW NOT PRESENT DURING THE STUDY
-# global_localisation <- lapply(1:n_subdivisions, function(t) {
-#   localisation_t <- global_localisation[[t]]
-#   infered_location <- "NOT HERE DURING THE STUDY"
-#   localisation_t$localisation <- ifelse(localisation_t$id %in% HCW_not_here, infered_location, localisation_t$localisation)
-#   return(localisation_t)
-# })
-```
 
