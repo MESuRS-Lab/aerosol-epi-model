@@ -10,9 +10,17 @@ using namespace std;
 Rcpp::Environment base("package:base");
 Function do_unique = base["unique"];
 
+
 //////////////////////////////////////////////
 // [[Rcpp::export]]
+Rcpp::DataFrame Get_t(Rcpp::List Global_list, int t){
+    Rcpp::DataFrame df(Global_list[t]);
+    return df;
+}
 
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
 Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame environment_tim1,
     Rcpp::DataFrame localization_tim1,
@@ -39,8 +47,6 @@ Rcpp::NumericVector Update_environment(
     Rcpp::IntegerVector status = status_tim1["status"];
     Rcpp::IntegerVector localization = localization_tim1["localization"];
     Rcpp::CharacterVector id_HCW = localization_tim1["id"];
-    int index_room_j = -1;
-    int index_localization_j = -1;
 
     // INACTIVATION 
     env_ti = env_ti * exp(-mu * dt);
@@ -50,6 +56,7 @@ Rcpp::NumericVector Update_environment(
         // INFECTED PATIENTS SHEDDING IN THEIR ROOMS
         if (info_patient_HCW_int[j] == 0 && status[j] == 1){
             int room_j = rooms[j];
+            
             // Search for the index of the room in environment dataframe
             int index_room_j = -1;
             for (int k = 0; k < id_rooms.size(); ++k) {
@@ -67,7 +74,7 @@ Rcpp::NumericVector Update_environment(
             // WARNING: LOCALIZATION INDEX != INDIVIDUAL INDEX ETC
             Rcpp::String id_j = ids[j];
             // Search for the room where was the HCW j at t-1
-            int index_localization_j;
+            int index_localization_j = -1;
             for (int k = 0; k < id_HCW.size(); k++){
                 if (ids[j] == id_HCW[k]){
                    index_localization_j = k;
@@ -76,7 +83,7 @@ Rcpp::NumericVector Update_environment(
             }
             int room_j = localization[index_localization_j];
             // Search for the index associated to this room
-            int index_room_j;
+            int index_room_j = -1;
             for (int k = 0; k < rooms.size(); k++){
                 if (rooms[k] == room_j){
                    index_room_j = k;
@@ -94,8 +101,8 @@ Rcpp::NumericVector Update_environment(
 //////////////////////////////////////////////
 // [[Rcpp::export]]
 Rcpp::List List_encountered(
-    String id,
-    DataFrame interactions_t
+    Rcpp::String id,
+    Rcpp::DataFrame interactions_t
 ) {
   Rcpp::List list_id;
   Rcpp::CharacterVector from = interactions_t["from"];
@@ -103,11 +110,11 @@ Rcpp::List List_encountered(
 
   for (int j = 0; j < interactions_t.nrows(); ++j) {
     if (from[j] == id) {
-        String push = to[j];
+        Rcpp::String push = to[j];
         list_id.push_back(push);
     }
     if (to[j] == id) {
-        String push = from[j];
+        Rcpp::String push = from[j];
         list_id.push_back(push);
     }
   }
