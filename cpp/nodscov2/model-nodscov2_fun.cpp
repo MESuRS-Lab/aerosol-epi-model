@@ -25,7 +25,7 @@ Rcpp::DataFrame Get_t(
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
-Rcpp::NumericVector Update_environment(
+Rcpp::NumericVector Update_environment( //NEED TO BE FIXED
     Rcpp::DataFrame environment_tim1,
     Rcpp::DataFrame localization_tim1,
     Rcpp::DataFrame status_tim1,
@@ -52,7 +52,7 @@ Rcpp::NumericVector Update_environment(
     Rcpp::IntegerVector localization = localization_tim1["localization"];
     Rcpp::CharacterVector id_HCW = localization_tim1["id"];
 
-    // INACTIVATION 
+    // EXPONENTIAL INACTIVATION 
     env_ti = env_ti * exp(-mu * dt);
     
     // INFECTING INDIVIDUALS SHEDDING
