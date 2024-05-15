@@ -160,6 +160,13 @@ global_lambda <- lapply(1:n_subdivisions, function(t){
 })
 rm(lambda_t)
 ```
+## INFO_PATIENT_HCW
+```{r}
+info_patient_HCW <- admission %>%
+  mutate(info = ifelse(status == "PA", 0, 1) ) %>%
+  mutate(room = NA) %>% 
+  select(id,info,room)
+```
 
 
 ## GLOBAL DATABASE
@@ -186,7 +193,7 @@ rm(lambda_t)
 ## Rcpp
 ```{r}
 # Call the parallel function
-sourceCpp(file.path(cpp_model_path,"model-nodscov2_fun.cpp"))
+sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 a <- List_encountered(id, global_interaction[[t]])
 
 test_status <- data.frame(id = c("ab","ba","cd"), status = c(0,1,1))
