@@ -11,6 +11,8 @@ library(dplyr)
 #library(tidyverse)
 library(ggplot2)
 library(lubridate)
+library(Rcpp)
+library(RcppParallel)
 ```
 
 ```{r}
@@ -18,7 +20,9 @@ wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
 
 data_path <- file.path(wd,"..", "..", "data")
-nodscov2_path <- file.path(data_path, "data-nodscov2") 
+nodscov2_path <- file.path(data_path, "data-nodscov2")
+cpp_path <-  file.path(wd,"..", "..", "cpp")
+cpp_model_path <- file.path(cpp_path,"nodscov2")
 ```
 
 ### WIP 
@@ -64,30 +68,19 @@ data <- list_ward[["Raymond_Poincare-Reanimation-20200506-20200507"]]
 ```{r}
 ## plans are more detailled for Raymond Poincaré hospital
 ## Dimensions
-
 begin_date
 end_date
-
 time_spent <- end_date - begin_date
 time_spent
-
 n_subdivisions
-
 n_individuals <- as.integer(admission %>%
                               filter(hospital == "APHP - RAYMOND POINCARÉ", ward == "Reanimation") %>%
                               distinct(id) %>%
                               count())
 n_individuals
-
 # begin_date <- as.POSIXct(min(data$date_posix_first))
 # end_date <- as.POSIXct(max(data$date_posix_first + data$length))
-
-# 
-# 
 # n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * minutes * 2 (number of time subdivisions)
-
-
-
 ```
 
 ## INTERACTIONS
@@ -177,7 +170,14 @@ rm(status_t)
 ## clusters (if needed?)
 ```
 
+## RCPP
+```{r}
+# Call the parallel function
+sourceCpp(file.path(cpp_model_path,"model-nodscov2_fun.cpp"))
+a <- List_encountered(id, global_interaction[[t]])
+a
 
+```
 
 
 
