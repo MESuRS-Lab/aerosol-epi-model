@@ -192,23 +192,21 @@ a <- List_encountered(id, global_interaction[[t]])
 test_status <- data.frame(id = c("ab","ba","cd"), status = c(0,1,1))
 test_lambda <- data.frame(id = c("ab","ba","cd"), lambda_c = 0, lambda_e = 0)
 test_int <- data.frame(from = c("ab","ba","cd"), to = c("ba","ab","ab"))
-test_loc <- data.frame(id = "ba", localization = 1)
-test_room <- data.frame(id = c("ab","ba","cd"), id_room = c(1,2,3))
-test_env <- test_room %>% select(id_room) %>% mutate(env = 0, id = id_room) %>% select(id, env)
+test_loc <- data.frame(id = c("ab","ba","cd"), localization = c(1,2,3))
+test_room <- data.frame(id = c("ba","cd"), id_room = c(2,3))
+test_env <- test_room %>% select(id_room) %>% mutate(env = c(100,200,300), id = id_room) %>% select(id, env)
 beta = 1
 dt = 30
 ti = 1
 a <- List_encountered("ab", test_int)
 b = Lambda_c(test_lambda, test_int, test_status, beta, dt, ti)
-test_info_patient_HCW = c(0,1,0)
+test_info_patient_HCW = c(0,1,1)
 
 
 epsilon = 1
 
-
 c = Lambda_e(test_lambda,  test_loc, test_env, test_room, test_info_patient_HCW, epsilon, dt)
 
-test_lambda$lambda_c = b
 
 ```
 
