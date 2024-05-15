@@ -13,10 +13,14 @@ Function do_unique = base["unique"];
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
-Rcpp::DataFrame Get_t(Rcpp::List Global_list, int t){
-    Rcpp::DataFrame df(Global_list[t]);
+Rcpp::DataFrame Get_t(
+    Rcpp::List Global_list,
+     int t
+){
+    // WARNING: c++ COUNTS STARTS AT 0
+    Rcpp::DataFrame df(Global_list[t-1]);
     return df;
-}
+};
 
 
 //////////////////////////////////////////////

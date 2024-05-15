@@ -15,6 +15,10 @@ extern double dt;
 
 
 
+RcppExport Rcpp::DataFrame Get_t(
+    Rcpp::List Global_list,
+     int t
+);
 
 RcppExport Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame environment_tim1,

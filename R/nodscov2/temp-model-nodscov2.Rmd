@@ -207,7 +207,8 @@ epsilon = 1
 
 c = Lambda_e(test_lambda,  test_loc, test_env, test_room, test_info_patient_HCW, epsilon, dt)
 
-
+d = Get_t(global_localization,1)
+setdiff(d,global_localization[[1]])
 ```
 
 
