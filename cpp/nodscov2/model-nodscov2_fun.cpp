@@ -39,7 +39,7 @@ Rcpp::DataFrame Get_t(
      int t
 ){
     // WARNING: c++ COUNTS STARTS AT 0
-    Rcpp::DataFrame df(Global_list[t-1]);
+    Rcpp::DataFrame df(Global_list[t]);
     return df;
 };
 
@@ -48,7 +48,7 @@ Rcpp::DataFrame Get_t(
 // [[Rcpp::export]]
 Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame environment_tim1,
-    Rcpp::DataFrame localization_tim1,
+    Rcpp::DataFrame localization_ti,
     Rcpp::DataFrame status_tim1,
     Rcpp::DataFrame info_patient_HCW, //(id: id of the individual, info: "0" IF PATIENT, "1" IF HCW, room: room assigned to the individual, easier for patients...) 
     const double mu,
@@ -70,8 +70,8 @@ Rcpp::NumericVector Update_environment(
     Rcpp::IntegerVector info_patient_HCW_int = info_patient_HCW["info"];
     Rcpp::IntegerVector info_patient_HCW_room = info_patient_HCW["room"];
     Rcpp::IntegerVector status = status_tim1["status"];
-    Rcpp::IntegerVector localizations = localization_tim1["localization"];
-    Rcpp::CharacterVector id_HCW = localization_tim1["id"];
+    Rcpp::IntegerVector localizations = localization_ti["localization"];
+    Rcpp::CharacterVector id_HCW = localization_ti["id"];
 
     // EXPONENTIAL INACTIVATION 
     env_ti = env_ti * exp(-mu * deltat);

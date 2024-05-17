@@ -1,12 +1,13 @@
 #include "model-nodscov2_fun.h"
 #include <Rcpp.h>
 
+#include <iostream>
 
 // [[Rcpp::plugins(cpp11)]]
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
-Rcpp::DataFrame simulation(
+Rcpp::List simulation(
     Rcpp::List global_interaction,
     Rcpp::List global_localization,
     Rcpp::List global_environment,
@@ -34,8 +35,9 @@ Rcpp::DataFrame simulation(
     Rcpp::DataFrame interaction_tim1;
     
     Rcpp::DataFrame lambda_ti;
-    Rcpp::DataFrame lambda_template = Get_t(global_lambda, 0);
-
+    Rcpp::DataFrame lambda_template;
+    lambda_template = Get_t(global_lambda, 0);
+    
     Rcpp::DataFrame localization_ti;
     Rcpp::DataFrame localization_tim1;
     
@@ -53,7 +55,8 @@ Rcpp::DataFrame simulation(
         ////////////////////////////
         environment_tim1 = Get_t(global_environment, t-1);
         environment_ti = clone(environment_tim1);
-        environment_ti["env"] = Update_environment(environment_ti, localization_tim1, status_tim1, info_patient_HCW, mu, nu, deltat);
+        localization_ti = Get_t(global_localization, t);
+        environment_ti["env"] = Update_environment(environment_ti, localization_ti, status_tim1, info_patient_HCW, mu, nu, deltat);
         global_environment[t] = environment_ti;
 
         ///////////////////
@@ -62,29 +65,20 @@ Rcpp::DataFrame simulation(
         lambda_ti = clone(lambda_template);
         lambda_ti["lambda_e"] = Lambda_e(lambda_template, localization_ti, environment_ti, info_patient_HCW, epsilon, deltat);
         lambda_ti["lambda_c"] = Lambda_c(lambda_template, interaction_ti, status_tim1, beta, deltat);
-        
+        global_lambda[t] = lambda_ti;
         
         ///////////////////////
         // Update the status //
         ///////////////////////
         status_tim1 = Get_t(global_status, t-1);
         status_ti = clone(status_tim1);
-        status_ti["status"] = Update_status(lambda_ti, status_tim1);
+        status_ti["status"] = Update_status(status_tim1, lambda_ti);
         global_status[t] = status_ti;
-
-
-
-
     }
 
 
-    return(info_patient_HCW);
-}
 
-    // Rcpp::List clusters,
-    // Rcpp::DataFrame inferred_admission,
-    // Rcpp::DataFrame HCW_interacting_id,
-    // Rcpp::List double_rooms,
-    // Rcpp::Datetime begin_date,
-    // Rcpp::Datetime end_date,
-    // int n_subdivisions,
+
+    Rcpp::List res = Rcpp::List::create(_["global_status"] = global_status, _["global_lambda"] = global_lambda, _["global_environment"] = global_environment);
+    return res;    
+}

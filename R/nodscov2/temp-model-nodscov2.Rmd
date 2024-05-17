@@ -209,6 +209,37 @@ admission_test$room <- as.integer(admission_test$room)
 ```
 
 
+```{r}
+load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
+sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
+
+beta = 1
+epsilon = 1
+mu = 1
+nu = 1000
+dt = 30
+tau = 60 * 60 *24
+deltat = dt/tau
+global_status_test <- global_status
+global_status_test[[1]] <- global_status[[1]] %>% mutate(status = ifelse(id == "001-0128-Z-K", as.integer(1), status))
+
+sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
+tsima = Sys.time()
+test <- simulation(global_interaction = global_interaction,
+           global_localization = global_localization,
+           global_environment = global_environment,
+           global_status = global_status_test,
+           global_lambda = global_lambda,
+           info_patient_HCW = admission_test,
+           beta = beta,
+           epsilon = epsilon,
+           nu = nu,
+           mu = mu,
+           dt = dt
+           )
+tsimb = Sys.time()
+print(tsimb-tsima)
+```
 
 
 ```{r}
