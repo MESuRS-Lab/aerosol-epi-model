@@ -34,7 +34,7 @@ RcppExport Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame info_patient_HCW, //(id: id of the individual, info: "0" IF PATIENT, "1" IF HCW, room: room assigned to the individual, easier for patients...) 
     const double mu,
     const double nu,
-    const int deltat
+    const double deltat
 );
 
 

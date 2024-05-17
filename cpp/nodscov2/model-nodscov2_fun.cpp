@@ -53,7 +53,7 @@ Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame info_patient_HCW, //(id: id of the individual, info: "0" IF PATIENT, "1" IF HCW, room: room assigned to the individual, easier for patients...) 
     const double mu,
     const double nu,
-    const int deltat
+    const double deltat
 ) {
     // THERE IS MULTIPLE WAYS TO ACHIEVE THIS
     // A. (naive) for loop on room ( for loop on individuals (check if patient/HCW and if the localization == room r then check if infected etc))
@@ -77,11 +77,10 @@ Rcpp::NumericVector Update_environment(
     env_ti = env_ti * exp(-mu * deltat);
     
     // INFECTING INDIVIDUALS SHEDDING
-    for (int j = 0; j < info_patient_HCW_int.size(); ++j) {
+    for (int j = 0; j < info_patient_HCW.nrows(); ++j) {
         // INFECTED PATIENTS SHEDDING IN THEIR ROOMS
         if (info_patient_HCW_int[j] == 0 && status[j] == 1){
             int room_j = info_patient_HCW_room[j];
-            
             // Search for the index of the room in environment dataframe
             int index_room_j = -1;
             for (int k = 0; k < rooms_environment.size(); ++k) {
@@ -91,7 +90,8 @@ Rcpp::NumericVector Update_environment(
                 }
             }
             // UPDATE THE ENVIRONMENT FOR THE INFECTED PATIENT IN THAT ROOM
-            env_ti[index_room_j] += 1 * nu * deltat;
+            if(index_room_j != -1){
+                env_ti[index_room_j] += 1 * nu * deltat;}
         } 
 
         // INFECTED HCW SHEDDING IN THE ROOM HE WAS AT t-1
@@ -109,14 +109,16 @@ Rcpp::NumericVector Update_environment(
             int room_j = localizations[index_localization_j];
             // Search for the index associated to this room
             int index_room_j = -1;
-            for (int k = 0; k < info_patient_HCW_room.size(); k++){
-                if (info_patient_HCW_room[k] == room_j){
+            for (int k = 0; k < rooms_environment.size(); k++){
+                if (rooms_environment[k] == room_j){
                    index_room_j = k;
                    break; 
                 }
             }
             // UPDATE THE ENVIRONMENT FOR THE INFECTED HCW IN THAT ROOM
-            env_ti[index_room_j] += 1 * nu * deltat;
+            if(index_room_j != -1){
+                env_ti[index_room_j] += 1 * nu * deltat;
+            }
         }
     }
 

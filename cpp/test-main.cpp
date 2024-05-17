@@ -38,9 +38,7 @@ int main()
   lambda_e lambda_e_tim1;
   lambda_e lambda_e_ti;
   
-  ////////////////
-  // SIMULATION //
-  ////////////////
+  
   for (int ti = 0; ti < nb_ti; ti++){
     // GET INT //
     interaction interaction_ti = Update_interaction(data, ti, "ti", begin_date, dt);

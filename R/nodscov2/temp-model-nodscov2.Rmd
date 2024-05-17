@@ -215,7 +215,7 @@ admission_test$room <- as.integer(admission_test$room)
 beta = 1
 epsilon = 1
 mu = 1
-nu = 1
+nu = 100
 dt = 30
 tau = 60 * 60 *24
 deltat = dt/tau
@@ -225,7 +225,7 @@ t = 3
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 t=1
 ta = Sys.time()
-for (t in 2:100){
+for (t in 3:3){
   lambda <- global_lambda[[t]]
   status <- global_status[[t]]
   
@@ -254,9 +254,6 @@ for (t in 2:100){
 }
 tb = Sys.time()
 print(tb-ta)
-
-
-
 
 
 ```
