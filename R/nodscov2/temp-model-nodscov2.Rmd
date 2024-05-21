@@ -281,7 +281,7 @@ ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))
 ```{r}
 hcw_id <- admission %>% filter(status == "PE") %>% pull(id)
 
-# Create FOI_over_time data frame
+
 FOI_over_time <- do.call(rbind, lapply(1:length(test[["global_lambda"]]), function(t) {
   data.frame(time = begin_date + 30 * t,
              id = test[["global_lambda"]][[t]]$id,
