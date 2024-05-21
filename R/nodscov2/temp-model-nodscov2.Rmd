@@ -135,7 +135,7 @@ rm(env_t)
 ## LOCALISATION
 ```{r}
 ## LOADED WITH .RData (localization-nodscov2.Rmd)
-head(global_localization)
+
 
 ## REMOVE "NOT HERE" FROM global_localization[[t]]$localization (in order to have an integer vector)
 global_localization <- lapply( 1:n_subdivisions, function(t){
@@ -144,7 +144,7 @@ global_localization <- lapply( 1:n_subdivisions, function(t){
   loc_t$localization <- as.integer(loc_t$localization)
   return(loc_t)
 })
-
+head(global_localization)
 
 
 ```
@@ -210,18 +210,18 @@ admission_test$room <- as.integer(admission_test$room)
 
 
 ```{r}
-load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
+#load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 
-beta = 100
-epsilon = 100
-mu = 1
-nu = 1000
+beta = 10
+epsilon = 5
+mu = 5
+nu = 10
 dt = 30
 tau = 60 * 60 *24
 deltat = dt/tau
 global_status_test <- global_status
-global_status_test[[1]] <- global_status[[1]] %>% mutate(status = ifelse(id == "001-0128-Z-K", as.integer(1), status))
+global_status_test[[1]] <- global_status[[1]] %>% mutate(status = ifelse(id == "001-0038-B-S", as.integer(1), status))
 
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 tsima = Sys.time()
@@ -240,54 +240,84 @@ test <- simulation(global_interaction = global_interaction,
 tsimb = Sys.time()
 print(tsimb-tsima)
 ```
+## Vizualisation
+```{r}
+infected_over_time <- data.frame(
+  time = begin_date + 30*seq(n_subdivisions),
+  infected_count = sapply(test[["global_status"]], function(df) sum(df$status == 1))
+)
+
+
+
+ggplot(infected_over_time, aes(x = time, y = infected_count)) +
+  geom_line(color = "blue") +
+  labs(title = "Number of Infected Individuals Over Time",
+       x = "Time",
+       y = "Number of Infected Individuals") +
+  theme_bw()
+
+```
+
+## Viral load
+```{r}
+viral_load_over_time <- do.call(rbind, lapply(1:length(test[["global_environment"]]), function(t) {
+  data.frame(time = begin_date + 30 * t,
+             room = test[["global_environment"]][[t]]$room,
+             viral_load = test[["global_environment"]][[t]]$env)
+}))
+
+ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))) +
+  geom_line() +
+  labs(title = "Viral Load in Rooms Over Time",
+       x = "Time",
+       y = "Viral Load",
+       color = "Room") +
+  theme_bw() +
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+```
+
+
+## FOI
+```{r}
+hcw_id <- admission %>% filter(status == "PE") %>% pull(id)
+
+# Create FOI_over_time data frame
+FOI_over_time <- do.call(rbind, lapply(1:length(test[["global_lambda"]]), function(t) {
+  data.frame(time = begin_date + 30 * t,
+             id = test[["global_lambda"]][[t]]$id,
+             lambda_e = test[["global_lambda"]][[t]]$lambda_e,
+             lambda_c = test[["global_lambda"]][[t]]$lambda_c,
+             status = ifelse(test[["global_lambda"]][[t]]$id %in% hcw_id, "PE", "PA"))
+}))
+FOI_over_time <- FOI_over_time %>% mutate(p_inf = 1 - exp(-lambda_e - lambda_c))
+
+
+ggplot(FOI_over_time, aes(x = time)) +
+  geom_line(aes(y = lambda_e, colour = "lambda_e (environment)" ), alpha = 0.5) +
+  geom_line(aes(y = lambda_c, colour = "lambda_c (close-contact)" ), alpha = 0.5) +
+  labs(title = "Lambda Over Time",
+       x = "Time",
+       y = "FOI",
+       color = "Lambda") +
+  facet_grid(cols = vars(status)) + 
+  theme_bw() + 
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+```
 
 
 ```{r}
-beta = 1
-epsilon = 1
-mu = 1
-nu = 100
-dt = 30
-tau = 60 * 60 *24
-deltat = dt/tau
-t = 3
-
-
-sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
-t=1
-ta = Sys.time()
-for (t in 3:3){
-  lambda <- global_lambda[[t]]
-  status <- global_status[[t]]
-  
-  test_status <- status %>% mutate(status = 0)
-  test_lambda <- lambda %>% mutate(lambda_e = 1000, lambda_c = 1000)
-  
-  int <- global_interaction[[t]]
-  loc <- global_localization[[t]]
-  env <- global_environment[[t]]
-  env_tm1 <- global_environment[[t-1]]
-  loc_tm1 <- global_localization[[t-1]]
-  status_tm1 <- global_status[[t-1]]
-  lambda_tm1 <- global_lambda[[t-1]]
-  loc_tm1 <- global_localization[[t-1]]
-  id = "001-0007-J-I"
-  a <- List_encountered(id, int)
-  b = Lambda_c(lambda_tm1, int, status, beta, deltat)
-  lambda$lambda_c <- b
-  c = Lambda_e(lambda_tm1,  loc, env, admission_test, epsilon, deltat)
-  lambda$lambda_e <- c
-  d = Get_t(global_localization,t)
-  e = Update_environment(env_tm1, loc_tm1, status_tm1, admission_test, mu, nu, deltat )
-  env$env <- e
-  setdiff(d,global_localization[[t]])
-  f = Update_status(test_status, test_lambda)
-}
-tb = Sys.time()
-print(tb-ta)
-
+ggplot(FOI_over_time, aes(x = time)) +
+  geom_line(aes(y = lambda_e, colour = "lambda_e (environment)" )) +
+  labs(title = "Probability of infection Over Time",
+       x = "Time",
+       y = "P_inf",
+       color = "P_inf") +
+  facet_grid(cols = vars(status)) + 
+  theme_bw() +
+  theme(axis.text.x=element_text(angle=45, hjust=1))
 
 ```
+
 
 
 

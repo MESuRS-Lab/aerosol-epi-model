@@ -29,8 +29,11 @@ nodscov2_path <- file.path(data_path, "data-nodscov2")
 
 ## NodsCov2 data (not shared)
 ```{r}
-load("Y:/ogaufres/projet-pacri/data/data-nodscov2/admission_ctc_nodscov2.RData")
-load("Y:/ogaufres/projet-pacri/data/data-nodscov2/list_ward.RData")
+load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/admission_ctc_nodscov2.RData")
+load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/list_ward.RData")
+
+load(file.path(nodscov2_path, "admission_ctc_nodscov2.RData"))
+load(file.path(nodscov2_path, "list_ward.RData"))
 ```
 
 ## FIXING ENCODING
@@ -92,6 +95,7 @@ admission %>% filter(ward == "Reanimation") %>% group_by(hospital, cat) %>% summ
 ## Reanimation wards
 admission %>%
   filter(ward == "Reanimation" ) %>%
+  filter(hospital != "APHP - NECKER ENFANTS MALADES") %>%
   group_by(hospital, cat) %>%
   summarise( n = n(), .groups = "drop") %>%
     ggplot(., aes(x = cat, y = n)) +
