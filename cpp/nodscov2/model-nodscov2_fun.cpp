@@ -19,6 +19,7 @@ double scale_incub_g = pow(sd_incub_g,2) / m_incub_g;
 // R UNIQUE(X) FUNCTION
 Rcpp::Environment base("package:base");
 Function do_unique = base["unique"];
+Function do_sample = base["sample"];
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
@@ -65,32 +66,66 @@ Rcpp::IntegerVector Get_status_t(
     return status_t;
 };
 
+
+
+
+
 //////////////////////////////////////////////
 // [[Rcpp::export]]
 Rcpp::DataFrame Update_status_bis(
     Rcpp::DataFrame global_status,
     Rcpp::DataFrame lambda_ti,
+    Rcpp::DataFrame info_patient_HCW,
+    Rcpp::DataFrame interactions_ti,
+    Rcpp::DataFrame localization_ti,
     int t
 ) {
     Rcpp::NumericVector lambda_c = lambda_ti["lambda_c"];
     Rcpp::NumericVector lambda_e = lambda_ti["lambda_c"];
+    
     Rcpp::IntegerVector status_tim1 = Get_status_t(global_status, t);
+
+    Rcpp::CharacterVector ids = info_patient_HCW["id"];
+    Rcpp::IntegerVector info_int = info_patient_HCW["info"];
+    Rcpp::IntegerVector info_room = info_patient_HCW["room"];
+    
     Rcpp::IntegerVector t_inf_tim1 = global_status["t_inf"];
     Rcpp::IntegerVector t_recover_tim1 = global_status["t_recover"];
+    Rcpp::CharacterVector inf_by = global_status["inf_by"];
+    Rcpp::IntegerVector inf_room_tim1 = global_status["inf_room"];
     
     Rcpp::DataFrame global_status_updated = clone(global_status);
     Rcpp::IntegerVector t_inf_ti = clone(t_inf_tim1);
     Rcpp::IntegerVector t_recover_ti = clone(t_recover_tim1);
+    Rcpp::IntegerVector inf_room_ti = clone(t_inf_tim1);
 
     Rcpp::NumericVector FOI = (lambda_ti.nrows(), 1) - exp(- (lambda_c  + lambda_e));
+
     for (int j=0; j < lambda_ti.nrows(); j++){
         if (status_tim1[j] == 0 && R::runif(0, 1) <= FOI[j]){
+            int room_j = -1;
             t_inf_ti[j] = t;
             t_recover_ti[j] = t + Incub_period_gamma();
+
+            // // ROOM ?
+            if (info_int[j] == 0){
+                room_j= info_room[j];
+            } else if (info_int[j] == 1){
+                room_j = Get_loc_HCW(ids[j], info_patient_HCW, localization_ti);
+            }
+            inf_room_ti[j] = room_j;
+            
+            // Rcpp::CharacterVector ids = info_patient_HCW["id"];
+            // Rcpp::List ind_inf = List_encountered(ids[j], interactions_ti);
+            // Rcpp::CharacterVector sample();
+            // Rcpp::String inf_by_j;
+
         }
     };
     global_status_updated["t_inf"] = t_inf_ti;
     global_status_updated["t_recover"] = t_recover_ti;
+    global_status_updated["inf_room"] = inf_room_ti;
+
     return global_status_updated;
 };
             
@@ -338,4 +373,42 @@ int Incub_period_lognormal() {
     int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
     
     return incubation_period_subdivisions;
+};
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+int Get_loc_HCW(
+    Rcpp::String id_HCW,
+    Rcpp::DataFrame info_patient_HCW,
+    Rcpp::DataFrame localization_ti
+) {
+    int localization;
+    Rcpp::CharacterVector ids = info_patient_HCW["id"];
+    Rcpp::CharacterVector ids_HCW = localization_ti["id"];
+    Rcpp::IntegerVector localizations_HCW = localization_ti["localization"];
+    Rcpp::IntegerVector status = info_patient_HCW["info"];
+    
+    int index_ind = -1;
+    for (int k = 0; k < ids.size(); k++){
+        if (id_HCW == ids[k]){
+                index_ind = k;
+                break;
+                }
+        }
+    if (status[index_ind] == 1){
+        int index_localization_j = -1;
+        for (int k = 0; k < ids_HCW.size(); k++){
+            if (ids[index_ind] == ids_HCW[k]){
+            index_localization_j = k;
+            break;
+            }
+        }
+        int room_j = localizations_HCW[index_localization_j];
+        if (room_j == -1){
+            localization = -1;
+        } else {
+            localization = room_j;
+            }
+        }
+    return localization;
 };

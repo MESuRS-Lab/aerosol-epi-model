@@ -75,7 +75,7 @@ Rcpp::List simulation(
         ///////////////////////
         // Update the status //
         ///////////////////////
-        Rcpp::DataFrame temp = Update_status_bis(global_status, lambda_ti, t);
+        Rcpp::DataFrame temp = Update_status_bis(global_status, lambda_ti,info_patient_HCW, interaction_ti, localization_ti, t);
         global_status = clone(temp);
 
     }

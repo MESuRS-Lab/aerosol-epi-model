@@ -151,14 +151,16 @@ head(global_localization)
 
 ## STATUS
 ```{r}
-status_t <- admission %>%
-  distinct(id) %>%
-  mutate(status = 0)
+# status_t <- admission %>%
+#   distinct(id) %>%
+#   mutate(status = 0)
+# 
+# global_status <- lapply(1:n_subdivisions, function(t){
+#   return(status_t)
+# })
+# rm(status_t)
+global_status = data.frame(id = admission$id, t_inf = as.integer(-1), t_recover = as.integer(-1), inf_by = "")
 
-global_status <- lapply(1:n_subdivisions, function(t){
-  return(status_t)
-})
-rm(status_t)
 ```
 
 
@@ -210,14 +212,13 @@ admission_test$room <- as.integer(admission_test$room)
 
 
 ```{r}
-load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
+#load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 
+test_status <- global_status
 
-test_status = data.frame(id = admission$id, t_inf = -1, t_recover = -1)
 test_lambda <- global_lambda[[1]] %>% mutate(lambda_c = 1, lambda_e = 1)
-a <- Update_status_bis(test_status, test_lambda, 1)
-b <- Get_status_t(a,300)
+
 beta = 10
 epsilon = 5
 mu = 5
@@ -228,9 +229,11 @@ deltat = dt/tau
 # global_status_test <- global_status
 # global_status_test[[1]] <- global_status[[1]] %>% mutate(status = ifelse(id == "001-0038-B-S", as.integer(1), status))
 test_status <- test_status %>% mutate(t_inf = ifelse(id == "001-0038-B-S", as.integer(1), t_inf ), t_recover = ifelse(id == "001-0038-B-S", as.integer(1000), t_recover )) 
-
+a <- Update_status_bis(test_status, test_lambda, admission_test, global_interaction[[1]], 1)
+b <- Get_status_t(a,300)
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
-sourceCpp(file.path(cpp_model_path,"model-nodscov2_fun.cpp"))
+
+loc_test <- Get_loc_HCW("001-0001-D-J",admission_test, localization_ti = global_localization[[1]])
 
 tsima = Sys.time()
 test <- simulation(global_interaction = global_interaction,

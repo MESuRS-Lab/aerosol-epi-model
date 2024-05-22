@@ -77,7 +77,16 @@ RcppExport Rcpp::NumericVector Update_status(
 RcppExport Rcpp::DataFrame Update_status_bis(
     Rcpp::DataFrame global_status,
     Rcpp::DataFrame lambda_ti,
+    Rcpp::DataFrame info_patient_HCW,
+    Rcpp::DataFrame interactions_ti,
+    Rcpp::DataFrame localization_ti,
     int t
+);
+
+RcppExport int Get_loc_HCW(
+    Rcpp::String id_HCW,
+    Rcpp::DataFrame info_patient_HCW,
+    Rcpp::DataFrame localization_ti
 );
 
 #endif
