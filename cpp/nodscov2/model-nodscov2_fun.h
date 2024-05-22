@@ -12,37 +12,23 @@ extern double epsilon;
 // extern double mu;
 // extern double tau;
 extern double deltat;
+extern double mIncub;
+extern double sdIncub;
+extern double maxPCRDetectability;
+extern double m_incub_g;
+extern double sd_incub_g;
+extern double shape_incub_g;
+extern double scale_incub_g;
 
 
+RcppExport int Incub_period_gamma();
 
-RcppExport Rcpp::DataFrame Get_t(
-    Rcpp::List Global_list,
-     int t
-);
-
-
-RcppExport Rcpp::NumericVector Update_status(
-    Rcpp::DataFrame status_tim1,
-    Rcpp::DataFrame lambda_ti
-);
-
-
-RcppExport int Incub_period_gamma(
-    double shape,
-     double scale
-);
-
-
-RcppExport int Incub_period_lognormal(
-    double meanlog,
-    double sdlog
-);
-
+RcppExport int Incub_period_lognormal();
 
 RcppExport Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame environment_tim1,
     Rcpp::DataFrame localization_ti,
-    Rcpp::DataFrame status_tim1,
+    Rcpp::IntegerVector status_tim1,
     Rcpp::DataFrame info_patient_HCW, //(id: id of the individual, info: "0" IF PATIENT, "1" IF HCW, room: room assigned to the individual, easier for patients...) 
     const double mu,
     const double nu,
@@ -58,7 +44,7 @@ RcppExport Rcpp::List List_encountered(
 RcppExport Rcpp::NumericVector Lambda_c (
     Rcpp::DataFrame lambda_tim1,
     Rcpp::DataFrame interaction_ti,
-    Rcpp::DataFrame status_ti,
+    Rcpp::IntegerVector status_ti,
     const double beta,
     const double deltat
 );
@@ -72,25 +58,26 @@ RcppExport Rcpp::NumericVector Lambda_e (
     const double deltat
 );
 
-// Update ENV
-// RcppExport DataFrame Update_environment(
-//     DataFrame environment_tim1,
-//     DataFrame interaction_tim1,
-//     DataFrame status_tim1,
-//     //DataFrame rooms,
-//     double mu,
-//     double nu,
-//     double deltat
-//     //double t
-// );
+RcppExport Rcpp::DataFrame Get_t(
+    Rcpp::List Global_list,
+     int t
+);
+
+RcppExport Rcpp::IntegerVector Get_status_t(
+    Rcpp::DataFrame global_status,
+    int t
+);
 
 
+RcppExport Rcpp::NumericVector Update_status(
+    Rcpp::DataFrame status_tim1,
+    Rcpp::DataFrame lambda_ti
+);
 
-// List encountered
+RcppExport Rcpp::DataFrame Update_status_bis(
+    Rcpp::DataFrame global_status,
+    Rcpp::DataFrame lambda_ti,
+    int t
+);
 
-// FOI (lambda_c / lambda_e)
-
-// Update STATUS
-
-// UPDATE t --> GIVEN GLOBAL LISTS -> GIVE DATAFRAME FOR TIME t
 #endif

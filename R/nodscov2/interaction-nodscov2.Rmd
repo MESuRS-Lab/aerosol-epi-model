@@ -96,17 +96,20 @@ admission %>% filter(ward == "Reanimation") %>% group_by(hospital, cat) %>% summ
 admission %>%
   filter(ward == "Reanimation" ) %>%
   filter(hospital != "APHP - NECKER ENFANTS MALADES") %>%
+  mutate(cat = ifelse(is.na(cat), "Patients", cat)) %>%
   group_by(hospital, cat) %>%
   summarise( n = n(), .groups = "drop") %>%
     ggplot(., aes(x = cat, y = n)) +
     geom_bar(stat = "identity") +
     facet_grid(cols = vars(hospital)) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 35, hjust = 1))
+    theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+  labs(x = "Categories", y = "Number of individuals")
 
 ## ReaChirurgie wards (For HC LYON EDOUARD HERRIOT 's REACHIRURGIE WARD)
 admission %>%
   filter(ward == "ReaChirurgie") %>%
+  mutate(cat = ifelse(is.na(cat), "Patients", cat)) %>%
   group_by(hospital, cat) %>%
   summarise( n = n(), .groups = "drop") %>%
     ggplot(., aes(x = cat, y = n)) +
@@ -203,7 +206,8 @@ data_rea %>%
   facet_grid(cols = vars(type_int), rows = vars(hospital)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
-  labs(title = "Distribution of Intervals in Reanimation")
+  labs(title = "Distribution of Intervals in Reanimation") +
+  labs(x = "Hour of the day", y = "Number of interactions")
 ```
 
 ## PA-PA INTERACTIONS

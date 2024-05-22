@@ -1,6 +1,7 @@
 #include "model-nodscov2_fun.h"
 #include <Rcpp.h>
 
+
 #include <iostream>
 
 // [[Rcpp::plugins(cpp11)]]
@@ -11,8 +12,8 @@ Rcpp::List simulation(
     Rcpp::List global_interaction,
     Rcpp::List global_localization,
     Rcpp::List global_environment,
-    Rcpp::List global_status,
     Rcpp::List global_lambda,
+    Rcpp::DataFrame global_status,
     Rcpp::DataFrame info_patient_HCW,
     double beta,
     double epsilon,
@@ -28,8 +29,8 @@ Rcpp::List simulation(
     Rcpp::DataFrame environment_ti = Get_t(global_environment, 0);
     Rcpp::DataFrame environment_tim1;
     
-    Rcpp::DataFrame status_ti =  Get_t(global_status, 0);
-    Rcpp::DataFrame status_tim1;
+    Rcpp::IntegerVector status_ti =  Get_status_t(global_status, 0);
+    Rcpp::IntegerVector status_tim1;
 
     Rcpp::DataFrame interaction_ti;
     Rcpp::DataFrame interaction_tim1;
@@ -53,7 +54,7 @@ Rcpp::List simulation(
     for (int t = 1; t < sim_size; t++){
         interaction_ti = Get_t(global_interaction, t);
         localization_tim1 = Get_t(global_localization, t-1);
-        status_tim1 = Get_t(global_status, t-1);
+        status_tim1 = Get_status_t(global_status, t-1);
         ////////////////////////////
         // Update the environment //
         ////////////////////////////
@@ -74,10 +75,9 @@ Rcpp::List simulation(
         ///////////////////////
         // Update the status //
         ///////////////////////
-        status_tim1 = Get_t(global_status, t-1);
-        status_ti = clone(status_tim1);
-        status_ti["status"] = Update_status(status_tim1, lambda_ti);
-        global_status[t] = status_ti;
+        Rcpp::DataFrame temp = Update_status_bis(global_status, lambda_ti, t);
+        global_status = clone(temp);
+
     }
 
 

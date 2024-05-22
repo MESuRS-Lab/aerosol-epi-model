@@ -210,9 +210,14 @@ admission_test$room <- as.integer(admission_test$room)
 
 
 ```{r}
-#load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
+load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 
+
+test_status = data.frame(id = admission$id, t_inf = -1, t_recover = -1)
+test_lambda <- global_lambda[[1]] %>% mutate(lambda_c = 1, lambda_e = 1)
+a <- Update_status_bis(test_status, test_lambda, 1)
+b <- Get_status_t(a,300)
 beta = 10
 epsilon = 5
 mu = 5
@@ -220,16 +225,19 @@ nu = 10
 dt = 30
 tau = 60 * 60 *24
 deltat = dt/tau
-global_status_test <- global_status
-global_status_test[[1]] <- global_status[[1]] %>% mutate(status = ifelse(id == "001-0038-B-S", as.integer(1), status))
+# global_status_test <- global_status
+# global_status_test[[1]] <- global_status[[1]] %>% mutate(status = ifelse(id == "001-0038-B-S", as.integer(1), status))
+test_status <- test_status %>% mutate(t_inf = ifelse(id == "001-0038-B-S", as.integer(1), t_inf ), t_recover = ifelse(id == "001-0038-B-S", as.integer(1000), t_recover )) 
 
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
+sourceCpp(file.path(cpp_model_path,"model-nodscov2_fun.cpp"))
+
 tsima = Sys.time()
 test <- simulation(global_interaction = global_interaction,
            global_localization = global_localization,
            global_environment = global_environment,
-           global_status = global_status_test,
            global_lambda = global_lambda,
+           global_status = test_status,
            info_patient_HCW = admission_test,
            beta = beta,
            epsilon = epsilon,
@@ -254,7 +262,8 @@ ggplot(infected_over_time, aes(x = time, y = infected_count)) +
   labs(title = "Number of Infected Individuals Over Time",
        x = "Time",
        y = "Number of Infected Individuals") +
-  theme_bw()
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=45, hjust=1))
 
 ```
 
@@ -277,6 +286,13 @@ ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))
 ```
 
 
+
+
+
+
+
+
+
 ## FOI
 ```{r}
 hcw_id <- admission %>% filter(status == "PE") %>% pull(id)
@@ -297,7 +313,7 @@ ggplot(FOI_over_time, aes(x = time)) +
   geom_line(aes(y = lambda_c, colour = "lambda_c (close-contact)" ), alpha = 0.5) +
   labs(title = "Lambda Over Time",
        x = "Time",
-       y = "FOI",
+       y = "Lambda",
        color = "Lambda") +
   facet_grid(cols = vars(status)) + 
   theme_bw() + 
@@ -307,7 +323,7 @@ ggplot(FOI_over_time, aes(x = time)) +
 
 ```{r}
 ggplot(FOI_over_time, aes(x = time)) +
-  geom_line(aes(y = lambda_e, colour = "lambda_e (environment)" )) +
+  geom_line(aes(y = lambda_e, colour = "P_inf" )) +
   labs(title = "Probability of infection Over Time",
        x = "Time",
        y = "P_inf",

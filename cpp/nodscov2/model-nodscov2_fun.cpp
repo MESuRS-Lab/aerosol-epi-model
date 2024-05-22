@@ -5,6 +5,16 @@
 using namespace std;
 
 // [[Rcpp::plugins(cpp11)]]
+double mIncub = 1.63 * 24*60*2;
+double sdIncub = 0.5 * 24*60*2;
+
+double m_incub_g = 4.07 * 24*60*2;
+double sd_incub_g = 2.12 * 24*60*2;
+double shape_incub_g = pow(m_incub_g,2) / pow(sd_incub_g, 2);
+double scale_incub_g = pow(sd_incub_g,2) / m_incub_g;
+
+
+
 
 // R UNIQUE(X) FUNCTION
 Rcpp::Environment base("package:base");
@@ -32,6 +42,59 @@ Rcpp::NumericVector Update_status(
     return status_ti;
 };
 
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+Rcpp::IntegerVector Get_status_t(
+    Rcpp::DataFrame global_status,
+    int t
+) {
+    Rcpp::IntegerVector t_inf = global_status["t_inf"];
+    Rcpp::IntegerVector t_recover = global_status["t_recover"];
+    Rcpp::IntegerVector status_t (t_inf.size()) ;
+    for(int j = 0; j < t_inf.size(); j++){
+        if (t_inf[j] != -1 && t >= t_inf[j] && t <= t_recover[j]){
+            status_t[j] = 1;
+        } else if (t_inf[j] != -1 && t > t_recover[j]){
+            status_t[j] = 2;
+        } else{
+            status_t[j] = 0;
+        }
+    }
+
+    return status_t;
+};
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+Rcpp::DataFrame Update_status_bis(
+    Rcpp::DataFrame global_status,
+    Rcpp::DataFrame lambda_ti,
+    int t
+) {
+    Rcpp::NumericVector lambda_c = lambda_ti["lambda_c"];
+    Rcpp::NumericVector lambda_e = lambda_ti["lambda_c"];
+    Rcpp::IntegerVector status_tim1 = Get_status_t(global_status, t);
+    Rcpp::IntegerVector t_inf_tim1 = global_status["t_inf"];
+    Rcpp::IntegerVector t_recover_tim1 = global_status["t_recover"];
+    
+    Rcpp::DataFrame global_status_updated = clone(global_status);
+    Rcpp::IntegerVector t_inf_ti = clone(t_inf_tim1);
+    Rcpp::IntegerVector t_recover_ti = clone(t_recover_tim1);
+
+    Rcpp::NumericVector FOI = (lambda_ti.nrows(), 1) - exp(- (lambda_c  + lambda_e));
+    for (int j=0; j < lambda_ti.nrows(); j++){
+        if (status_tim1[j] == 0 && R::runif(0, 1) <= FOI[j]){
+            t_inf_ti[j] = t;
+            t_recover_ti[j] = t + Incub_period_gamma();
+        }
+    };
+    global_status_updated["t_inf"] = t_inf_ti;
+    global_status_updated["t_recover"] = t_recover_ti;
+    return global_status_updated;
+};
+            
+
 //////////////////////////////////////////////
 // [[Rcpp::export]]
 Rcpp::DataFrame Get_t(
@@ -49,7 +112,7 @@ Rcpp::DataFrame Get_t(
 Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame environment_tim1,
     Rcpp::DataFrame localization_ti,
-    Rcpp::DataFrame status_tim1,
+    Rcpp::IntegerVector status_tim1,
     Rcpp::DataFrame info_patient_HCW, //(id: id of the individual, info: "0" IF PATIENT, "1" IF HCW, room: room assigned to the individual, easier for patients...) 
     const double mu,
     const double nu,
@@ -69,7 +132,6 @@ Rcpp::NumericVector Update_environment(
     Rcpp::CharacterVector ids = info_patient_HCW["id"];
     Rcpp::IntegerVector info_patient_HCW_int = info_patient_HCW["info"];
     Rcpp::IntegerVector info_patient_HCW_room = info_patient_HCW["room"];
-    Rcpp::IntegerVector status = status_tim1["status"];
     Rcpp::IntegerVector localizations = localization_ti["localization"];
     Rcpp::CharacterVector id_HCW = localization_ti["id"];
 
@@ -79,7 +141,7 @@ Rcpp::NumericVector Update_environment(
     // INFECTING INDIVIDUALS SHEDDING
     for (int j = 0; j < info_patient_HCW.nrows(); ++j) {
         // INFECTED PATIENTS SHEDDING IN THEIR ROOMS
-        if (info_patient_HCW_int[j] == 0 && status[j] == 1){
+        if (info_patient_HCW_int[j] == 0 && status_tim1[j] == 1){
             int room_j = info_patient_HCW_room[j];
             // Search for the index of the room in environment dataframe
             int index_room_j = -1;
@@ -95,7 +157,7 @@ Rcpp::NumericVector Update_environment(
         } 
 
         // INFECTED HCW SHEDDING IN THE ROOM HE WAS AT t-1
-        if (info_patient_HCW_int[j] == 1 && status[j] == 1){
+        if (info_patient_HCW_int[j] == 1 && status_tim1[j] == 1){
             // WARNING: LOCALIZATION INDEX != INDIVIDUAL INDEX ETC
             Rcpp::String id_j = ids[j];
             // Search for the room where was the HCW j at t-1
@@ -156,14 +218,13 @@ Rcpp::List List_encountered(
 Rcpp::NumericVector Lambda_c (
     Rcpp::DataFrame lambda_tim1,
     Rcpp::DataFrame interaction_ti,
-    Rcpp::DataFrame status_ti,
+    Rcpp::IntegerVector status_ti,
     const double beta,
     const double deltat
 ) {
     Rcpp::CharacterVector ids = lambda_tim1["id"];
     Rcpp::NumericVector temp_lambda_c = lambda_tim1["lambda_c"];
     Rcpp::NumericVector lambda_c_ti = clone(temp_lambda_c);
-    Rcpp::IntegerVector status = status_ti["status"];
     Rcpp::String id;
     Rcpp::List list_ind_r;
     int nb_inf_r; 
@@ -183,7 +244,7 @@ Rcpp::NumericVector Lambda_c (
                 }
             }
             // if individual r is infected & we found its index (for safety)
-            if (index_r != -1 && status[index_r] == 1) {
+            if (index_r != -1 && status_ti[index_r] == 1) {
                 nb_inf_r += 1;
             }
         }
@@ -261,9 +322,9 @@ Rcpp::NumericVector Lambda_e (
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
-int Incub_period_gamma(double shape, double scale) {
+int Incub_period_gamma() {
     // Incubation period -> Gamma distribution (shape,scale)
-    double incubation_period_seconds = R::rgamma(shape, scale);
+    double incubation_period_seconds = R::rgamma(shape_incub_g, scale_incub_g);
     int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
     
     return incubation_period_subdivisions;
@@ -271,9 +332,9 @@ int Incub_period_gamma(double shape, double scale) {
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
-int Incub_period_lognormal(double meanlog, double sdlog) {
+int Incub_period_lognormal() {
     // Incubation period -> Log-normal distribution (meanlog, sdlog)
-    double incubation_period_seconds = R::rlnorm(meanlog, sdlog);
+    double incubation_period_seconds = R::rlnorm(mIncub, sd_incub_g);
     int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
     
     return incubation_period_subdivisions;
