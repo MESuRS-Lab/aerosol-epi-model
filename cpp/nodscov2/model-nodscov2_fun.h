@@ -41,6 +41,14 @@ RcppExport Rcpp::List List_encountered(
     Rcpp::DataFrame interaction_ti
 );
 
+RcppExport Rcpp::List List_inf_encountered(
+    Rcpp::String id,
+    Rcpp::DataFrame interaction_ti,
+    Rcpp::DataFrame global_status,
+    Rcpp::DataFrame info_patient_HCW,
+    int t
+);
+
 RcppExport Rcpp::NumericVector Lambda_c (
     Rcpp::DataFrame lambda_tim1,
     Rcpp::DataFrame interaction_ti,
@@ -68,6 +76,22 @@ RcppExport Rcpp::IntegerVector Get_status_t(
     int t
 );
 
+RcppExport int Get_status_j(
+    Rcpp::String id,
+    Rcpp::DataFrame global_status,
+    Rcpp::DataFrame info_patient_HCW,
+    int t
+);
+
+RcppExport Rcpp::String Sample_inf(
+    Rcpp::String id,
+    Rcpp::List list_inf_encountered,
+    Rcpp::DataFrame info_patient_HCW,
+    Rcpp::DataFrame localization_ti,
+    double lambda_e_j,
+    double lambda_c_j
+);
+
 
 RcppExport Rcpp::NumericVector Update_status(
     Rcpp::DataFrame status_tim1,
@@ -89,4 +113,9 @@ RcppExport int Get_loc_HCW(
     Rcpp::DataFrame localization_ti
 );
 
+RcppExport int Get_loc_j(
+    Rcpp::String id,
+    Rcpp::DataFrame info_patient_HCW,
+    Rcpp::DataFrame localization_ti
+); 
 #endif

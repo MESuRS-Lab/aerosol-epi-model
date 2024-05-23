@@ -159,7 +159,7 @@ head(global_localization)
 #   return(status_t)
 # })
 # rm(status_t)
-global_status = data.frame(id = admission$id, t_inf = as.integer(-1), t_recover = as.integer(-1), inf_by = "")
+global_status = data.frame(id = admission$id, t_inf = as.integer(-1), t_recover = as.integer(-1), inf_by = "", inf_room = as.integer(-1))
 
 ```
 
@@ -217,23 +217,31 @@ sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 
 test_status <- global_status
 
-test_lambda <- global_lambda[[1]] %>% mutate(lambda_c = 1, lambda_e = 1)
-
-beta = 10
-epsilon = 5
+test_lambda <- global_lambda
+beta = 100
+epsilon = 0
 mu = 5
-nu = 10
+nu = 5
 dt = 30
 tau = 60 * 60 *24
 deltat = dt/tau
-# global_status_test <- global_status
-# global_status_test[[1]] <- global_status[[1]] %>% mutate(status = ifelse(id == "001-0038-B-S", as.integer(1), status))
-test_status <- test_status %>% mutate(t_inf = ifelse(id == "001-0038-B-S", as.integer(1), t_inf ), t_recover = ifelse(id == "001-0038-B-S", as.integer(1000), t_recover )) 
-a <- Update_status_bis(test_status, test_lambda, admission_test, global_interaction[[1]], 1)
+
+
+test_status <- test_status %>% mutate(t_inf = ifelse(id == "001-0038-B-S", as.integer(1), t_inf ),
+                                      t_recover = ifelse(id == "001-0038-B-S", as.integer(1000), t_recover ),
+                                      inf_room = ifelse(id == "001-0038-B-S", rooms[rooms$id == "001-0038-B-S", "id_room"], inf_room))
+
+
+t = 1001
+id = "001-0038-B-S"
+a <- Update_status_bis(test_status, test_lambda, admission_test, global_interaction[[2]], global_localization[[2]], t=2)
 b <- Get_status_t(a,300)
 sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
 
-loc_test <- Get_loc_HCW("001-0001-D-J",admission_test, localization_ti = global_localization[[1]])
+loc_test <- Get_loc_HCW("001-0001-D-J",admission_test, global_localization[[1]])
+Get_status_j("001-0038-B-S", test_status, admission_test, 1)
+Get_loc_j("001-0021-S-G", admission_test, global_localization[[1]])
+
 
 tsima = Sys.time()
 test <- simulation(global_interaction = global_interaction,
@@ -250,17 +258,43 @@ test <- simulation(global_interaction = global_interaction,
            )
 tsimb = Sys.time()
 print(tsimb-tsima)
+
+res_lambda = test[["global_lambda"]]
+res_status = test[["global_status"]]
 ```
+
+```{r}
+t = 659
+t_room = 11
+res_status %>% filter(inf_room == t_room)
+t_id = "001-0001-D-J"
+res_status %>% filter(id == t_id)
+sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
+
+List_inf_encountered(t_id, global_interaction[[t]], res_status, admission_test, t)
+
+test_vector = c()
+list_check = c()
+for (id_test in List_encountered(t_id, global_interaction[[t]])){
+  Get_status_j("001-0030-N-H", res_status, admission_test, t)
+  
+  }
+
+
+```
+
 ## Vizualisation
 ```{r}
-infected_over_time <- data.frame(
-  time = begin_date + 30*seq(n_subdivisions),
-  infected_count = sapply(test[["global_status"]], function(df) sum(df$status == 1))
-)
+## Number of infected over time
+counts <- sapply(1:n_subdivisions, function(t) {
+  sum(test[["global_status"]]$t_inf <= t &
+        test[["global_status"]]$t_recover >= t &
+        test[["global_status"]]$t_inf != -1)
+})
 
+infected_over_time <- data.frame(time = 1:n_subdivisions, infected_count = counts)
 
-
-ggplot(infected_over_time, aes(x = time, y = infected_count)) +
+ggplot(infected_over_time, aes(x = time * 30 + begin_date, y = infected_count)) +
   geom_line(color = "blue") +
   labs(title = "Number of Infected Individuals Over Time",
        x = "Time",
@@ -287,13 +321,6 @@ ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))
   theme_bw() +
   theme(axis.text.x=element_text(angle=45, hjust=1))
 ```
-
-
-
-
-
-
-
 
 
 ## FOI
