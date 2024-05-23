@@ -219,7 +219,7 @@ test_status <- global_status
 
 test_lambda <- global_lambda
 beta = 100
-epsilon =100
+epsilon = 100
 mu = 5
 nu = 5
 dt = 30
@@ -263,25 +263,6 @@ res_lambda = test[["global_lambda"]]
 res_status = test[["global_status"]]
 ```
 
-```{r}
-t = 659
-t_room = 11
-res_status %>% filter(inf_room == t_room)
-t_id = "001-0001-D-J"
-res_status %>% filter(id == t_id)
-sourceCpp(file.path(cpp_model_path,"model_nodscov2.cpp"))
-
-List_inf_encountered(t_id, global_interaction[[t]], res_status, admission_test, t)
-
-test_vector = c()
-list_check = c()
-for (id_test in List_encountered(t_id, global_interaction[[t]])){
-  Get_status_j("001-0030-N-H", res_status, admission_test, t)
-  
-  }
-
-
-```
 
 ## Vizualisation
 ```{r}
@@ -335,8 +316,6 @@ FOI_over_time <- do.call(rbind, lapply(1:length(test[["global_lambda"]]), functi
              lambda_c = test[["global_lambda"]][[t]]$lambda_c,
              status = ifelse(test[["global_lambda"]][[t]]$id %in% hcw_id, "PE", "PA"))
 }))
-FOI_over_time <- FOI_over_time %>% mutate(p_inf = 1 - exp(-lambda_e - lambda_c))
-
 
 ggplot(FOI_over_time, aes(x = time)) +
   geom_line(aes(y = lambda_e, colour = "lambda_e (environment)" ), alpha = 0.5) +
@@ -352,6 +331,8 @@ ggplot(FOI_over_time, aes(x = time)) +
 
 
 ```{r}
+FOI_over_time <- FOI_over_time %>% mutate(p_inf = 1 - exp(-lambda_e - lambda_c))
+
 ggplot(FOI_over_time, aes(x = time)) +
   geom_line(aes(y = lambda_e, colour = "P_inf" )) +
   labs(title = "Probability of infection Over Time",
