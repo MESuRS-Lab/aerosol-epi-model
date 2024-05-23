@@ -219,7 +219,7 @@ test_status <- global_status
 
 test_lambda <- global_lambda
 beta = 100
-epsilon = 0
+epsilon =100
 mu = 5
 nu = 5
 dt = 30

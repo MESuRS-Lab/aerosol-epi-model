@@ -101,9 +101,10 @@ Rcpp::String Sample_inf(
 ) {
     if (lambda_e_j == 0){ // NO ENV --> CONTACT
         int n_ind = list_inf_encountered.size();
-        double FOI_j =  1 - exp(-lambda_c_j);
+        double FOI_j = 1 - exp(-lambda_c_j);
         double ind_weight = (1 - exp(-lambda_c_j)) / (n_ind * FOI_j);
-        Rcpp::NumericVector weights(ind_weight, n_ind);
+        
+        Rcpp::NumericVector weights(n_ind, ind_weight);  // Initialize with ind_weight, CAUTION, R its rep(1,3) but cpp its v(3,1)
 
         Rcpp::CharacterVector elements(n_ind);
         for (int i = 0; i < elements.size(); i++) { //
@@ -125,63 +126,40 @@ Rcpp::String Sample_inf(
         return res;
 
     } else { // CONTACT AND ENV
-        Rcpp::String res("WIP");
-        return (res);
+        int n_ind = list_inf_encountered.size(); 
+        double FOI_j = 1 - exp(-lambda_c_j -lambda_e_j);
+        double ind_weight = (1 - exp(-lambda_c_j)) / (n_ind * FOI_j); // lambda_c !=0 so n_ind!=0
+        double env_weight = (1 - exp(-lambda_e_j))/ FOI_j;
+        // WEIGHTS VECTOR
+        Rcpp::NumericVector weights(n_ind, ind_weight);  // Initialize with ind_weight, CAUTION, R its rep(1,3) but cpp its v(3,1)
+        weights.push_front(env_weight); //WEIGHT FOR ENVIRONMENT
+        
+        // ELEMENTS VECTOR
+        Rcpp::CharacterVector elements(n_ind);
+        for (int i = 0; i < elements.size(); i++) { //
+            Rcpp::String id_patient_i = list_inf_encountered[i];
+            elements[i] = id_patient_i;
+        }
+        Rcpp::String env_string("ENVIRONMENT-");
+        elements.push_front(env_string);
+
+        // SAMPLE
+        Rcpp::String sampled = Rcpp::sample(elements, 1, true, weights)[0];
+        
+        // RETURN THE CAUSE OF INFECTION
+        if (sampled == env_string){ // IF ENVIRONMENT
+            int room_j = Get_loc_j(id, info_patient_HCW, localization_ti);
+            Rcpp::String room_string = std::to_string(room_j);
+            Rcpp::String res(env_string);
+            res += room_string; 
+            return res;
+
+        } else { // IF CLOSE CONTACT
+            Rcpp::String res("CONTACT-");
+            res += sampled; // "sampled" is the id of the individual we've sampled
+            return res;
+        };
     }
-    
-    
-    
-    
-    
-    
-    // int n_ind = list_inf_encountered.size();
-    // if (n_ind == 0){
-    //     return Rcpp::String("PB");
-    // // } else if ( lambda_e_j == 0){
-    // //     double FOI_j =  1 - exp(-(lambda_c_j + lambda_e_j));
-    // //     double ind_weight = (1 - exp(-lambda_c_j)) / (n_ind * FOI_j);
-    // } else {
-        
-    //     double FOI_j =  1 - exp(-(lambda_c_j + lambda_e_j));
-    //     double env_weight = (1 - exp(-lambda_e_j))/ FOI_j;
-    //     double ind_weight = (1 - exp(-lambda_c_j)) / (n_ind * FOI_j);
-        
-    //     // WEIGHTS VECTOR
-        
-    //     Rcpp::NumericVector weights(ind_weight, n_ind); // ALL INDIVIDUAL HAVE THE SAME PROB WHEN CONTACT
-    //     weights.push_front(env_weight); //WEIGHT FOR ENVIRONMENT
-
-    //     // ELEMENTS VECTOR
-    //     Rcpp::CharacterVector elements(n_ind);
-    //     for (int i = 0; i < elements.size(); i++) { //
-    //         Rcpp::String id_patient_i = list_inf_encountered[i];
-    //         elements[i] = id_patient_i;
-    //     }
-    //     Rcpp::String env_string("ENVIRONMENT-");
-    //     elements.push_front(env_string);
-
-    //     // SAMPLE
-    //     Rcpp::String sampled = Rcpp::sample(elements, 1, true, weights)[0];
-
-    //     // RETURN THE CAUSE OF INFECTION
-        
-    //     if (sampled == env_string){
-    //         int room_j = Get_loc_j(id, info_patient_HCW, localization_ti);
-    //         Rcpp::String room_string = std::to_string(room_j);
-    //         Rcpp::String res(env_string);
-    //         res += room_string; 
-    //         return res;
-
-    //     } else {
-    //         Rcpp::String res("CONTACT-");
-    //         res += sampled; // "sampled" is the id of the individual we've sampled
-    //         return res;
-    //     };
-    // }
-
-    
-    
-
 };
 
 //////////////////////////////////////////////
@@ -234,16 +212,11 @@ Rcpp::DataFrame Update_status_bis(
             // CAUSE OF INFECTION
             Rcpp::String id_j = ids[j];
             Rcpp::List list_inf_encountered = List_inf_encountered(id_j, interactions_ti, global_status, info_patient_HCW, t);
-            int n_ind = list_inf_encountered.size();
             double lambda_e_j = lambda_e[j];
             double lambda_c_j = lambda_c[j];
-            cout << "HERE " << t << "id " << id_j.get_cstring() << endl;
-            cout << " LAMBDA_E = " << lambda_e_j << " LAMBDA_C = " << lambda_c_j << endl;
             Rcpp::String sampled_j = Sample_inf(ids[j], list_inf_encountered, info_patient_HCW, localization_ti, lambda_e_j, lambda_c_j);
             inf_by_ti[j] = sampled_j;
-            cout <<"time " << t << " id " << ids[j] << " FOI = " << FOI[j] <<  " lambda_e = " << lambda_e[j] << " lambda_c = "<< lambda_c[j] << endl;
-            cout <<"time " << t << " id " << ids[j] << " size list inf " << n_ind <<  " sampled " << sampled_j.get_cstring() << endl;
-        }
+            }
     };
     global_status_updated["t_inf"] = t_inf_ti;
     global_status_updated["t_recover"] = t_recover_ti;
