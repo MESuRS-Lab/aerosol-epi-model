@@ -213,7 +213,6 @@ admission_test$room <- as.integer(admission_test$room)
 
 
 ```{r}
-#load("~/CNAM-PASTEUR-FIXE/projet-pacri/test-model.RData")
 sourceCpp(file.path(cpp_model_path,"model-nodscov2.cpp"))
 
 ## PARAMETERS

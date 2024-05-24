@@ -15,11 +15,9 @@ library(lubridate)
 ```{r}
 wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
-
-data_path <- file.path(wd,"..", "..", "data")
-nodscov2_path <- file.path(data_path, "data-nodscov2")
 cpp_path <-  file.path(wd,"..", "..", "cpp")
 cpp_model_path <- file.path(cpp_path,"nodscov2")
+sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
 ```
 
 ```{r}
@@ -31,9 +29,9 @@ load(file.path(sim_nodscov2_path, paste0(id_sim, "-", "simulation-nodscov2.RData
 ```{r}
 ## Number of infected over time
 counts <- sapply(1:n_subdivisions, function(t) {
-  sum(test[["global_status"]]$t_inf <= t &
-        test[["global_status"]]$t_recover >= t &
-        test[["global_status"]]$t_inf != -1)
+  sum(data_sim[["global_status"]]$t_inf <= t &
+        data_sim[["global_status"]]$t_recover >= t &
+        data_sim[["global_status"]]$t_inf != -1)
 })
 
 infected_over_time <- data.frame(time = 1:n_subdivisions, infected_count = counts)
@@ -50,10 +48,10 @@ ggplot(infected_over_time, aes(x = time * 30 + begin_date, y = infected_count)) 
 
 ## Viral load
 ```{r}
-viral_load_over_time <- do.call(rbind, lapply(1:length(test[["global_environment"]]), function(t) {
+viral_load_over_time <- do.call(rbind, lapply(1:length(data_sim[["global_environment"]]), function(t) {
   data.frame(time = begin_date + 30 * t,
-             room = test[["global_environment"]][[t]]$room,
-             viral_load = test[["global_environment"]][[t]]$env)
+             room = data_sim[["global_environment"]][[t]]$room,
+             viral_load = data_sim[["global_environment"]][[t]]$env)
 }))
 
 ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))) +
@@ -72,12 +70,12 @@ ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))
 hcw_id <- admission %>% filter(status == "PE") %>% pull(id)
 
 
-FOI_over_time <- do.call(rbind, lapply(1:length(test[["global_lambda"]]), function(t) {
+FOI_over_time <- do.call(rbind, lapply(1:length(data_sim[["global_lambda"]]), function(t) {
   data.frame(time = begin_date + 30 * t,
-             id = test[["global_lambda"]][[t]]$id,
-             lambda_e = test[["global_lambda"]][[t]]$lambda_e,
-             lambda_c = test[["global_lambda"]][[t]]$lambda_c,
-             status = ifelse(test[["global_lambda"]][[t]]$id %in% hcw_id, "PE", "PA"))
+             id = data_sim[["global_lambda"]][[t]]$id,
+             lambda_e = data_sim[["global_lambda"]][[t]]$lambda_e,
+             lambda_c = data_sim[["global_lambda"]][[t]]$lambda_c,
+             status = ifelse(data_sim[["global_lambda"]][[t]]$id %in% hcw_id, "PE", "PA"))
 }))
 
 ggplot(FOI_over_time, aes(x = time)) +
@@ -147,20 +145,15 @@ for (t in 1:length(test_global_int)) {
     test_global_int[[t]]$localization[j] <- localization
   }
 }
-## OK
-loc_reel <- global_localization[[100]] %>% filter(localization != -1) %>% filter(id %in% test_global_int[[100]]$from | id %in% test_global_int[[100]]$to )
-int_test <- test_global_int[[100]]
-
-
 ```
 
 
 ## INFECTION CHAIN
 ```{r}
 library(epicontacts)
-
+id_index <- data_sim[["global_status"]] %>% filter(inf_by == "INDEX") %>% pull(id)
 ## linelist object
-linelist <- left_join(admission_test, res_status, by = join_by(id))
+linelist <- left_join(admission_sim, data_sim[["global_status"]], by = join_by(id))
 linelist <- linelist %>%
   mutate(type = ifelse(info == 0, "PATIENT", "HEALTHCARE WORKER")) %>%
   mutate(type = ifelse(id == id_index, "INDEX", type)) 
@@ -173,14 +166,14 @@ linelist <- bind_rows(linelist,env_linelist)
 
 
 ## contacts object
-environmental_contacts <- res_status %>%
+environmental_contacts <- data_sim[["global_status"]] %>%
   filter(grepl("ENVIRONMENT", inf_by)) %>%
   mutate(from = inf_by, to = id, time = t_inf) %>%
   mutate(cause = "ENVIRONMENT") %>% 
   select(from, to, t_inf, t_recover, inf_by, cause)
 
 
-close_contacts <- res_status %>%
+close_contacts <- data_sim[["global_status"]] %>%
   filter(grepl("CONTACT", inf_by)) %>%
   mutate(from = gsub("CONTACT-", "", inf_by), to = id, time = t_inf) %>%
   mutate(cause = "CONTACT") %>% 

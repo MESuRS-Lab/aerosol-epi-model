@@ -20,14 +20,15 @@ knitr::opts_chunk$set(root.dir = wd)
 
 data_path <- file.path(wd,"..", "..", "data")
 nodscov2_path <- file.path(data_path, "data-nodscov2") 
+loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
 ```
 
 ### WIP 
 
 ## NodsCov2 data (not shared)
 ```{r}
-load("Y:/ogaufres/projet-pacri/data/data-nodscov2/admission_ctc_nodscov2.RData")
-load("Y:/ogaufres/projet-pacri/data/data-nodscov2/list_ward.RData")
+load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/admission_ctc_nodscov2.RData")
+load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/list_ward.RData")
 ```
 
 
@@ -70,7 +71,7 @@ time_spent <- end_date - begin_date
 n_subdivisions <- as.integer(time_spent) * 24 * 60 * 2 ## Time spent * hours * minutes * 2 (number of time subdivisions)
 
 
-data_list <- lapply(1:n_subdivisions, function(t){
+global_interaction <- lapply(1:n_subdivisions, function(t){
   interactions_t <- data %>%
     filter(date_posix_first <= begin_date + (t)*30 & date_posix_first + length >= begin_date + (t+1)*30) %>%
     mutate(time = t) %>%
@@ -81,7 +82,7 @@ data_list <- lapply(1:n_subdivisions, function(t){
 
 
 ## Expand to a single DF + write to csv file
-#data_tot <- do.call(rbind, data_list)
+#data_tot <- do.call(rbind, global_interaction)
 #write.csv2(x = data_tot, file = file.path(nodscov2_path, "int_tot_RP_test.csv"), row.names = FALSE)
 
 ## TO READ IT
@@ -131,7 +132,7 @@ double_rooms <- list(c("001-0038-B-S", "001-0039-B-F"), c("001-0127-B-A", "001-0
 
 ## INTERACTION localization
 ```{r}
-data_list <- lapply(data_list, function(df) {
+global_interaction <- lapply(global_interaction, function(df) {
   df <- df %>% mutate(localization = NA)
   
   # Join data_tot with rooms based on the common column (id) for 'from'
@@ -160,13 +161,13 @@ data_list <- lapply(data_list, function(df) {
 ## etc etc
 
 
-#data_tot <- do.call(rbind, data_list)
+#data_tot <- do.call(rbind, global_interaction)
 ```
 
 
 ## INTERACTION CLUSTERS FOR EACH TIME t
 ```{r}
-clusters <- lapply(data_list, function(df) {
+clusters <- lapply(global_interaction, function(df) {
   # non oriented graph based on interaction happening at time t
   graph <- graph_from_data_frame(df, directed = FALSE)
   # Extract connected component
@@ -184,7 +185,7 @@ clusters <- lapply(data_list, function(df) {
 ## localization INFERENCE - inferred ADMISSIONS & HCW NOT PRESENT DURING THE WHOLE STUDY - TEMPORARY (assign first_time and last_time for individual --> TO KNOW WHEN THEY LEAVE)
 ```{r}
 HCW_ids <- admission$id[admission$status == "PE"]
-data_tot <- do.call(rbind,data_list)
+data_tot <- do.call(rbind,global_interaction)
 ## FOR PE-PA INTERACTIONS
 a = data_tot %>%
   filter(!(from_status == "PA" & to_status == "PA") & !(from_status == "PE" & to_status == "PE")) %>%
@@ -263,7 +264,7 @@ global_localization <- lapply(1:n_subdivisions, function(t) {
   localization_t <- data.frame(id = HCW_interacting_ids, localization = NA, time = t)
 
   # Interactions at time t
-  interactions_t <- data_list[[t]]
+  interactions_t <- global_interaction[[t]]
   clusters_t <- clusters[[t]]
   # For each clusters of individuals at time t
   lapply(clusters_t, function(cluster) {
@@ -447,7 +448,7 @@ print(tb_no_int - ta_no_int)
 ## TEMPORARY
 #SAVE TO .RData FILES
 ```{r}
-save(clusters, global_localization, inferred_admission, rooms, data_list, admission, HCW_interacting_ids, n_subdivisions, begin_date, end_date, file = "localization-nodscov2.RData")
+save(clusters, global_localization, inferred_admission, rooms, global_interaction, admission, HCW_interacting_ids, n_subdivisions, begin_date, end_date, file = file.path(loc_nodscov2_path, "localization-nodscov2.RData"))
 ```
 
 

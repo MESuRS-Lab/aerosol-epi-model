@@ -8,21 +8,17 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
-#library(ggplot2)
-#library(lubridate)
 library(Rcpp)
-#library(RcppParallel)
 ```
 
 ```{r}
 wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
 
-data_path <- file.path(wd,"..", "..", "data")
-nodscov2_path <- file.path(data_path, "data-nodscov2")
 cpp_path <-  file.path(wd,"..", "..", "cpp")
 cpp_model_path <- file.path(cpp_path,"nodscov2")
 sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
+loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
 ```
 
 ## NodsCov2 data (not shared)
@@ -30,7 +26,7 @@ sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
 args = commandArgs(trailingOnly=TRUE)
 #load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/admission_ctc_nodscov2.RData")
 #load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/list_ward.RData")
-load(file.path(wd,"localization-nodscov2.RData")) ##overwrite admission
+load(file.path(loc_nodscov2_path,"localization-nodscov2.RData")) ##overwrite admission
 ```
 
 ## ADMISSION
@@ -48,12 +44,12 @@ admission_sim$room <- as.integer(admission_sim$room)
 
 ## ROOMS
 ```{r}
-head(rooms)
+#head(rooms)
 ```
 
 ## INTERACTIONS
 ```{r}
-global_interaction <- data_list
+#head(global_interaction)
 ```
 
 ## LOCALIZATIONS
@@ -64,7 +60,6 @@ global_localization <- lapply( 1:n_subdivisions, function(t){
   loc_t$localization <- as.integer(loc_t$localization)
   return(loc_t)
 })
-head(global_localization)
 ```
 
 ## ENVIRONMENT
@@ -150,6 +145,8 @@ id_sim <- ifelse(length(args)==0, "01", args[1])
 save(global_interaction,
      global_localization,
      admission,
+     admission_sim,
+     rooms,
      beta,
      nu,
      mu,
@@ -158,6 +155,7 @@ save(global_interaction,
      begin_date,
      end_date,
      data_sim,
+     clusters,
      file = file.path(sim_nodscov2_path, paste0(id_sim, "-", "simulation-nodscov2.RData"))
      )
 ```
