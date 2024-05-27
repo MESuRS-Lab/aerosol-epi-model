@@ -205,17 +205,11 @@ Rcpp::DataFrame Update_status_bis(
 
     for (int j=0; j < lambda_ti.nrows(); j++){
         if (status_tim1[j] == 0 && R::runif(0, 1) <= FOI[j]){
-            int room_j = -1;
             t_inf_ti[j] = (t+1); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
             t_recover_ti[j] = (t+1) + Incub_period_gamma(); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
 
             // ROOM WHERE j IS INFECTED //
-            if (admission_int[j] == 0){
-                room_j= admission_room[j];
-            } else if (admission_int[j] == 1){
-                room_j = Get_loc_HCW(ids[j], admission, localization_ti);
-            }
-             inf_room_ti[j] = room_j;
+            inf_room_ti[j] = Get_loc_j(ids[j], admission, localization_ti);
             
             // CAUSE OF INFECTION
             Rcpp::String id_j = ids[j];

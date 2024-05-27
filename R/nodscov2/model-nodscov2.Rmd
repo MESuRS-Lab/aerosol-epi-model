@@ -156,4 +156,19 @@ save(global_interaction,
 ```
 
 
+## WIP ##
+## endless day
+
+```{r}
+end_date - begin_date ##end of last interaction
+## we take 24h
+new_begin_date <- begin_date + 5*60*60
+new_end_date <- new_begin_date + 24*60*60
+new_end_date - new_begin_date
+t_begin <- 5*60*2
+t_end <- t_begin + 24*60*2
+
+truncated_interaction <- global_interaction[(u <- seq_along(global_interaction)) %in% t_begin:(t_end)]
+
+```
 
