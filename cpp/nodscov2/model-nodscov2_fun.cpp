@@ -5,20 +5,20 @@
 using namespace std;
 
 // [[Rcpp::plugins(cpp11)]]
-double mIncub = 1.63 * 24*60*2;
-double sdIncub = 0.5 * 24*60*2;
+double mIncub = (1.63 * 24*60*2)*3;
+double sdIncub = (0.5 * 24*60*2)*3;
 
-double m_incub_g = 4.07 * 24*60*2;
-double sd_incub_g = 2.12 * 24*60*2;
+double m_incub_g = (4.07 * 24*60*2)*3;
+double sd_incub_g = (2.12 * 24*60*2)*3;
 double shape_incub_g = pow(m_incub_g,2) / pow(sd_incub_g, 2);
 double scale_incub_g = pow(sd_incub_g,2) / m_incub_g;
 
 
-double mInf = 1.63 * 24*60*2;
-double sdInf = 0.5 * 24*60*2;
+double mInf = (1.63 * 24*60*2)*3;
+double sdInf = (0.5 * 24*60*2)*3;
 
-double m_inf_g = 4.07 * 24*60*2;
-double sd_inf_g = 2.12 * 24*60*2;
+double m_inf_g = (4.07 * 24*60*2)*3;
+double sd_inf_g = (2.12 * 24*60*2)*3;
 double shape_inf_g = pow(m_inf_g,2) / pow(sd_inf_g, 2);
 double scale_inf_g = pow(sd_inf_g,2) / m_inf_g;
 

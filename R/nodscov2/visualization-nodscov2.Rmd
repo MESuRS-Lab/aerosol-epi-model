@@ -22,8 +22,22 @@ sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
 
 ```{r}
 id_sim <- "01"
-load(file.path(sim_nodscov2_path, paste0(id_sim, "-", "simulation-nodscov2.RData")))
 ```
+## TEST
+```{r}
+id_sim <- "test-endless-day"
+load(file.path(sim_nodscov2_path, paste0(id_sim, "-", "simulation-nodscov2.RData")))
+data_sim <- data_sim_test
+rm(data_sim_test)
+
+global_interaction <- rep(truncated_interaction, n_days)
+global_localization <- rep(truncated_localization, n_days)
+n_subdivisions <- new_n_subdivisions
+begin_date <- new_begin_date
+end_date <- new_end_date + days(n_days)
+```
+
+
 
 ## Vizualisation
 ```{r}

@@ -100,8 +100,8 @@ sourceCpp(file.path(cpp_model_path,"model-nodscov2.cpp"))
 
 ## PARAMETERS
 ```{r}
-beta <- 200
-epsilon <- 50
+beta <- 10
+epsilon <- 10
 mu <- 5
 nu <- 5
 dt <- 30
@@ -166,9 +166,66 @@ new_begin_date <- begin_date + 5*60*60
 new_end_date <- new_begin_date + 24*60*60
 new_end_date - new_begin_date
 t_begin <- 5*60*2
-t_end <- t_begin + 24*60*2
+t_end <- (t_begin + 24*60*2) - 1
+```
 
+
+```{r}
 truncated_interaction <- global_interaction[(u <- seq_along(global_interaction)) %in% t_begin:(t_end)]
+truncated_localization <- global_localization[(u <- seq_along(global_localization)) %in% t_begin:(t_end)]
+truncated_lambda <- global_lambda[(u <- seq_along(global_lambda)) %in% t_begin:(t_end)]
+truncated_environment <- global_environment[(u <- seq_along(global_environment)) %in% t_begin:(t_end)]
+truncated_status <- status
 
+n_days <- 7
+test_interaction <- rep(truncated_interaction, n_days)
+test_localization <- rep(truncated_localization, n_days)
+test_lambda <- rep(truncated_lambda, n_days)
+test_environment <- rep(truncated_environment, n_days)
+test_status <- truncated_status
+
+new_n_subdivisions <- (t_end-t_begin +1)*n_days
+```
+
+```{r}
+ta <- Sys.time()
+data_sim_test <- simulation(global_interaction = test_interaction,
+           global_localization = test_localization,
+           global_environment = test_environment,
+           global_lambda = test_lambda,
+           global_status = test_status,
+           admission = admission_sim,
+           beta = beta,
+           epsilon = epsilon,
+           nu = nu,
+           mu = mu,
+           dt = dt
+           )
+tb <- Sys.time()
+print(tb-ta)
+```
+
+
+
+```{r}
+id_sim <- ifelse(length(args)==0, "test-endless-day", args[1])
+
+save(truncated_interaction,
+     truncated_localization,
+     admission,
+     admission_sim,
+     rooms,
+     beta,
+     nu,
+     mu,
+     dt,
+     new_n_subdivisions,
+     n_days,
+     new_begin_date,
+     new_end_date,
+     data_sim_test,
+     clusters,
+     file = file.path(sim_nodscov2_path, paste0(id_sim, "-", "simulation-nodscov2.RData"))
+     )
 ```
 
