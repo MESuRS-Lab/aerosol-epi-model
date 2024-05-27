@@ -60,10 +60,11 @@ Rcpp::IntegerVector Get_status_t(
     Rcpp::IntegerVector t_inf = global_status["t_inf"];
     Rcpp::IntegerVector t_recover = global_status["t_recover"];
     Rcpp::IntegerVector status_t (t_inf.size()) ;
+    
     for(int j = 0; j < t_inf.size(); j++){
-        if (t_inf[j] != -1 && t >= t_inf[j] && t <= t_recover[j]){
+        if (t_inf[j] != -1 && (t+1) >= t_inf[j] && (t+1) <= t_recover[j]){ //cpp index begins at 0 & R's at 1, we chose to use R's index for time
             status_t[j] = 1;
-        } else if (t_inf[j] != -1 && t > t_recover[j]){
+        } else if (t_inf[j] != -1 && (t+1) > t_recover[j]){
             status_t[j] = 2;
         } else{
             status_t[j] = 0;
@@ -205,8 +206,8 @@ Rcpp::DataFrame Update_status_bis(
     for (int j=0; j < lambda_ti.nrows(); j++){
         if (status_tim1[j] == 0 && R::runif(0, 1) <= FOI[j]){
             int room_j = -1;
-            t_inf_ti[j] = t-1; // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
-            t_recover_ti[j] = (t-1) + Incub_period_gamma(); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
+            t_inf_ti[j] = (t+1); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
+            t_recover_ti[j] = (t+1) + Incub_period_gamma(); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
 
             // ROOM WHERE j IS INFECTED //
             if (admission_int[j] == 0){

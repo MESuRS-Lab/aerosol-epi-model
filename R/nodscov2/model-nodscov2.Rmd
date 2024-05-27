@@ -54,12 +54,7 @@ admission_sim$room <- as.integer(admission_sim$room)
 
 ## LOCALIZATIONS
 ```{r}
-global_localization <- lapply( 1:n_subdivisions, function(t){
-  loc_t <- global_localization[[t]]
-  loc_t <- loc_t %>% mutate(localization = ifelse(localization == "NOT HERE", -1, localization))
-  loc_t$localization <- as.integer(loc_t$localization)
-  return(loc_t)
-})
+#head(global_localization)
 ```
 
 ## ENVIRONMENT

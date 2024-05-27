@@ -27,7 +27,7 @@ Rcpp::List simulation(
     double deltat = dt/(tau);
 
     Rcpp::DataFrame environment_ti = Get_t(global_environment, 0);
-    Rcpp::DataFrame environment_tim1;
+    Rcpp::DataFrame environment_tim1 = Get_t(global_environment, 0);
     
     Rcpp::IntegerVector status_ti =  Get_status_t(global_status, 0);
     Rcpp::IntegerVector status_tim1;
@@ -41,15 +41,18 @@ Rcpp::List simulation(
     
     Rcpp::DataFrame localization_ti = Get_t(global_localization, 0);
     Rcpp::DataFrame localization_tim1;
-
-    // Shedding of the index patient
-    environment_ti["env"] = Update_environment(environment_ti, localization_ti , status_ti, admission, mu, nu, deltat);
-    global_environment[0] = environment_ti;
-    // update status for time t == 0?
     
-    ////////////////
-    // SIMULATION //
-    ////////////////
+    ///////////////
+    // R's t = 1 //
+    ///////////////
+    // Shedding of the index patient
+    environment_ti["env"] = Update_environment(environment_tim1, localization_ti , status_ti, admission, mu, nu, deltat);
+    global_environment[0] = environment_ti;
+    // update status for time t = 1?
+    
+    //////////////////////////
+    // SIMULATION (R's t>1) //
+    //////////////////////////
     int sim_size = global_interaction.size();
     for (int t = 1; t < sim_size; t++){
         interaction_ti = Get_t(global_interaction, t);
@@ -77,11 +80,7 @@ Rcpp::List simulation(
         ///////////////////////
         Rcpp::DataFrame temp = Update_status_bis(global_status, lambda_ti,admission, interaction_ti, localization_ti, t);
         global_status = clone(temp);
-
     }
-
-
-
 
     Rcpp::List res = Rcpp::List::create(_["global_status"] = global_status, _["global_lambda"] = global_lambda, _["global_environment"] = global_environment);
     return res;    
