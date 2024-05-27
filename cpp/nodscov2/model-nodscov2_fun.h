@@ -6,8 +6,8 @@
 
 using namespace Rcpp;
 
-extern double beta;
-extern double epsilon;
+// extern double beta;
+// extern double epsilon;
 // extern double nu;
 // extern double mu;
 // extern double tau;
@@ -20,10 +20,23 @@ extern double sd_incub_g;
 extern double shape_incub_g;
 extern double scale_incub_g;
 
+extern double mInf;
+extern double sdInf;
+extern double m_inf_g;
+extern double sd_inf_g;
+extern double shape_inf_g;
+extern double scale_inf_g;
+
 
 RcppExport int Incub_period_gamma();
 
 RcppExport int Incub_period_lognormal();
+
+RcppExport int Inf_period_gamma();
+
+RcppExport int Inf_period_lognormal();
+
+    
 
 RcppExport Rcpp::NumericVector Update_environment(
     Rcpp::DataFrame environment_tim1,

@@ -14,6 +14,13 @@ double shape_incub_g = pow(m_incub_g,2) / pow(sd_incub_g, 2);
 double scale_incub_g = pow(sd_incub_g,2) / m_incub_g;
 
 
+double mInf = 1.63 * 24*60*2;
+double sdInf = 0.5 * 24*60*2;
+
+double m_inf_g = 4.07 * 24*60*2;
+double sd_inf_g = 2.12 * 24*60*2;
+double shape_inf_g = pow(m_inf_g,2) / pow(sd_inf_g, 2);
+double scale_inf_g = pow(sd_inf_g,2) / m_inf_g;
 
 
 // R UNIQUE(X) FUNCTION
@@ -493,6 +500,26 @@ int Incub_period_lognormal() {
     int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
     
     return incubation_period_subdivisions;
+};
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+int Inf_period_gamma() {
+    // Infection period -> Gamma distribution (shape,scale)
+    double infection_period_seconds = R::rgamma(shape_inf_g, scale_inf_g);
+    int infection_period_subdivisions = static_cast<int>(infection_period_seconds / 30.0);
+    
+    return infection_period_subdivisions;
+};
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+int Inf_period_lognormal() {
+    // Infection period -> Log-normal distribution (meanlog, sdlog)
+    double infection_period_seconds = R::rlnorm(mInf, sd_inf_g);
+    int infection_period_subdivisions = static_cast<int>(infection_period_seconds / 30.0);
+    
+    return infection_period_subdivisions;
 };
 
 //////////////////////////////////////////////
