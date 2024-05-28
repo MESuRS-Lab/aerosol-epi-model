@@ -5,20 +5,21 @@
 using namespace std;
 
 // [[Rcpp::plugins(cpp11)]]
-double mIncub = (1.63 * 24*60*2)*3;
-double sdIncub = (0.5 * 24*60*2)*3;
+int z = 10;
+double mIncub = (1.63 * 24*60*2)*z;
+double sdIncub = (0.5 * 24*60*2)*z;
 
-double m_incub_g = (4.07 * 24*60*2)*3;
-double sd_incub_g = (2.12 * 24*60*2)*3;
+double m_incub_g = (4.07 * 24*60*2)*z;
+double sd_incub_g = (2.12 * 24*60*2)*z;
 double shape_incub_g = pow(m_incub_g,2) / pow(sd_incub_g, 2);
 double scale_incub_g = pow(sd_incub_g,2) / m_incub_g;
 
 
-double mInf = (1.63 * 24*60*2)*3;
-double sdInf = (0.5 * 24*60*2)*3;
+double mInf = (1.63 * 24*60*2)*z;
+double sdInf = (0.5 * 24*60*2)*z;
 
-double m_inf_g = (4.07 * 24*60*2)*3;
-double sd_inf_g = (2.12 * 24*60*2)*3;
+double m_inf_g = (4.07 * 24*60*2)*z;
+double sd_inf_g = (2.12 * 24*60*2)*z;
 double shape_inf_g = pow(m_inf_g,2) / pow(sd_inf_g, 2);
 double scale_inf_g = pow(sd_inf_g,2) / m_inf_g;
 
@@ -27,28 +28,6 @@ double scale_inf_g = pow(sd_inf_g,2) / m_inf_g;
 Rcpp::Environment base("package:base");
 Function do_unique = base["unique"];
 Function do_sample = base["sample"];
-
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-Rcpp::NumericVector Update_status(
-    Rcpp::DataFrame status_tim1,
-    Rcpp::DataFrame lambda_ti
-) {
-    Rcpp::NumericVector status_prev = status_tim1["status"];
-    Rcpp::NumericVector lambda_c = lambda_ti["lambda_c"];
-    Rcpp::NumericVector lambda_e = lambda_ti["lambda_c"];
-    Rcpp::NumericVector status_ti = clone(status_prev);
-
-
-    Rcpp::NumericVector FOI = (lambda_ti.nrows(), 1) - exp(- (lambda_c  + lambda_e));
-    for (int j=0; j < lambda_ti.nrows(); j++){
-        if (status_prev[j] == 0 && R::runif(0, 1) <= FOI[j]){
-            status_ti[j] = 1;
-        }
-    };
-
-    return status_ti;
-};
 
 
 //////////////////////////////////////////////
@@ -84,14 +63,24 @@ int Get_status_j(
 ) {
     int status_j = -1; // if returns -1 --> error (id not in admission)
     Rcpp::CharacterVector ids = admission["id"];
-    Rcpp::IntegerVector status = Get_status_t(global_status,t);
+    Rcpp::IntegerVector t_inf = global_status["t_inf"];
+    Rcpp::IntegerVector t_recover = global_status["t_recover"];
     int index_j = -1;
     for (int k = 0; k < admission.nrows(); k++){
         if (id == ids[k]){
             index_j = k;
         }
     }
-    if (index_j != -1){status_j = status[index_j];}
+    // WE CHECK THE STATUS FOR ONLY INDIVIDUAL J (with index_j)
+    if (index_j != -1){
+        if (t_inf[index_j] != -1 && (t+1) >= t_inf[index_j] && (t+1) <= t_recover[index_j]){ //cpp index begins at 0 & R's at 1, we chose to use R's index for time
+            status_j = 1;
+        } else if (t_inf[index_j] != -1 && (t+1) > t_recover[index_j]){
+            status_j = 2;
+        } else{
+            status_j = 0;
+        }
+    }
     
     return status_j;
 };
@@ -111,7 +100,6 @@ Rcpp::String Sample_inf(
         int n_ind = list_inf_encountered.size();
         double FOI_j = 1 - exp(-lambda_c_j);
         double ind_weight = (1 - exp(-lambda_c_j)) / (n_ind * FOI_j);
-        
         Rcpp::NumericVector weights(n_ind, ind_weight);  // Initialize with ind_weight, CAUTION, R its rep(1,3) but cpp its v(3,1)
 
         Rcpp::CharacterVector elements(n_ind);
@@ -515,6 +503,26 @@ int Inf_period_lognormal() {
     int infection_period_subdivisions = static_cast<int>(infection_period_seconds / 30.0);
     
     return infection_period_subdivisions;
+};
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+int Inf_period_uniform() {
+    // Infection period -> Uniform distribution
+    double infection_period_days = R::runif(3, 7);
+    int infection_period_subdivisions = static_cast<int>( (infection_period_days * 3600*24) / 30.0);
+    
+    return infection_period_subdivisions;
+};
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+int Incub_period_uniform() {
+    // Incub period -> Uniform distribution
+    double incubation_period_days = R::runif(1, 5);
+    int incubation_period_subdivisions = static_cast<int>( (incubation_period_days * 3600*24) / 30.0);
+    
+    return incubation_period_subdivisions;
 };
 
 //////////////////////////////////////////////

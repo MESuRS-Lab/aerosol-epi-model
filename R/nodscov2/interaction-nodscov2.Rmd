@@ -210,6 +210,104 @@ data_rea %>%
   labs(x = "Hour of the day", y = "Number of interactions")
 ```
 
+```{r}
+length_cat <- list_rea[[poincare]] %>%
+  filter((from_status == "PA" & to_status == "PE") | (from_status == "PE" & to_status == "PA")) %>%
+  mutate(id_pe = ifelse(from_status == "PE", from, to)) %>%
+  left_join(admission %>% select(id, cat), by = c("id_pe" = "id"))
+
+
+sum_length_cat <- length_cat %>%
+  group_by(id_pe, cat) %>%
+  summarise(
+    sum_cat = sum(length),
+    n_cat = n(),
+    adj_sum_cat = sum_cat / n_cat,
+    .groups = 'drop'
+  )
+
+# Adjusted cumulative time interacting with patients by category of HCW
+ggplot(sum_length_cat, aes(x = id_pe, y = adj_sum_cat)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+  theme(axis.text.x = element_blank()) +
+  facet_grid(cols = vars(cat)) +
+  labs(
+    title = "Distribution of adjusted time spent interacting with patients by category of HCW",
+    x = "Category",
+    y = "Adjusted cumulative time interacting"
+  )
+
+# Number of distinct interactions with patients by category of HCW
+ggplot(sum_length_cat, aes(x = id_pe, y = n_cat)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+  theme(axis.text.x = element_blank()) +
+  facet_grid(cols = vars(cat)) +
+  labs(
+    title = "Distribution of distinct interactions with patients by category of HCW",
+    x = "Category",
+    y = "Number of interactions"
+  )
+
+# Cumulative time spent interacting with patients by category of HCW
+ggplot(sum_length_cat, aes(x = id_pe, y = sum_cat)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+  theme(axis.text.x = element_blank()) +
+  facet_grid(cols = vars(cat)) +
+  labs(
+    title = "Distribution of time spent interacting with patients by category of HCW",
+    x = "HCW ID",
+    y = "Cumulative time interacting"
+  )
+```
+
+
+```{r}
+## Violin and jitter
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+# Plot
+sum_length_cat %>%
+  ggplot( aes(x=cat, y=sum_cat, fill=cat)) +
+    geom_boxplot() +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.4, alpha=0.9) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11),
+      axis.text.x = element_text(angle = 35, hjust = 1)
+    ) +
+    ggtitle("Cumulative time spent interacting with patient by category of HCW") +
+    xlab("") +
+    ylab("Cumulative time interacting (s)")
+
+
+sum_length_cat %>%
+  ggplot( aes(x=cat, y=sum_cat, fill=cat)) +
+    geom_violin() +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.4, alpha=0.9) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11),
+      axis.text.x = element_text(angle = 35, hjust = 1)
+    ) +
+    ggtitle("Cumulative time spent interacting with patient by category of HCW") +
+    xlab("") +
+    ylab("Cumulative time interacting (s)")
+
+```
+
+
+
 ## PA-PA INTERACTIONS
 ```{r}
 k_RP <- list_rea[[poincare]] #%>% filter(length > 300)

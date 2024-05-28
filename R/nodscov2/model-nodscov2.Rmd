@@ -100,8 +100,8 @@ sourceCpp(file.path(cpp_model_path,"model-nodscov2.cpp"))
 
 ## PARAMETERS
 ```{r}
-beta <- 5
-epsilon <- 5
+beta <- 4
+epsilon <- 2
 mu <- 5
 nu <- 5
 dt <- 30

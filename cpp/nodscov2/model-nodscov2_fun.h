@@ -106,11 +106,6 @@ RcppExport Rcpp::String Sample_inf(
 );
 
 
-RcppExport Rcpp::NumericVector Update_status(
-    Rcpp::DataFrame status_tim1,
-    Rcpp::DataFrame lambda_ti
-);
-
 RcppExport Rcpp::DataFrame Update_status_bis(
     Rcpp::DataFrame global_status,
     Rcpp::DataFrame lambda_ti,

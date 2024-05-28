@@ -503,6 +503,76 @@ save(clusters,
 ```
 
 
+
+## DISTRIBUTION OF TIME SPENT IN RESTROOM/CORRIDOR BY CATEGORY OF HCW
+```{r}
+load(file.path(loc_nodscov2_path,"localization-nodscov2.RData")) ##overwrite admission
+
+test_loc <- do.call(rbind, global_localization) %>%
+  filter(localization %in% c(19,20)) %>%
+  left_join(admission %>% select(id, cat), by = join_by(id)) %>% 
+  left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")) %>% 
+  group_by(id, cat, localization, room) %>%
+  summarise(
+    sum_room = n() * 30,
+    n = n(),
+    .groups = 'drop'
+  )
+
+## Violin and jitter
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+
+
+test_loc %>%
+  ggplot( aes(x=cat, y=sum_room, fill=cat)) +
+    geom_boxplot() +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.4, alpha=0.9) +
+    facet_grid(cols = vars(room)) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11),
+      axis.text.x = element_text(angle = 35, hjust = 1)
+    ) +
+    ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
+    xlab("") +
+    ylab("Cumulative time interacting (s)")
+
+test_loc %>%
+  ggplot( aes(x=cat, y=sum_room, fill=cat)) +
+    geom_violin() +
+    geom_boxplot(width=.1) +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.4, alpha=0.9) +
+    facet_grid(cols = vars(room)) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11),
+      axis.text.x = element_text(angle = 35, hjust = 1)
+    ) +
+    ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
+    xlab("") +
+    ylab("Cumulative time interacting (s)")
+```
+
+## TEMPORARY
+```{r}
+ind_restroom <- test_loc %>% filter(sum_room > 100000) %>% pull(id)
+int_restroom <- data %>%
+  filter(from %in% ind_restroom | to %in% ind_restroom ) %>%
+  mutate(id_restroom = ifelse(from %in% id_restroom, from, to)) %>%
+  group_by(id_restroom) %>%
+  summarise(date_min = min(date_posix_first), date_max = max(date_posix_first), .groups = "drop")
+```
+
+
+
+
+
 <!-- ################################# GARBAGE ############################## -->
 
 
