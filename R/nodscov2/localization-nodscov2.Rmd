@@ -171,7 +171,7 @@ HCW_ids <- admission$id[admission$status == "PE"]
 data_tot <- do.call(rbind,global_interaction)
 
 ## FOR PE-PA INTERACTIONS
-a = data_tot %>%
+a <- data_tot %>%
   filter(!(from_status == "PA" & to_status == "PA") & !(from_status == "PE" & to_status == "PE")) %>%
   mutate(id = ifelse(from_status == "PE", from, to)) %>% ## we want HCW ids
   group_by(id) %>%
@@ -183,7 +183,7 @@ a = data_tot %>%
 
 
 ## FOR PE-PE INTERACTIONS | FROM ids
-b = data_tot %>%
+b <- data_tot %>%
   filter(from_status == "PE" & to_status == "PE") %>%
   mutate(id = from) %>% 
   group_by(id) %>%
@@ -195,7 +195,7 @@ b = data_tot %>%
 
 
 ## FOR PE-PE INTERACTIONS | TO ids
-c = data_tot %>%
+c <- data_tot %>%
   filter(from_status == "PE" & to_status == "PE") %>%
   mutate(id = to) %>% 
   group_by(id) %>%
@@ -530,7 +530,7 @@ test_loc %>%
     geom_boxplot() +
     scale_fill_viridis(discrete = TRUE, alpha=0.6) +
     geom_jitter(color="black", size=0.4, alpha=0.9) +
-    facet_grid(cols = vars(room)) +
+    ggh4x::facet_grid2(cols = vars(room), scales = "free_y", independent  ="y") +
     theme_ipsum() +
     theme(
       legend.position="none",
@@ -541,13 +541,31 @@ test_loc %>%
     xlab("") +
     ylab("Cumulative time interacting (s)")
 
+    
 test_loc %>%
   ggplot( aes(x=cat, y=sum_room, fill=cat)) +
     geom_violin() +
     geom_boxplot(width=.1) +
     scale_fill_viridis(discrete = TRUE, alpha=0.6) +
     geom_jitter(color="black", size=0.4, alpha=0.9) +
-    facet_grid(cols = vars(room)) +
+    ggh4x::facet_grid2(cols = vars(room), scales = "free_y", independent  ="y") +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11),
+      axis.text.x = element_text(angle = 35, hjust = 1)
+    ) +
+    ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
+    xlab("") +
+    ylab("Cumulative time interacting (s)")
+    
+
+test_loc %>% filter(room == "Restroom") %>%
+  ggplot( aes(x=cat, y=sum_room, fill=cat)) +
+    geom_violin() +
+    geom_boxplot(width=.1) +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.4, alpha=0.9) +
     theme_ipsum() +
     theme(
       legend.position="none",
@@ -562,11 +580,20 @@ test_loc %>%
 ## TEMPORARY
 ```{r}
 ind_restroom <- test_loc %>% filter(sum_room > 100000) %>% pull(id)
+
+summarise_int_restroom <- data %>%
+  filter(from %in% ind_restroom | to %in% ind_restroom ) %>%
+  mutate(id_restroom = ifelse(from %in% ind_restroom, from, to)) %>%
+  left_join(admission %>% select(id,cat), by = c("id_restroom" = "id" )) %>%
+  group_by(id_restroom) %>%
+  summarise(date_min = min(date_posix_first), date_max = max(date_posix_first), .groups = "drop") %>%
+  ungroup() 
+  
 int_restroom <- data %>%
   filter(from %in% ind_restroom | to %in% ind_restroom ) %>%
-  mutate(id_restroom = ifelse(from %in% id_restroom, from, to)) %>%
-  group_by(id_restroom) %>%
-  summarise(date_min = min(date_posix_first), date_max = max(date_posix_first), .groups = "drop")
+  mutate(id_restroom = ifelse(from %in% ind_restroom, from, to)) %>%
+  left_join(admission %>% select(id,cat), by = c("id_restroom" = "id" ))
+
 ```
 
 
