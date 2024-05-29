@@ -42,30 +42,41 @@ end_date <- new_end_date + days(n_days)
 ## Vizualisation
 ```{r}
 ## Number of infected over time
-counts <- sapply(1:n_subdivisions, function(t) {
-  sum(data_sim[["global_status"]]$t_inf <= t &
-        data_sim[["global_status"]]$t_recover >= t &
-        data_sim[["global_status"]]$t_inf != -1)
+n_individual <- dim(data_sim[["global_status"]])[1]
+counts <- lapply(1:n_subdivisions, function(t) {
+  df <- data.frame(status = c("Susceptible", "Exposed ", "Infectious", "Recovered"), count = NA, proportion = NA, time = t)
+  
+  df$count[1] <- sum(data_sim[["global_status"]]$t_inf == -1 | data_sim[["global_status"]]$t_inf > t)
+  df$count[2] <- sum(data_sim[["global_status"]]$t_inf <= t & data_sim[["global_status"]]$t_incub > t)
+  df$count[3] <- sum(data_sim[["global_status"]]$t_incub <= t & data_sim[["global_status"]]$t_recover > t)
+  df$count[4] <- sum(data_sim[["global_status"]]$t_recover <= t & data_sim[["global_status"]]$t_inf != -1)
+  
+  df$proportion[1] <- df$count[1] * 100 / n_individual
+  df$proportion[2] <- df$count[2] * 100 / n_individual
+  df$proportion[3] <- df$count[3] * 100 / n_individual
+  df$proportion[4] <- df$count[4] * 100 / n_individual
+  
+  return(df)
 })
 
-infected_over_time <- data.frame(time = 1:n_subdivisions, infected_count = counts)
+counts_df <- do.call(rbind, counts)
 
-ggplot(infected_over_time, aes(x = time * 30 + begin_date, y = infected_count)) +
-  geom_line(color = "blue") +
-  labs(title = "Number of Infected Individuals Over Time",
+ggplot(counts_df, aes(x = time * 30 + begin_date, y = count, color = factor(status))) +
+  geom_line() +
+  labs(title = "SEIR",
        x = "Time",
-       y = "Number of Infected Individuals") +
-  theme_bw()+
+       y = "Proportion of individuals",
+       color = "Status") +
+  theme_bw() +
   theme(axis.text.x=element_text(angle=45, hjust=1))
-
 ```
 
 ## Viral load
 ```{r}
-viral_load_over_time <- do.call(rbind, lapply(1:length(data_sim[["global_environment"]]), function(t) {
-  data.frame(time = begin_date + 30 * t,
-             room = data_sim[["global_environment"]][[t]]$room,
-             viral_load = data_sim[["global_environment"]][[t]]$env)
+viral_load_over_time <- do.call(rbind, lapply(1:(length(data_sim[["global_environment"]])%/% 10), function(t) {
+  data.frame(time = begin_date + 30 * t*10,
+             room = data_sim[["global_environment"]][[t*10]]$room,
+             viral_load = data_sim[["global_environment"]][[t*10]]$env)
 }))
 
 ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))) +
@@ -84,12 +95,12 @@ ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))
 hcw_id <- admission %>% filter(status == "PE") %>% pull(id)
 
 
-FOI_over_time <- do.call(rbind, lapply(1:length(data_sim[["global_lambda"]]), function(t) {
-  data.frame(time = begin_date + 30 * t,
-             id = data_sim[["global_lambda"]][[t]]$id,
-             lambda_e = data_sim[["global_lambda"]][[t]]$lambda_e,
-             lambda_c = data_sim[["global_lambda"]][[t]]$lambda_c,
-             status = ifelse(data_sim[["global_lambda"]][[t]]$id %in% hcw_id, "PE", "PA"))
+FOI_over_time <- do.call(rbind, lapply(1:(length(data_sim[["global_lambda"]])%/% 100), function(t) {
+  data.frame(time = begin_date + 30 * t*100,
+             id = data_sim[["global_lambda"]][[t*100]]$id,
+             lambda_e = data_sim[["global_lambda"]][[t*100]]$lambda_e,
+             lambda_c = data_sim[["global_lambda"]][[t*100]]$lambda_c,
+             status = ifelse(data_sim[["global_lambda"]][[t*100]]$id %in% hcw_id, "PE", "PA"))
 }))
 
 ggplot(FOI_over_time, aes(x = time)) +
@@ -144,18 +155,17 @@ environmental_contacts <- data_sim[["global_status"]] %>%
   filter(grepl("ENVIRONMENT", inf_by)) %>%
   mutate(from = inf_by, to = id, time = t_inf) %>%
   mutate(cause = "ENVIRONMENT") %>% 
-  select(from, to, t_inf, t_recover, inf_by, cause)
+  select(from, to, t_inf, t_incub, t_recover, inf_by, cause)
 
 
 close_contacts <- data_sim[["global_status"]] %>%
   filter(grepl("CONTACT", inf_by)) %>%
   mutate(from = gsub("CONTACT-", "", inf_by), to = id, time = t_inf) %>%
   mutate(cause = "CONTACT") %>% 
-  
-  select(from, to, t_inf, t_recover, inf_by, cause)
+  select(from, to, t_inf, t_incub, t_recover, inf_by, cause)
 
 inf_contacts_df <- bind_rows(environmental_contacts, close_contacts)
-inf_contacts_df <- inf_contacts_df %>% mutate(inf_interval = paste0("{",t_inf,";", t_recover,"}"))
+inf_contacts_df <- inf_contacts_df %>% mutate(inf_interval = paste0("{", t_inf, ";", t_incub, ";", t_inf, "}"))
 
 
 ## epicontacts object

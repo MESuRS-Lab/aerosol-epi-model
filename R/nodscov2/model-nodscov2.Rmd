@@ -75,7 +75,7 @@ rm(env_t)
 
 ## STATUS
 ```{r}
-global_status = data.frame(id = admission$id, t_inf = as.integer(-1), t_recover = as.integer(-1), inf_by = "", inf_room = as.integer(-1))
+global_status = data.frame(id = admission$id, t_inf = as.integer(-1), t_incub = as.integer(-1), t_recover = as.integer(-1), inf_by = "", inf_room = as.integer(-1))
 ```
 
 ## LAMBDA
@@ -103,7 +103,7 @@ sourceCpp(file.path(cpp_model_path,"model-nodscov2.cpp"))
 beta <- 4
 epsilon <- 2
 mu <- 5
-nu <- 5
+nu <- 4
 dt <- 30
 tau <- 60 * 60 *24
 deltat <- dt/tau
@@ -112,10 +112,18 @@ deltat <- dt/tau
 ## INDEX
 ```{r}
 id_index <- "001-0038-B-S"
-status <- global_status %>% mutate(t_inf = ifelse(id == id_index, as.integer(1), t_inf ),
-                                      t_recover = ifelse(id == id_index, as.integer(1000), t_recover ),
-                                      inf_room = ifelse(id ==id_index, rooms[rooms$id == id_index, "id_room"], inf_room),
-                                      inf_by = ifelse(id == id_index, "INDEX", inf_by))
+status <- global_status %>% mutate(t_inf = ifelse(id == id_index,
+                                                  as.integer(1),
+                                                  t_inf),
+                                   t_incub = ifelse(id == id_index,
+                                                    as.integer(t_inf + runif(1, min = 2880*1, max = 2880*5)),
+                                                    t_recover),
+                                   t_recover = ifelse(id == id_index,
+                                                      as.integer(t_incub + runif(1, min = 2880*3, max = 2880*7)),
+                                                      t_recover),
+                                   inf_by = ifelse(id == id_index,
+                                                   "INDEX",
+                                                   inf_by))
 ```
 
 ## Simulation
@@ -177,7 +185,7 @@ truncated_lambda <- global_lambda[(u <- seq_along(global_lambda)) %in% t_begin:(
 truncated_environment <- global_environment[(u <- seq_along(global_environment)) %in% t_begin:(t_end)]
 truncated_status <- status
 
-n_days <- 7
+n_days <- 28
 test_interaction <- rep(truncated_interaction, n_days)
 test_localization <- rep(truncated_localization, n_days)
 test_lambda <- rep(truncated_lambda, n_days)

@@ -37,16 +37,19 @@ Rcpp::IntegerVector Get_status_t(
     int t
 ) {
     Rcpp::IntegerVector t_inf = global_status["t_inf"];
+    Rcpp::IntegerVector t_incub = global_status["t_incub"];
     Rcpp::IntegerVector t_recover = global_status["t_recover"];
     Rcpp::IntegerVector status_t (t_inf.size()) ;
     
     for(int j = 0; j < t_inf.size(); j++){
-        if (t_inf[j] != -1 && (t+1) >= t_inf[j] && (t+1) <= t_recover[j]){ //cpp index begins at 0 & R's at 1, we chose to use R's index for time
-            status_t[j] = 1;
+        if (t_inf[j] != -1 && (t+1) >= t_inf[j] &&(t+1) <= t_incub[j]){
+            status_t[j] = 1; // individual j is EXPOSED
+        } else if (t_inf[j] != -1 && (t+1) > t_incub[j] && (t+1) <= t_recover[j]){ //cpp index begins at 0 & R's at 1, we chose to use R's index for time
+            status_t[j] = 2; // individual j is INFECTIOUS
         } else if (t_inf[j] != -1 && (t+1) > t_recover[j]){
-            status_t[j] = 2;
+            status_t[j] = 3; // individual j is RECOVERED
         } else{
-            status_t[j] = 0;
+            status_t[j] = 0; // individual j is SUSCEPTIBLE
         }
     }
 
@@ -64,6 +67,7 @@ int Get_status_j(
     int status_j = -1; // if returns -1 --> error (id not in admission)
     Rcpp::CharacterVector ids = admission["id"];
     Rcpp::IntegerVector t_inf = global_status["t_inf"];
+    Rcpp::IntegerVector t_incub = global_status["t_incub"];
     Rcpp::IntegerVector t_recover = global_status["t_recover"];
     int index_j = -1;
     for (int k = 0; k < admission.nrows(); k++){
@@ -73,12 +77,14 @@ int Get_status_j(
     }
     // WE CHECK THE STATUS FOR ONLY INDIVIDUAL J (with index_j)
     if (index_j != -1){
-        if (t_inf[index_j] != -1 && (t+1) >= t_inf[index_j] && (t+1) <= t_recover[index_j]){ //cpp index begins at 0 & R's at 1, we chose to use R's index for time
-            status_j = 1;
+        if (t_inf[index_j] != -1 && (t+1) >= t_inf[index_j] && (t+1) <= t_incub[index_j]){
+            status_j = 1; // individual j is EXPOSED
+        } else if (t_inf[index_j] != -1 && (t+1) > t_incub[index_j] && (t+1) <= t_recover[index_j]){ //cpp index begins at 0 & R's at 1, we chose to use R's index for time
+            status_j = 2; // individual j is INFECTIOUS
         } else if (t_inf[index_j] != -1 && (t+1) > t_recover[index_j]){
-            status_j = 2;
+            status_j = 3; // individual j is RECOVERED
         } else{
-            status_j = 0;
+            status_j = 0; // individual j is SUSCEPTIBLE
         }
     }
     
@@ -178,12 +184,14 @@ Rcpp::DataFrame Update_status_bis(
     Rcpp::IntegerVector admission_room = admission["room"];
     
     Rcpp::IntegerVector t_inf_tim1 = global_status["t_inf"];
+    Rcpp::IntegerVector t_incub_tim1 = global_status["t_incub"];
     Rcpp::IntegerVector t_recover_tim1 = global_status["t_recover"];
     Rcpp::CharacterVector inf_by_tim1 = global_status["inf_by"];
     Rcpp::IntegerVector inf_room_tim1 = global_status["inf_room"];
     
     Rcpp::DataFrame global_status_updated = clone(global_status);
     Rcpp::IntegerVector t_inf_ti = clone(t_inf_tim1);
+    Rcpp::IntegerVector t_incub_ti = clone(t_incub_tim1);
     Rcpp::IntegerVector t_recover_ti = clone(t_recover_tim1);
     Rcpp::IntegerVector inf_room_ti = clone(inf_room_tim1);
     Rcpp::CharacterVector inf_by_ti = clone(inf_by_tim1);
@@ -194,7 +202,8 @@ Rcpp::DataFrame Update_status_bis(
     for (int j=0; j < lambda_ti.nrows(); j++){
         if (status_tim1[j] == 0 && R::runif(0, 1) <= FOI[j]){
             t_inf_ti[j] = (t+1); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
-            t_recover_ti[j] = (t+1) + Incub_period_gamma(); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
+            t_incub_ti[j] = t_inf_ti[j] + Incub_period_uniform();
+            t_recover_ti[j] = t_incub_ti[j] + Inf_period_uniform(); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
 
             // ROOM WHERE j IS INFECTED //
             inf_room_ti[j] = Get_loc_j(ids[j], admission, localization_ti);
@@ -209,6 +218,7 @@ Rcpp::DataFrame Update_status_bis(
             }
     };
     global_status_updated["t_inf"] = t_inf_ti;
+    global_status_updated["t_incub"] = t_incub_ti;
     global_status_updated["t_recover"] = t_recover_ti;
     global_status_updated["inf_room"] = inf_room_ti;
     global_status_updated["inf_by"] = inf_by_ti;
@@ -263,7 +273,7 @@ Rcpp::NumericVector Update_environment(
     // INFECTING INDIVIDUALS SHEDDING
     for (int j = 0; j < admission.nrows(); ++j) {
         // INFECTED PATIENTS SHEDDING IN THEIR ROOMS
-        if (admission_int[j] == 0 && status_tim1[j] == 1){
+        if (admission_int[j] == 0 && status_tim1[j] == 2){ // 2 = INFECTIOUS -> SHEDDING
             int room_j = admission_room[j];
             // Search for the index of the room in environment dataframe
             int index_room_j = -1;
@@ -279,7 +289,7 @@ Rcpp::NumericVector Update_environment(
         } 
 
         // INFECTED HCW SHEDDING IN THE ROOM HE WAS AT t-1
-        if (admission_int[j] == 1 && status_tim1[j] == 1){
+        if (admission_int[j] == 1 && status_tim1[j] == 2){ // 2 = INFECTIOUS -> SHEDDING
             // WARNING: LOCALIZATION INDEX != INDIVIDUAL INDEX ETC
             // Search for the room where was the HCW j at t-1
             int index_localization_j = -1;
@@ -347,7 +357,8 @@ Rcpp::List List_inf_encountered(
     Rcpp::List list_inf_encountered;
     for (int j = 0; j < list_encountered.size(); j++){
         Rcpp::String id_encountered = list_encountered[j];
-        if (Get_status_j(id_encountered, global_status, admission, t) == 1){
+        // 0 = Susceptible, 1 = Exposed, 2 = Infected, 3 = Recovered
+        if (Get_status_j(id_encountered, global_status, admission, t) == 2){ //INFECTIOUS
             list_inf_encountered.push_back(id_encountered);
         }
     }
@@ -377,7 +388,8 @@ Rcpp::NumericVector Lambda_c (
     for (int j = 0; j < lambda_tim1.nrows(); ++j){
         id = ids[j];
         nb_inf_r = 0;
-        list_ind_r = List_encountered(id, interaction_ti); // 
+        list_ind_r = List_encountered(id, interaction_ti);
+        // Dont use List_inf_encountered because we dont need admission for Lambda_c
         for (int i = 0; i < list_ind_r.size(); ++i){
             Rcpp::String id_r = list_ind_r[i];
             // Search for the index of individual encountered in ids vector 
@@ -388,8 +400,8 @@ Rcpp::NumericVector Lambda_c (
                     break;
                 }
             }
-            // if individual r is infected & we found its index (for safety)
-            if (index_r != -1 && status_ti[index_r] == 1) {
+            // if individual r is INFECTIOUS & we found its index (for safety)
+            if (index_r != -1 && status_ti[index_r] == 2) { // 2 = INFECTIOUS
                 nb_inf_r += 1;
             }
         }
@@ -519,7 +531,7 @@ int Inf_period_uniform() {
 // [[Rcpp::export]]
 int Incub_period_uniform() {
     // Incub period -> Uniform distribution
-    double incubation_period_days = R::runif(1, 5);
+    double incubation_period_days = R::runif(1, 3);
     int incubation_period_subdivisions = static_cast<int>( (incubation_period_days * 3600*24) / 30.0);
     
     return incubation_period_subdivisions;

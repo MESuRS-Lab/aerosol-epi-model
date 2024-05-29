@@ -36,6 +36,10 @@ RcppExport int Inf_period_gamma();
 
 RcppExport int Inf_period_lognormal();
 
+RcppExport int Incub_period_uniform();
+
+RcppExport int Inf_period_uniform();
+
     
 
 RcppExport Rcpp::NumericVector Update_environment(
