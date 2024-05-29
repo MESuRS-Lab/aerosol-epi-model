@@ -20,6 +20,10 @@ cpp_path <-  file.path(wd,"..", "..", "cpp")
 cpp_model_path <- file.path(cpp_path,"nodscov2")
 sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
 loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
+
+if (!dir.exists(sim_nodscov2_path)) {
+  dir.create(sim_nodscov2_path, recursive = TRUE)
+}
 ```
 
 ## NodsCov2 data (not shared)

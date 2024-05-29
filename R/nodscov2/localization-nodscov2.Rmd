@@ -12,15 +12,21 @@ library(dplyr)
 library(ggplot2)
 library(lubridate)
 library(igraph)
+library(tidyr)
 ```
 
 ```{r}
 wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
 
+
 data_path <- file.path(wd,"..", "..", "data")
 nodscov2_path <- file.path(data_path, "data-nodscov2") 
 loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
+
+if (!dir.exists(loc_nodscov2_path)) {
+  dir.create(loc_nodscov2_path, recursive = TRUE)
+}
 ```
 
 ### WIP 
@@ -62,6 +68,8 @@ data <- left_join(data, admission %>% select(id, status), by = c("from" = "id"))
     rename(from_status = status) %>%
     left_join(admission %>% select(id, status), by = c("to" = "id")) %>%
     rename(to_status = status)
+
+data <- unique(data)
 ```
 
 
@@ -76,7 +84,6 @@ n_subdivisions <- floor(as.numeric(time_spent) * 2) ## Time spent * hours * minu
 
 
 ## t = 1 -> [0,30]sec
-
 global_interaction <- lapply(1:n_subdivisions, function(t){
   interactions_t <- data %>%
     filter(date_posix_first <= (begin_date + (t-1)*30) & (date_posix_first + length >= begin_date + (t)*30) ) %>%
@@ -165,48 +172,23 @@ clusters <- lapply(global_interaction, function(df) {
 
 
 
-
-
 ## SHIFTS INFERENCE
-```{r}
-data_d1 <- data %>% filter(day(date_posix_first) == day(begin_date))
-data_d2 <- data %>% filter(day(date_posix_first) == day(end_date))
-#dim(data_d2)[1] + dim(data_d1)[1] == dim(data)[1]
-
-shift <- admission %>%
-  select(id, status, cat) %>%
-  filter(status == "PE") %>%
-  mutate(min_d1 = as.POSIXct(NA, origin="1970-01-01"),
-         max_d1 = as.POSIXct(NA, origin="1970-01-01"),
-         min_d2 = as.POSIXct(NA, origin="1970-01-01"),
-         max_d2 = as.POSIXct(NA, origin="1970-01-01"))
-
-for (ind in shift$id){
-  min_d1 = min(data_d1 %>% filter(from == ind | to == ind) %>% pull(date_posix_first))
-  max_d1 = max(data_d1 %>% filter(from == ind | to == ind) %>% mutate(date_tot = date_posix_first + length)  %>% pull(date_tot))
-  min_d2 = min(data_d2 %>% filter(from == ind | to == ind) %>% pull(date_posix_first))
-  max_d2 = max(data_d2 %>% filter(from == ind | to == ind) %>% mutate(date_tot = date_posix_first + length)  %>% pull(date_tot))
-  shift[shift$id == ind, "min_d1"] <- as.POSIXct(min_d1)
-  shift[shift$id == ind, "max_d1"] <- as.POSIXct(max_d1) 
-  shift[shift$id == ind, "min_d2"] <- as.POSIXct(min_d2) 
-  shift[shift$id == ind, "max_d2"] <- as.POSIXct(max_d2) 
-}
-```
-
-
 ```{r}
 # Pivot -> get all int for each individual
 df_long <- data %>%
+  mutate(date_posix_end = date_posix_first + length) %>% 
   pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>%
   arrange(individual, date_posix_first)
 
 # Time between 2 interactions for each individual (lag get the previous )
 df_long <- df_long %>%
   group_by(individual) %>%
-  mutate(time_diff = difftime(date_posix_first, lag(date_posix_first), units = "mins"))
+  mutate(test_filter = date_posix_first - lag(date_posix_end)) %>%
+  filter(test_filter > 0 | is.na(test_filter)) %>%
+  mutate(time_diff = difftime(date_posix_first, lag(date_posix_end), units = "mins"))
 
 
-time_threshold <- 60*3
+time_threshold <- 60*2
 
 df_long <- df_long %>%
   mutate(new_shift = ifelse(is.na(time_diff) | time_diff > time_threshold, 1, 0)) %>%
@@ -217,102 +199,32 @@ shifts <- df_long %>%
   group_by(individual, shift_id) %>%
   summarise(
     start_time = min(date_posix_first),
-    end_time = max(date_posix_first),
-    shift_length = as.numeric(difftime(max(date_posix_first), min(date_posix_first), units = "hours")),
+    end_time = max(date_posix_end),
+    shift_length = as.numeric(difftime(max(date_posix_end), min(date_posix_first), units = "hours")),
     .groups = 'drop'
   ) %>%
-  filter(shift_length <= 15)
+  arrange(individual, shift_id) %>%
+  left_join(admission %>% select(id,status), by = c("individual" = "id")) %>%
+  filter(status == "PE")
 
-
-# shifts <- shifts %>%
-#   group_by(individual) %>%
-#   mutate(shift_number = row_number()) %>%
-#   filter(shift_number <= 2) %>%
-#   select(-shift_number)
-
-shifts <- shifts %>% left_join(admission %>% select(id,status), by = c("individual" = "id")) %>% filter(status == "PE")
-
-print(shifts)
 ```
 
-
-
-
-
-
-
-
-## localization INFERENCE - inferred ADMISSIONS & HCW NOT PRESENT DURING THE WHOLE STUDY - TEMPORARY (assign first_time and last_time for individual --> TO KNOW WHEN THEY LEAVE)
+## CHECK INDIVIDUALS IN ADMISSION: HERE OR NOT HERE DURING THE STUDY?
 ```{r}
-HCW_ids <- admission$id[admission$status == "PE"]
-data_tot <- do.call(rbind,global_interaction)
-
-## FOR PE-PA INTERACTIONS
-a <- data_tot %>%
-  filter(!(from_status == "PA" & to_status == "PA") & !(from_status == "PE" & to_status == "PE")) %>%
-  mutate(id = ifelse(from_status == "PE", from, to)) %>% ## we want HCW ids
-  group_by(id) %>%
-  mutate(first_time = min(time), last_time = max(time)) %>%
-  ungroup() %>%
-  distinct(id, .keep_all = T) %>%
-  filter(id %in% HCW_ids) %>%
-  select(id, first_time, last_time)
+id_interacting <- data %>%
+  pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>% distinct(individual) %>% pull()
+id_total <- admission %>% distinct(id) %>% pull()
 
 
-## FOR PE-PE INTERACTIONS | FROM ids
-b <- data_tot %>%
-  filter(from_status == "PE" & to_status == "PE") %>%
-  mutate(id = from) %>% 
-  group_by(id) %>%
-  mutate(first_time = min(time), last_time = max(time)) %>%
-  ungroup() %>%
-  distinct(id, .keep_all = T) %>%
-  filter(id %in% HCW_ids) %>%
-  select(id, first_time, last_time)
 
-
-## FOR PE-PE INTERACTIONS | TO ids
-c <- data_tot %>%
-  filter(from_status == "PE" & to_status == "PE") %>%
-  mutate(id = to) %>% 
-  group_by(id) %>%
-  mutate(first_time = min(time), last_time = max(time)) %>%
-  ungroup() %>%
-  distinct(id, .keep_all = T) %>%
-  filter(id %in% HCW_ids) %>%
-  select(id, first_time, last_time)
-
-## BIND DFs
-inferred_admission <- bind_rows(a, b, c) %>%
-  group_by(id) %>%
-  summarise(
-    first_time = min(first_time),
-    last_time = max(last_time)
-    ) %>%
-  ungroup()
-
-print(inferred_admission)
-
-rm(a)
-rm(b)
-rm(c)
-rm(data_tot)
-
-
-## THERE IS HCWs THAT ARE NOT PRESENT DURING THE STUDY --> WE CAN EXCLUDE THEM FROM THE localization INFERENCE MODEL
-HCW_interacting_ids <- inferred_admission %>% pull(id)
-length(HCW_interacting_ids)
-HCW_not_here <- setdiff(HCW_ids, HCW_interacting_ids)
-# data_tot %>% filter(from %in% HCW_not_here | to %in% HCW_not_here) 
-
-
-## WE EXCLUDE THE HCWs NOT PRESENT DURING THE STUDY
-# WE USE list_HCW_interacting INSTEAD OF HCW_ids
+id_not_interacting <- setdiff(id_total, id_interacting)
+print(admission %>% filter(id %in% id_not_interacting))
+## INDIVIDUALS WITH 0 INTERACTIONS ARE HCWs -> WE REMOVE THEM
+HCW_interacting_ids <- admission %>% filter(status == "PE") %>% filter(id %in% id_interacting) %>% pull(id)
 ```
 
 
-
-## localization INFERENCE (only for PE, PAs stay in their room) - INTERACTIONS
+## Localization INFERENCE (only for PE, PAs stay in their room) - INTERACTIONS
 ```{r}
 ############################################################
 ## ASSIGNING localization FOR THE INDIVIDUALS INTERACTING ##
@@ -477,26 +389,28 @@ for (t in 3:n_subdivisions){
   
   ## ITERATE ON THE INDIVIDUALS NOT INTERACTING at time t
   for (individual in id_not_interacting_t){
-    ## LAST INTERACTION KNOWN FOR THE INDIVIDUAL (C.F. inferred ADMISSION)
+    shifts_j <- shifts[shifts$individual == individual, ]
+    current_time <- begin_date + t * 30
+    in_shift <- any(current_time >= shifts_j$start_time & current_time <= shifts_j$end_time)
     
-    ## 1. IF INDIVIDUAL IS INTERACTING AT t-1 (localization_tm1$localization != "NOT HERE")
-    if (inferred_admission[inferred_admission$id == individual, "last_time"] < t){
+    if (in_shift) {
+      ## If the individual is within a shift
+      if (individual %in% id_room_tm1) {
+        ind_loc_t <- rooms[rooms$id == "ALL", "id_room"] #IF IN ROOM -> CORRIDOR
+      } else if (individual %in% id_corridor_tm1) {
+        ind_loc_t <- rooms[rooms$id == "PE", "id_room"] #IF IN CORRIDOR -> RESTROOM
+      } else if (individual %in% id_restroom_tm1) {
+        ind_loc_t <- rooms[rooms$id == "PE", "id_room"] #IF RESTROOM --> STAYS IN RESTROOM #### TEMPORARY #########
+      } else if (individual %in% id_not_here_tm1){
+        ind_loc_t <- "NOT HERE"
+      } else {
+        ind_loc_t <- "ERROR"
+      }
+    } else {
+      ## If the individual is not within a shift
       ind_loc_t <- "NOT HERE"
-    } else if (individual %in% id_room_tm1){
-      #IF IN ROOM -> CORRIDOR
-      ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
-    } else if (individual %in% id_corridor_tm1){
-      #IF IN CORRIDOR -> RESTROOM
-      ind_loc_t <- rooms[rooms$id == "PE", "id_room"]
-    } else if (individual %in% id_restroom_tm1){
-      #IF RESTROOM --> STAYS IN RESTROOM #### TEMPORARY #########
-      ind_loc_t <- rooms[rooms$id == "PE", "id_room"]
-      ## 2. IF INDIVIDUAL NOT INTERACTING AT t-1 --> (localization_tm1$localization == "NOT HERE") --> "NOT HERE"
-    } else if (individual %in% id_not_here_tm1){
-      ind_loc_t <- "NOT HERE"
-    }  else {
-      ind_loc_t <- "ERROR"
     }
+    
     ## ASSIGN THE localization OF THE INDIVIDUAL AT t==2
     localization_t[localization_t$id == individual, "localization"] <- ind_loc_t
   }
@@ -506,8 +420,10 @@ for (t in 3:n_subdivisions){
 tb_no_int <- Sys.time()
 print(tb_no_int - ta_no_int)
 
-
+y <- do.call(rbind,global_localization)
 ```
+
+
 ## MUTATE "NOT HERE" TO -1 (for Rcpp) 
 ```{r}
 global_localization <- lapply( 1:n_subdivisions, function(t){
@@ -679,7 +595,73 @@ int_restroom <- data %>%
 
 <!-- ################################# GARBAGE ############################## -->
 
+## localization INFERENCE - inferred ADMISSIONS & HCW NOT PRESENT DURING THE WHOLE STUDY - TEMPORARY (assign first_time and last_time for individual --> TO KNOW WHEN THEY LEAVE)
+```{r}
+HCW_ids <- admission$id[admission$status == "PE"]
+data_tot <- do.call(rbind,global_interaction)
 
+## FOR PE-PA INTERACTIONS
+a <- data_tot %>%
+  filter(!(from_status == "PA" & to_status == "PA") & !(from_status == "PE" & to_status == "PE")) %>%
+  mutate(id = ifelse(from_status == "PE", from, to)) %>% ## we want HCW ids
+  group_by(id) %>%
+  mutate(first_time = min(time), last_time = max(time)) %>%
+  ungroup() %>%
+  distinct(id, .keep_all = T) %>%
+  filter(id %in% HCW_ids) %>%
+  select(id, first_time, last_time)
+
+
+## FOR PE-PE INTERACTIONS | FROM ids
+b <- data_tot %>%
+  filter(from_status == "PE" & to_status == "PE") %>%
+  mutate(id = from) %>% 
+  group_by(id) %>%
+  mutate(first_time = min(time), last_time = max(time)) %>%
+  ungroup() %>%
+  distinct(id, .keep_all = T) %>%
+  filter(id %in% HCW_ids) %>%
+  select(id, first_time, last_time)
+
+
+## FOR PE-PE INTERACTIONS | TO ids
+c <- data_tot %>%
+  filter(from_status == "PE" & to_status == "PE") %>%
+  mutate(id = to) %>% 
+  group_by(id) %>%
+  mutate(first_time = min(time), last_time = max(time)) %>%
+  ungroup() %>%
+  distinct(id, .keep_all = T) %>%
+  filter(id %in% HCW_ids) %>%
+  select(id, first_time, last_time)
+
+## BIND DFs
+inferred_admission <- bind_rows(a, b, c) %>%
+  group_by(id) %>%
+  summarise(
+    first_time = min(first_time),
+    last_time = max(last_time)
+    ) %>%
+  ungroup()
+
+print(inferred_admission)
+
+rm(a)
+rm(b)
+rm(c)
+rm(data_tot)
+
+
+## THERE IS HCWs THAT ARE NOT PRESENT DURING THE STUDY --> WE CAN EXCLUDE THEM FROM THE localization INFERENCE MODEL
+HCW_interacting_ids <- inferred_admission %>% pull(id)
+length(HCW_interacting_ids)
+HCW_not_here <- setdiff(HCW_ids, HCW_interacting_ids)
+# data_tot %>% filter(from %in% HCW_not_here | to %in% HCW_not_here) 
+
+
+## WE EXCLUDE THE HCWs NOT PRESENT DURING THE STUDY
+# WE USE list_HCW_interacting INSTEAD OF HCW_ids
+```
 
 ## INTERACTION localization
 ```{r}
