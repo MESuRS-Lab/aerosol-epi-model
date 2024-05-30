@@ -51,6 +51,7 @@ id_not_interacting <- setdiff(id_total, id_interacting)
 ```{r}
 status_sim <- data_sim[["global_status"]] %>% filter(id %in% id_interacting)
 lambda_sim <- lapply(data_sim[["global_lambda"]], function(df)  df %>% filter(id %in% id_interacting))
+admission_truncated <- admission %>% filter(id %in% id_interacting)
 #environment_sim <- data_sim[["global_environment"]] ## might filter it later to remove the rooms of patient not interacting in the truncated data
 ```
 
@@ -164,14 +165,12 @@ list_S <- status_sim %>% filter(t_inf == -1) %>% select(id) %>% left_join(admiss
 
 
 
-
-
 ## INFECTION CHAIN
 ```{r}
 library(epicontacts)
 id_index <- status_sim %>% filter(inf_by == "INDEX") %>% pull(id)
 ## linelist object
-linelist <- left_join(admission_sim, status_sim, by = join_by(id))
+linelist <- left_join(admission_sim %>% filter(id %in% id_interacting), status_sim, by = join_by(id))
 linelist <- linelist %>%
   mutate(type = ifelse(info == 0, "PATIENT", "HEALTHCARE WORKER")) %>%
   mutate(type = ifelse(id == id_index, "INDEX", type)) 
@@ -223,8 +222,5 @@ vis_epicontacts(x,
                 selector = TRUE
                 )
 
-### NOT WORKING
-#node_colors <- setNames(c("red", "blue", "black","darkgreen"), c("PATIENT", "HEALTHCARE WORKER", "INDEX","ROOM"))
-# custom_palette <- c("INDEX" = "#2ca02c", "PATIENT" = "#d62728", "HEALTHCARE WORKER" = "#1f77b4", "ROOM" = "#ff7f0e")
-# linelist$color <- fac2col(linelist$type, pal = function(n) custom_palette)
+
 ```

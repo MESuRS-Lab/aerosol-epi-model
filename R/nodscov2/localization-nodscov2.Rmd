@@ -532,7 +532,7 @@ test_loc %>%
     ) +
     ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
     xlab("") +
-    ylab("Cumulative time interacting (s)")
+    ylab("Cumulative time interacting (h)")
 
     
 test_loc %>%
@@ -550,7 +550,7 @@ test_loc %>%
     ) +
     ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
     xlab("") +
-    ylab("Cumulative time interacting (s)")
+    ylab("Cumulative time interacting (h)")
     
 
 test_loc %>% filter(room == "Restroom") %>%
@@ -567,7 +567,7 @@ test_loc %>% filter(room == "Restroom") %>%
     ) +
     ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
     xlab("") +
-    ylab("Cumulative time interacting (s)")
+    ylab("Cumulative time interacting (h)")
 ```
 
 ## TEMPORARY
