@@ -99,7 +99,8 @@ ggplot(counts_df, aes(x = time * 30 + begin_date, y = proportion, color = factor
   theme(axis.text.x=element_text(angle=45, hjust=1))
 ```
 
-## Viral load
+
+## Viral load over time
 ```{r}
 viral_load_over_time <- do.call(rbind, lapply(1:(length(data_sim[["global_environment"]])%/% 10), function(t) {
   data.frame(time = begin_date + 30 * t*10,
@@ -118,7 +119,7 @@ ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))
 ```
 
 
-## FOI
+## Lambda over time
 ```{r}
 hcw_id <- admission %>% filter(status == "PE") %>% pull(id)
 
@@ -144,6 +145,7 @@ ggplot(FOI_over_time, aes(x = time)) +
 ```
 
 
+## FOI over time
 ```{r}
 FOI_over_time <- FOI_over_time %>% mutate(p_inf = 1 - exp(-lambda_e - lambda_c))
 
@@ -158,15 +160,15 @@ ggplot(FOI_over_time, aes(x = time)) +
   theme(axis.text.x=element_text(angle=45, hjust=1))
 
 ```
+
+
 ## Individuals that stay susceptible
 ```{r}
 list_S <- status_sim %>% filter(t_inf == -1) %>% select(id) %>% left_join(admission %>% select(id, cat, status), by= join_by(id))
 ```
 
 
-
-
-## INFECTION CHAIN
+## Infection chain
 ```{r}
 library(epicontacts)
 id_index <- status_sim %>% filter(inf_by == "INDEX") %>% pull(id)

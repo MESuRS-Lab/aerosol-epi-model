@@ -282,7 +282,7 @@ global_localization <- lapply(1:n_subdivisions, function(t) {
 
 
 ## localization INFERENCE (only for PE, PAs stay in their room) - NO INTERACTION
-```{r Loc t = 1}
+```{r Loc t1}
 ################################################################
 ## ASSIGNING localization FOR THE INDIVIDUALS NOT INTERACTING ##
 ################################################################
@@ -299,7 +299,7 @@ global_localization[[1]]$localization <- ifelse(is.na(global_localization[[1]]$l
 ```
 
 
-```{r Loc t = 2}
+```{r Loc t2}
 ############
 ## t == 2 ##
 ############
@@ -354,7 +354,7 @@ rm(ind_loc_t2)
 ```
 
 
-```{r Loc t>2}
+```{r Loc tsup2}
 ############
 ## t > 2 ###
 ############
