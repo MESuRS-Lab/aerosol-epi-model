@@ -55,7 +55,7 @@ The project is divided into 4 dependent R scripts:
   <summary> 1. interaction-nodscov2.Rmd </summary>
 
   This script loads Nods-Cov-2 local data (private), filters it to keep only intensive care units, then does an analysis of the distribution of individuals' categories, type of interactions etc.
-  this script led us to choose (for now) Raymond Poincaré hospital's intensive care unit (Lyon, France).
+  this script led us to choose (for now) Raymond Poincaré hospital's intensive care unit (Garches, France).
   
   An analysis on healthcare worker cumulative time spent interacting with patients is also done.
 
