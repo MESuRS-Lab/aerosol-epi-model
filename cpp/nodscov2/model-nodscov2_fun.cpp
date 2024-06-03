@@ -5,23 +5,22 @@
 using namespace std;
 
 // [[Rcpp::plugins(cpp11)]]
-int z = 10;
-double mIncub = (1.63 * 24*60*2)*z;
-double sdIncub = (0.5 * 24*60*2)*z;
+const int z = 10;
+const double mIncub = (1.63) * (24 * 60 * 2) * z;
+const double sdIncub = (0.5) * (24 * 60 * 2) * z;
 
-double m_incub_g = (4.07 * 24*60*2)*z;
-double sd_incub_g = (2.12 * 24*60*2)*z;
-double shape_incub_g = pow(m_incub_g,2) / pow(sd_incub_g, 2);
-double scale_incub_g = pow(sd_incub_g,2) / m_incub_g;
+const double m_incub_g = (4.07) * (24 * 60 * 2) * z;
+const double sd_incub_g = (2.12) * (24 * 60 * 2) * z;
+const double shape_incub_g = pow(m_incub_g, 2) / pow(sd_incub_g, 2);
+const double scale_incub_g = pow(sd_incub_g, 2) / m_incub_g;
 
+const double mInf = (1.63) * (24 * 60 * 2) * z;
+const double sdInf = (0.5) * (24 * 60 * 2) * z;
 
-double mInf = (1.63 * 24*60*2)*z;
-double sdInf = (0.5 * 24*60*2)*z;
-
-double m_inf_g = (4.07 * 24*60*2)*z;
-double sd_inf_g = (2.12 * 24*60*2)*z;
-double shape_inf_g = pow(m_inf_g,2) / pow(sd_inf_g, 2);
-double scale_inf_g = pow(sd_inf_g,2) / m_inf_g;
+const double m_inf_g = (4.07) * (24 * 60 * 2) * z;
+const double sd_inf_g = (2.12) * (24 * 60 * 2) * z;
+const double shape_inf_g = pow(m_inf_g, 2) / pow(sd_inf_g, 2);
+const double scale_inf_g = pow(sd_inf_g, 2) / m_inf_g;
 
 
 // R UNIQUE(X) FUNCTION
@@ -550,43 +549,6 @@ int Incub_period_uniform() {
     return incubation_period_subdivisions;
 };
 
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-int Get_loc_HCW(
-    Rcpp::String id_HCW,
-    Rcpp::DataFrame admission,
-    Rcpp::DataFrame localization_ti
-) {
-    int localization = -1; // could be different than -1/NOT HERE (error easier to see)
-    Rcpp::CharacterVector ids = admission["id"];
-    Rcpp::CharacterVector ids_HCW = localization_ti["id"];
-    Rcpp::IntegerVector localizations_HCW = localization_ti["localization"];
-    Rcpp::IntegerVector status = admission["info"];
-    
-    int index_ind = -1;
-    for (int k = 0; k < ids.size(); k++){
-        if (id_HCW == ids[k]){
-                index_ind = k;
-                break;
-                }
-        }
-    if (status[index_ind] == 1){
-        int index_localization_j = -1;
-        for (int k = 0; k < ids_HCW.size(); k++){
-            if (ids[index_ind] == ids_HCW[k]){
-            index_localization_j = k;
-            break;
-            }
-        }
-        int room_j = localizations_HCW[index_localization_j];
-        if (room_j == -1){
-            localization = -1;
-        } else {
-            localization = room_j;
-            }
-        }
-    return localization;
-};
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
