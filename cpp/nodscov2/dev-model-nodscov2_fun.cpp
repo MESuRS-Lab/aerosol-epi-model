@@ -261,7 +261,7 @@ Rcpp::NumericVector Update_environment(
     Rcpp::NumericVector env_ti = clone(temp_env);
     Rcpp::CharacterVector ids = admission["id"];
     Rcpp::IntegerVector admission_int = admission["info"];
-    
+
     double individual_weigth;
 
     // EXPONENTIAL INACTIVATION 
@@ -290,6 +290,7 @@ Rcpp::NumericVector Update_environment(
             if(index_room_j != -1){
                 env_ti[index_room_j] += individual_weigth * nu * deltat;}
         }
+    }
 
   return env_ti;
 };
