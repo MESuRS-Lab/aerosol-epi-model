@@ -1,4 +1,4 @@
-#include "model-nodscov2_fun.h"
+#include "dev-model-nodscov2_fun.h"
 #include <Rcpp.h>
 #include <iostream>
 
@@ -179,7 +179,6 @@ Rcpp::DataFrame Update_status_bis(
     Rcpp::IntegerVector status_tim1 = Get_status_t(global_status, t);
 
     Rcpp::CharacterVector ids = admission["id"];
-    Rcpp::IntegerVector admission_int = admission["info"];
     
     Rcpp::IntegerVector t_inf_tim1 = global_status["t_inf"];
     Rcpp::IntegerVector t_incub_tim1 = global_status["t_incub"];
@@ -191,8 +190,9 @@ Rcpp::DataFrame Update_status_bis(
     Rcpp::IntegerVector t_inf_ti = clone(t_inf_tim1);
     Rcpp::IntegerVector t_incub_ti = clone(t_incub_tim1);
     Rcpp::IntegerVector t_recover_ti = clone(t_recover_tim1);
-    Rcpp::IntegerVector inf_room_ti = clone(inf_room_tim1);
     Rcpp::CharacterVector inf_by_ti = clone(inf_by_tim1);
+    Rcpp::IntegerVector inf_room_ti = clone(inf_room_tim1);
+    
 
 
     Rcpp::NumericVector FOI = (lambda_ti.nrows(), 1) - exp(- (lambda_c  + lambda_e));
@@ -404,67 +404,40 @@ Rcpp::NumericVector Lambda_e (
     Rcpp::CharacterVector ids_lambda = lambda_tim1["id"];
     Rcpp::NumericVector temp_lambda_e = lambda_tim1["lambda_e"];
     Rcpp::NumericVector lambda_e_ti = clone(temp_lambda_e);
-    Rcpp::CharacterVector ids_localization = localization_ti["id"];
-    Rcpp::IntegerVector localizations = localization_ti["localization"];
     
     Rcpp::IntegerVector admission_int = admission["info"]; // "0" IF PATIENT, "1" IF HCW
-    Rcpp::IntegerVector admission_room = admission["room"];
     Rcpp::NumericVector environment = environment_ti["env"];
     Rcpp::IntegerVector rooms_environment = environment_ti["id_room"];
     
-
-  for (int j = 0; j < lambda_tim1.nrows(); ++j){
-    Rcpp::String id_j = ids_lambda[j];
-    // TWO CASES (PATIENTS AND HCWS)
-    // CASE 1. IF INDIVIDUAL j IS A PATIENT --> 
-    if (admission_int[j] == 0){
-        int room_j = Get_loc_j(id_j, localization_ti)
+    double individual_weight;
+    for (int j = 0; j < lambda_tim1.nrows(); ++j){
+        Rcpp::String id_j = ids_lambda[j];
+        // TWO CASES (PATIENTS AND HCWS)
+        if (admission_int[j] == 0){
+            // CASE 1. IF INDIVIDUAL j IS A PATIENT --> 
+            individual_weight = 1;
+        } else if (admission_int[j] == 1){
+            // CASE 2. IF INDIVIDUAL j IS A HCW
+            individual_weight = 1;
+        } else {
+            individual_weight = 1;
+        }
+        int room_j = Get_loc_j(id_j, localization_ti);
         // Search for the index of patient's room
         int index_room = -1;
-            for (int k = 0; k < rooms_environment.size(); ++k) {
-                if (rooms_environment[k] == room_j) {
-                    index_room = k;
-                    break;
-                }
+        for (int k = 0; k < rooms_environment.size(); ++k) {
+            if (rooms_environment[k] == room_j) {
+                index_room = k;
+                break;
             }
+        }
         // VIRAL LOAD THRESOLD
         if (environment[index_room] > env_thresold){
-            lambda_e_ti[j] = epsilon * deltat * environment[index_room];
+            lambda_e_ti[j] = individual_weight * epsilon * deltat * environment[index_room];
         } else{
             lambda_e_ti[j] = 0;
         }
     }
-    
-    // CASE 2. IF INDIVIDUAL j IS A HCW --> ENVIRONMENT ACCORDING TO ITS LOCALIZATION
-    // WARNING, LOCALIZATION DF INDEX != LAMBDA DF INDEX ETC
-    if (admission_int[j] == 1){
-        // Search for the room where the HCW is located
-        int index_localization = -1;
-            for (int k = 0; k < ids_localization.size(); ++k) {
-                if (ids_localization[k] == ids_lambda[j]) {
-                    index_localization = k;
-                    break;
-                }
-            }
-        int room_j = localizations[index_localization];
-        // Search for the index of this room
-        int index_room = -1;
-            for (int k = 0; k < rooms_environment.size(); ++k) {
-                if (rooms_environment[k] == room_j) {
-                    index_room = k;
-                    break;
-                }
-            }
-         
-        // VIRAL LOAD THRESOLD
-        if (environment[index_room] > env_thresold){
-            lambda_e_ti[j] = epsilon * deltat * environment[index_room];
-        } else{
-            lambda_e_ti[j] = 0;
-        }
-        
-    }
-  }
 
   return lambda_e_ti;
 };

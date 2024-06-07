@@ -342,25 +342,22 @@ global_localization <- lapply(1:n_subdivisions, function(t) {
 test_loc <-  do.call(rbind, global_localization) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
 View(test_loc %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")))
 ```
-
+## SMOOTHING (SUCCESSIVE INTERACTION IN THE SAME ROOM WITH <5min GAP)
 ```{r}
-interactions <- do.call(rbind, global_interaction)
-localizations <- do.call(rbind, global_localization)
-
 id_room_patient <- rooms %>% 
   filter(id %in% (admission %>% filter(status == "PA") %>% pull(id))) %>%
   distinct(id_room) %>%
   pull()
 
-smoothing_localization <- function(interactions, localizations) {
+smoothing_localization <- function(global_interaction, global_localization) {
+  interactions <- do.call(rbind, global_interaction)
+  localizations <- do.call(rbind, global_localization)
   smoothed_loc <- data.frame()
   
-  # Récupérer toutes les interactions d'un individu
   interactions_long <- interactions %>%
     pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>%
     arrange(individual, time)
-  
-  # Appliquer le lissage pour chaque individu
+
   for (ind in unique(interactions_long$individual)) {
     ind_interactions <- interactions_long %>% filter(individual == ind) %>% arrange(time)
     ind_localizations <- localizations %>% filter(id == ind)
@@ -376,7 +373,7 @@ smoothing_localization <- function(interactions, localizations) {
             ind_localizations[ind_localizations$time == ind_interactions$time[i] - 1, "localization"] <- current_loc
             }
         }
-        if (time_gap > 2 & time_gap <= 5) {
+        if (time_gap > 2 & time_gap <= 10) {
           previous_loc <- ind_localizations %>% filter(time == ind_interactions$time[i - 1]) %>% pull(localization)
           current_loc <- ind_localizations %>% filter(time == ind_interactions$time[i]) %>% pull(localization)
           if (previous_loc == current_loc & current_loc %in% id_room_patient){
@@ -394,15 +391,46 @@ smoothing_localization <- function(interactions, localizations) {
 }
 
 
+smoothed_global_interaction <- smoothing_localization(global_interaction, global_localization)
 
-smoothed_global_interaction <- smoothing_localization(interactions, localizations)
-
-
+## DF TO LIST
 test_global_localization <- lapply(1:n_subdivisions, function(t) {
   localization_t <- smoothed_global_interaction %>% filter(time == t) %>% arrange(id)
   return(localization_t)
 })
 
+
+c <- data.frame()
+for (t in 1:n_subdivisions){
+  a <- setdiff(test_global_localization[[t]], global_localization[[t]])
+  c <- bind_rows(c,a)
+}
+
+check_smoothing <- (do.call(rbind, test_global_localization) %>%
+                      filter(id == "001-0001-D-J") %>%
+                      filter(time < 800 & time > 450) %>%
+                      left_join(do.call(rbind,global_localization) %>%
+                                  filter(id =="001-0001-D-J" ) %>%
+                                  filter(time < 800 & time > 450)
+                                , by = join_by(time)))
+```
+
+## (TEMP)
+```{r}
+global_localization <- test_global_localization
+rm(test_global_localization)
+rm(smoothed_global_interaction)
+rm(interactions)
+```
+
+## SMOOTHING (ADDING CORRIDOR BEFORE AN INTERACTION)
+```{r}
+smoothing_corridor <- function(global_interaction, global_localization) {
+  interactions <- do.call(rbind, global_interaction)
+  localizations <- do.call(rbind, global_localization)
+  smoothed_loc <- data.frame()
+  
+}
 ```
 
 
