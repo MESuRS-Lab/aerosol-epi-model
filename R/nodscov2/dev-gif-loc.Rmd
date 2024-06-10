@@ -7,11 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(dplyr)
-library(lubridate)
 library(ggplot2)
 library(gganimate)
-library(dplyr)
 library(gifski)
 ```
 
@@ -40,7 +37,7 @@ chambres <- data.frame(
   type = c(rep("Chambre", 18), rep("Restrooms", 2), rep("Office/Nursing station",2), "Corridor", "Only MED+PARAMED")
 )
 
-all_data <- do.call(rbind,global_localization) #%>% filter(time < 30)
+all_data <- do.call(rbind,global_localization) %>% filter(time < 30)
 all_data <- all_data %>%
   filter(localization != -1) %>%
   left_join(chambres, by = c("localization")) %>% 
@@ -52,7 +49,7 @@ all_data <- all_data %>%
 ```{r}
 p <- ggplot(all_data, aes(x = x, y = y, color = factor(id), group = id)) +
   geom_point(size = 5) +
-  geom_path(aes(group = id), alpha = 0.5) +  # Tracer les trajectoires
+  geom_path(aes(group = id), alpha = 0.8) +  # Tracer les trajectoires
   scale_color_discrete(name = "Individu") +
   scale_y_continuous(breaks = 1:5, labels = c("Chambre", "Corridor", "Office", "Restroom", "Med + PM")) +
   labs(title = 'Déplacement des individus au temps: {frame_time}', x = 'X', y = 'Type de pièce') +
