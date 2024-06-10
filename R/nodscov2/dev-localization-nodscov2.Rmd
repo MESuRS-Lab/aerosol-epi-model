@@ -13,7 +13,6 @@ library(lubridate)
 library(igraph)
 library(tidyr)
 library(viridis)
-library(purrr)
 ```
 
 ```{r Paths setup}
@@ -24,8 +23,12 @@ knitr::opts_chunk$set(root.dir = wd)
 data_path <- file.path(wd,"..", "..", "data")
 nodscov2_path <- file.path(data_path, "data-nodscov2") 
 loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
+fig_path <- file.path(loc_nodscov2_path,"..","fig")
 
 if (!dir.exists(loc_nodscov2_path)) {
+  dir.create(loc_nodscov2_path, recursive = TRUE)
+}
+if (!dir.exists(fig_path)) {
   dir.create(loc_nodscov2_path, recursive = TRUE)
 }
 ```
@@ -868,8 +871,6 @@ test_loc %>% filter(room == "Medical Restroom" | room == "Paramedical Restroom")
     xlab("") +
     ylab("Cumulative time interacting (h)")
 ```
-
-
 
 
 ## TEMP - Tracking individual
