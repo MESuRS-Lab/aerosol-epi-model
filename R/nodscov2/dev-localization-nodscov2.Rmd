@@ -24,12 +24,17 @@ data_path <- file.path(wd,"..", "..", "data")
 nodscov2_path <- file.path(data_path, "data-nodscov2") 
 loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
 fig_path <- file.path(loc_nodscov2_path,"..","fig")
+ind_paths_path <- file.path(fig_path, "individual-paths")
+if (!dir.exists(ind_paths_path)) {
 
 if (!dir.exists(loc_nodscov2_path)) {
   dir.create(loc_nodscov2_path, recursive = TRUE)
 }
 if (!dir.exists(fig_path)) {
   dir.create(loc_nodscov2_path, recursive = TRUE)
+}
+
+  dir.create(ind_paths_path, recursive = TRUE)
 }
 ```
 
@@ -60,9 +65,7 @@ admission <- admission %>%
   filter(!(cat %in% c("administration",
                   "investigation",
                   "logistic",
-                  "visitor"))) %>%
-  ## ADD PE/PA IN ADMISSION'S IDs (id)
-  mutate(id_bis = paste0(status,"-",id))
+                  "visitor")))
 
 ## FILTER INTERACTIONS TO KEEP ONLY HCW AND PATIENTS
 data <- data %>%
@@ -255,8 +258,6 @@ id_paramedical <- admission %>% filter(id %in% id_interacting & cat %in% cat_par
 id_medical <- admission %>% filter(id %in% id_interacting & cat %in% cat_medical) %>% pull(id)
 id_hcw <- admission %>% filter(id %in% id_interacting & status == "PE") %>% pull(id)
 id_patient <- admission %>% filter(id %in% id_interacting & status == "PA") %>% pull(id)
-
-
 ```
 
 
@@ -882,6 +883,9 @@ test_df <- do.call(rbind, global_interaction) %>%
   select(individual, time, localization)
 
 
+
+
+
 save_individual_path <- function(ind) {
   p <- ggplot(paths %>% filter(id == ind), aes(x = time * 30 + begin_date, y = room, color = as.factor(id))) +
     geom_path(aes(group = id)) +  # geom_path -> connected lines
@@ -895,7 +899,7 @@ save_individual_path <- function(ind) {
     
   ind_cat <- admission[admission$id == ind, "cat"]
   # filename
-  file_name <- file.path(fig_path, paste0(ind,"_", ind_cat, "_fig-traj", ".png"))
+  file_name <- file.path(ind_paths_path, paste0(ind,"_", ind_cat, "_fig-traj", ".png"))
   ggsave(file = file_name, plot = p, height = 4, width = 20)
 }
 
