@@ -13,6 +13,7 @@ library(lubridate)
 library(igraph)
 library(tidyr)
 library(viridis)
+library(purrr)
 ```
 
 ```{r Paths setup}
@@ -340,7 +341,7 @@ global_localization <- lapply(1:n_subdivisions, function(t) {
 ## checkup
 ```{r}
 test_loc <-  do.call(rbind, global_localization) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
-View(test_loc %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")))
+View(test_loc %>% filter(id %in% id_hcw) %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")))
 ```
 ## SMOOTHING (SUCCESSIVE INTERACTION IN THE SAME ROOM WITH <5min GAP)
 ```{r}
@@ -520,20 +521,7 @@ u <- do.call(rbind,global_localization) %>% group_by(id,localization) %>% summar
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-## localization INFERENCE (only for PE, PAs stay in their room) - NO INTERACTION
+## localization INFERENCE - NO INTERACTION (PATIENTS STAY IN THEIR ROOM, SO WE ONLY CHECK/FILL HCW)
 ```{r Loc t1}
 ################################################################
 ## ASSIGNING localization FOR THE INDIVIDUALS NOT INTERACTING ##
@@ -651,23 +639,14 @@ for (t in 3:n_subdivisions){
   
   id_not_interacting_t <- localization_t %>% filter(is.na(localization)) %>% pull(id)
   
-  id_room_tm1 <- localization_tm1 %>% filter(localization != rooms[rooms$id == "R-M-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "R-PM-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "PM-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "M-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "M-PM", "id_room"] &
-                                           localization != rooms[rooms$id == "ALL", "id_room"] &
-                                           localization != "NOT HERE" &
-                                           !is.na(localization)
-                                         ) %>% pull(id)
-  
-
+  id_room_tm1 <- localization_tm1 %>% filter(localization %in% id_room_patient) %>% pull(id)
   id_corridor_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "ALL", "id_room"]) %>% pull(id)
-  id_medical_restroom_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "R-M-PE", "id_room"]) %>% pull(id)
-  id_paramedical_restroom_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "R-PM-PE", "id_room"]) %>% pull(id)
-  id_nursing_station_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "PM-PE", "id_room"]) %>% pull(id)
   id_office_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "M-PE", "id_room"]) %>% pull(id)
+  id_medical_restroom_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "R-M-PE", "id_room"]) %>% pull(id)
+  id_nursing_station_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "PM-PE", "id_room"]) %>% pull(id)
+  id_paramedical_restroom_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "R-PM-PE", "id_room"]) %>% pull(id)
   id_medical_paramed_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "M-PM", "id_room"]) %>% pull(id)
+  
   id_not_here_tm1 <- localization_tm1 %>% filter(localization == "NOT HERE") %>% pull(id)
   
   ## ITERATE ON THE INDIVIDUALS NOT INTERACTING at time t
@@ -678,6 +657,7 @@ for (t in 3:n_subdivisions){
     
     if (in_shift) {
       ## If the individual is within a shift
+      
       if (individual %in% id_paramedical){
         if (individual %in% id_room_tm1){
           ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
@@ -746,7 +726,7 @@ global_localization <- lapply( 1:n_subdivisions, function(t){
 
 ```{r}
 test_loc_ter <- do.call(rbind,global_localization) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
-View(test_loc_ter %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")))
+View(test_loc_ter %>%filter(id %in% id_hcw) %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")))
 ```
 
 
@@ -801,15 +781,15 @@ global_interaction <- test_global_int
 ```{r Save to .RData}
 save(clusters,
      global_localization,
-     shifts,
-     rooms,
      global_interaction,
      admission,
+     rooms,
+     shifts,
      id_hcw,
-     id_patient
-     n_subdivisions,
+     id_patient,
      begin_date,
      end_date,
+     n_subdivisions,
      file = file.path(loc_nodscov2_path, "dev-localization-nodscov2.RData"))
 ```
 
@@ -892,25 +872,39 @@ test_loc %>% filter(room == "Medical Restroom" | room == "Paramedical Restroom")
 
 
 
-
 ## TEMP - Tracking individual
 ```{r}
-ind = "001-0001-D-J"
-paths <- do.call(rbind, global_localization) %>% left_join(rooms %>% select(id_room,room), by = c("localization" = "id_room")) %>% mutate(room = ifelse(is.na(room), "-1 NOT HERE", room))
- 
-fig_path <- file.path(loc_nodscov2_path,"..","fig")
+paths <- do.call(rbind, global_localization) %>% left_join(rooms %>% distinct(id_room, .keep_all = T) %>% select(id_room,room), by = c("localization" = "id_room")) %>% mutate(room = ifelse(is.na(room), "-1 NOT HERE", room))
 
-ggplot(paths %>% filter(id == ind), aes(x = time*30 + begin_date, y = room, color = as.factor(id))) +
-  geom_path(aes(group = id)) +  # geom_path pour les lignes connectées
-  geom_point(aes(shape = as.factor(id))) +  # geom_point pour les points
-  labs(color = "ID", shape = "ID") +  # Légendes pour les couleurs et les formes
-  theme_bw() +  # Thème en noir et blanc
-  ggtitle("Trajectoires des identifiants en fonction du temps") +  # Titre du graphique
-  xlab("Temps") +  # Label de l'axe X
-  ylab("Pièce") +  # Label de l'axe Y
-  facet_wrap(~ id)  # Facet pour créer un sous-graphe pour chaque identifiant
-ggsave(file = file.path(fig_path,"fig_traj.png"), height = 4, width = 20)
+test_df <- do.call(rbind, global_interaction) %>%
+  pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>% 
+  select(individual, time, localization)
+
+
+save_individual_path <- function(ind) {
+  p <- ggplot(paths %>% filter(id == ind), aes(x = time * 30 + begin_date, y = room, color = as.factor(id))) +
+    geom_path(aes(group = id)) +  # geom_path -> connected lines
+    geom_point(aes(shape = as.factor(id))) +  # geom_point -> points
+    labs(color = "ID", shape = "ID") +  #legend
+    theme_bw() +  #
+    ggtitle("Individual trajectory over time") +  # title
+    #facet_wrap(~ id) + # 
+    xlab("Time") +  
+    ylab("Room") 
+    
+  ind_cat <- admission[admission$id == ind, "cat"]
+  # filename
+  file_name <- file.path(fig_path, paste0(ind,"_", ind_cat, "_fig-traj", ".png"))
+  ggsave(file = file_name, plot = p, height = 4, width = 20)
+}
+
+#map -> apply function for each individual
+map(id_interacting, save_individual_path)
+
+
+do.call(rbind,global_localization) %>% filter(id %in% id_patient) %>% group_by(id,localization) %>% summarise(n = n())
 ```
+
 
 
 <!-- ################################# GARBAGE ############################## -->
