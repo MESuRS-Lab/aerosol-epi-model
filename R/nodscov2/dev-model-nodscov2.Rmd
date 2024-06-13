@@ -30,7 +30,12 @@ loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
 if (!dir.exists(sim_nodscov2_path)) {
   dir.create(sim_nodscov2_path, recursive = TRUE)
 }
-
+if (!dir.exists(cpp_model_path)) {
+  dir.create(cpp_model_path, recursive = TRUE)
+}
+if (!dir.exists(loc_nodscov2_path)) {
+  dir.create(loc_nodscov2_path, recursive = TRUE)
+}
 
 ```
 
