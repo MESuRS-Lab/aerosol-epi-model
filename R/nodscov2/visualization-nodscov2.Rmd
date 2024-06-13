@@ -34,7 +34,7 @@ if (!dir.exists(fig_sim_path)) {
 
 ## TEST
 ```{r}
-id_sim <- "dev-test-endless-day"
+id_sim <- "new-dev-test-endless-day"
 id_sim_path <- file.path(sim_nodscov2_path, id_sim)
 fig_sim_path <- file.path(id_sim_path, paste0(id_sim,"-fig"))
 
@@ -44,6 +44,7 @@ if (!dir.exists(fig_sim_path)) {
 
 #load(file.path(id_sim_path, paste0(id_sim, "-", "simulation-nodscov2.RData")))
 load(file.path(id_sim_path, paste0(id_sim, "-", "dev-simulation-nodscov2.RData")))
+load(file.path(id_sim_path, paste0(id_sim, "-", "new-dev-simulation-nodscov2.RData")))
 data_sim <- data_sim_test
 rm(data_sim_test)
 

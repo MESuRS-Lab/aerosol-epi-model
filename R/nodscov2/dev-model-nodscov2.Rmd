@@ -80,7 +80,8 @@ env_t <- rooms %>%
   distinct(room) %>%
   mutate(env = 0) %>%
   mutate(id_room = rooms %>% distinct(id_room) %>% pull() ) %>%
-  select(room, id_room, env)
+  left_join(rooms %>% select(id_room, volume), by = "id_room") %>%
+  select(room, id_room, env, volume)
 env_t$id_room <- as.integer(env_t$id_room)
 
 global_environment <- lapply(1:n_subdivisions, function(t){
@@ -120,21 +121,21 @@ sourceCpp(file.path(cpp_model_path,"dev-model-nodscov2.cpp"))
 beta <- 4
 
 B <- 0.48 *24 # Breating rate ( 0.48 m3/h)
-epsilon <- 1 # Airborne transmission rate -> epsilon = (B/V) * E(t_i)
 
 mu_air <- 4 * 24 # Quanta removal (4-6 Air changes/h)
 mu_inac <- (log(2)/1.1) * 24 # Quanta inactivation (computed with viral half life -> 0.63quanta inactivated/h) 
-mu <- 1
-#mu <- mu_air + mu_inac
+mu <- mu_air + mu_inac
 
-
-nu <- 1 ## Quanta shedding
-#nu <- 10 * 24 #( 10 quanta/h)
+nu <- 10 * 24 #( 10 quanta/h)
 
 dt <- 30 # Time step
 tau <- 60 * 60 *24 # Seconds in 1 day
 deltat <- dt/tau
 env_thresold <- 0 # Quanta threshold above which the environment is infectious
+
+#epsilon <- 1 # Airborne transmission rate -> epsilon = (B/V) * E(t_i)
+#mu <- 1
+#nu <- 1 ## Quanta shedding
 ```
 
 ## INDEX
@@ -201,7 +202,7 @@ data_sim_test <- simulation(global_interaction = test_interaction,
            global_status = test_status,
            admission = admission_sim,
            beta = beta,
-           epsilon = epsilon,
+           B = B,
            nu = nu,
            mu = mu,
            env_thresold,
@@ -214,7 +215,7 @@ print(tb-ta)
 
 
 ```{r}
-id_sim <- ifelse(length(args)==0, "dev-test-endless-day", args[1])
+id_sim <- ifelse(length(args)==0, "new-dev-test-endless-day", args[1])
 id_sim_path <- file.path(sim_nodscov2_path, id_sim)
 
 if (!dir.exists(id_sim_path)) {
@@ -230,6 +231,7 @@ save(truncated_interaction,
      beta,
      nu,
      mu,
+     B,
      env_thresold,
      dt,
      new_n_subdivisions,
@@ -238,7 +240,7 @@ save(truncated_interaction,
      new_end_date,
      data_sim_test,
      clusters,
-     file = file.path(id_sim_path, paste0(id_sim, "-", "dev-simulation-nodscov2.RData"))
+     file = file.path(id_sim_path, paste0(id_sim, "-", "-new-dev-simulation-nodscov2.RData"))
      )
 ```
 
