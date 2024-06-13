@@ -13,6 +13,7 @@ library(lubridate)
 library(igraph)
 library(tidyr)
 library(viridis)
+library(purrr)
 ```
 
 ```{r Paths setup}
@@ -109,24 +110,26 @@ rooms <- admission %>%
   distinct(id) %>%
   mutate(room = as.factor(row_number())) %>%
   mutate(id_room = as.factor(row_number())) %>%
-  select(id_room,room, id)
+  mutate(volume = 20* 2.2) %>%  #18 square meters * 2.2 height
+  select(id_room,room, volume,  id)
 
 rooms <- rooms %>%
-  bind_rows(data.frame(room = "Medical Restroom", id = "R-M-PE", id_room = as.factor(nrow(rooms) + 1))) %>%
-  bind_rows(data.frame(room = "Paramedical Restroom", id = "R-PM-PE", id_room = as.factor(nrow(rooms) + 2))) %>%
-  bind_rows(data.frame(room = "Nursing station", id = "PM-PE", id_room = as.factor(nrow(rooms) + 3))) %>%
-  bind_rows(data.frame(room = "Office", id = "M-PE", id_room = as.factor(nrow(rooms) + 4))) %>%
-  bind_rows(data.frame(room = "Corridor", id = "ALL", id_room = as.factor(nrow(rooms) + 5))) %>% 
-  bind_rows(data.frame(room = "only med & paramed", id = "M-PM", id_room = as.factor(nrow(rooms) + 6)))
+  bind_rows(data.frame(room = "Medical Restroom", id = "R-M-PE", volume = 30 * 2.2 ,  id_room = as.factor(nrow(rooms) + 1))) %>%
+  bind_rows(data.frame(room = "Paramedical Restroom", id = "R-PM-PE", volume =  40 * 2.2 , id_room = as.factor(nrow(rooms) + 2))) %>%
+  bind_rows(data.frame(room = "Nursing station", id = "PM-PE", volume = 20 * 2.2 , id_room = as.factor(nrow(rooms) + 3))) %>%
+  bind_rows(data.frame(room = "Office", id = "M-PE", volume = 20 * 2.2 , id_room = as.factor(nrow(rooms) + 4))) %>%
+  bind_rows(data.frame(room = "Corridor", id = "ALL", volume = 200 * 2.2 , id_room = as.factor(nrow(rooms) + 5)))
 
 ### DOUBLE ROOMS
 ## "001-0038-B-S" and = "001-0039-B-F" are in the same room
 ## "001-0127-B-A" and "001-0128-Z-K" are in the same room
 rooms <- rooms %>% mutate(room = ifelse(id == "001-0038-B-S", rooms[rooms$id == "001-0039-B-F", "room"], room),
-                         id_room = ifelse(id == "001-0038-B-S", rooms[rooms$id == "001-0039-B-F", "id_room"], id_room))
+                          volume = ifelse(id == "001-0038-B-S", 30 * 2.2, volume),
+                          id_room = ifelse(id == "001-0038-B-S", rooms[rooms$id == "001-0039-B-F", "id_room"], id_room))
 
 rooms <- rooms %>% mutate(room = ifelse(id == "001-0128-Z-K", rooms[rooms$id == "001-0127-B-A", "room"], room),
-                         id_room = ifelse(id == "001-0128-Z-K", rooms[rooms$id == "001-0127-B-A", "id_room"], id_room))
+                          volume = ifelse(id == "001-0128-Z-K", 30 * 2.2, volume),
+                          id_room = ifelse(id == "001-0128-Z-K", rooms[rooms$id == "001-0127-B-A", "id_room"], id_room))
 
 double_rooms <- list(c("001-0038-B-S", "001-0039-B-F"), c("001-0127-B-A", "001-0128-Z-K"))
 ```
@@ -322,12 +325,12 @@ global_localization <- lapply(1:n_subdivisions, function(t) {
       cluster_localization <- unique(rooms[rooms$id == double_rooms[[2]][[1]], "id_room"])
     } else if (ONE_PATIENT) {
       cluster_localization <- rooms[rooms$id == cluster[!cluster %in% id_hcw], "id_room"]
-    } else if (ONLY_PARAMEDICAL){
-      cluster_localization <- rooms[rooms$id == "PM-PE", "id_room"] ## ONLY PARAMEDICAL INTERACTING -> NURSING STATION ?
     } else if (ONLY_MEDICAL){
       cluster_localization <- rooms[rooms$id == "M-PE", "id_room"] ## ONLY MEDICAL INTERACTING -> OFFICE
+    } else if (ONLY_PARAMEDICAL){
+      cluster_localization <- rooms[rooms$id == "PM-PE", "id_room"] ## ONLY PARAMEDICAL INTERACTING -> NURSING STATION 
     } else if (MEDICAL_AND_PARAMEDICAL){
-      cluster_localization <- rooms[rooms$id == "M-PM", "id_room"] ## ONLY MEDICAL AND PARAMEDICAL -> NURSING STATION ?
+      cluster_localization <- rooms[rooms$id == "PM-PE", "id_room"] ## ONLY MEDICAL AND PARAMEDICAL -> NURSING STATION ?
     } else {
       cluster_localization <- "MISSED LOCALIZATION OF CLUSTER"
     }
@@ -555,24 +558,14 @@ global_localization[[1]]$localization <- ifelse(is.na(global_localization[[1]]$l
 ## SECOND SUBDIVISION
 localization_t1 <- global_localization[[1]]
 localization_t2 <- global_localization[[2]]
-id_not_interacting_t2 <- localization_t2 %>% filter(is.na(localization)) %>% pull(id)
-id_room_t1 <- localization_t1 %>% filter(localization != rooms[rooms$id == "R-M-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "R-PM-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "PM-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "M-PE", "id_room"] &
-                                           localization != rooms[rooms$id == "M-PM", "id_room"] &
-                                           localization != rooms[rooms$id == "ALL", "id_room"] &
-                                           localization != "NOT HERE" &
-                                           !is.na(localization)
-                                         ) %>% pull(id)
-  
 
+id_not_interacting_t2 <- localization_t2 %>% filter(is.na(localization)) %>% pull(id)
+id_room_t1 <- localization_t1 %>% filter(localization %in% id_room_patient) %>% pull(id)
 id_corridor_t1 <- localization_t1 %>% filter(localization == rooms[rooms$id == "ALL", "id_room"]) %>% pull(id)
 id_medical_restroom_t1 <- localization_t1 %>% filter(localization == rooms[rooms$id == "R-M-PE", "id_room"]) %>% pull(id)
 id_paramedical_restroom_t1 <- localization_t1 %>% filter(localization == rooms[rooms$id == "R-PM-PE", "id_room"]) %>% pull(id)
 id_nursing_station_t1 <- localization_t1 %>% filter(localization == rooms[rooms$id == "PM-PE", "id_room"]) %>% pull(id)
 id_office_t1 <- localization_t1 %>% filter(localization == rooms[rooms$id == "M-PE", "id_room"]) %>% pull(id)
-id_medical_paramed_t1 <- localization_t1 %>% filter(localization == rooms[rooms$id == "M-PM", "id_room"]) %>% pull(id)
 id_not_here_t1 <- localization_t1 %>% filter(localization == "NOT HERE") %>% pull(id)
 
 
@@ -583,8 +576,8 @@ for (individual in id_not_interacting_t2){
       ind_loc_t2 <- rooms[rooms$id == "ALL", "id_room"]
     } else if (individual %in% id_nursing_station_t1){
       ind_loc_t2 <- rooms[rooms$id == "ALL", "id_room"]
-    } else if (individual %in% id_medical_paramed_t1){
-      ind_loc_t2 <- rooms[rooms$id == "ALL", "id_room"]
+    } else if (individual %in% id_paramedical_restroom_t1){
+      ind_loc_t2 <- rooms[rooms$id == "R-PM-PE", "id_room"]
     } else if (individual %in% id_corridor_t1){
       ind_loc_t2 <- rooms[rooms$id == "R-PM-PE", "id_room"]
     } else if (individual %in% id_not_here_t1){
@@ -597,9 +590,9 @@ for (individual in id_not_interacting_t2){
     
     if (individual %in% id_room_t1){
       ind_loc_t2 <- rooms[rooms$id == "ALL", "id_room"]
-    } else if (individual %in% id_office_t1){
+    } else if (individual %in% id_nursing_station_t1){
       ind_loc_t2 <- rooms[rooms$id == "ALL", "id_room"]
-    } else if (individual %in% id_medical_paramed_t1){
+    }else if (individual %in% id_office_t1){
       ind_loc_t2 <- rooms[rooms$id == "ALL", "id_room"]
     } else if (individual %in% id_corridor_t1){
       ind_loc_t2 <- rooms[rooms$id == "R-M-PE", "id_room"]
@@ -629,7 +622,6 @@ rm(id_medical_restroom_t1)
 rm(id_paramedical_restroom_t1)
 rm(id_nursing_station_t1)
 rm(id_office_t1)
-rm(id_medical_paramed_t1)
 rm(ind_loc_t2)
 ```
 
@@ -653,7 +645,6 @@ for (t in 3:n_subdivisions){
   id_medical_restroom_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "R-M-PE", "id_room"]) %>% pull(id)
   id_nursing_station_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "PM-PE", "id_room"]) %>% pull(id)
   id_paramedical_restroom_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "R-PM-PE", "id_room"]) %>% pull(id)
-  id_medical_paramed_tm1 <- localization_tm1 %>% filter(localization == rooms[rooms$id == "M-PM", "id_room"]) %>% pull(id)
   
   id_not_here_tm1 <- localization_tm1 %>% filter(localization == "NOT HERE") %>% pull(id)
   
@@ -671,11 +662,9 @@ for (t in 3:n_subdivisions){
           ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
         } else if (individual %in% id_nursing_station_tm1){
           ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
-        } else if (individual %in% id_medical_paramed_tm1){
-          ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
-        } else if (individual %in% id_corridor_tm1){
+        }else if (individual %in% id_paramedical_restroom_tm1){
           ind_loc_t <- rooms[rooms$id == "R-PM-PE", "id_room"]
-        } else if (individual %in% id_paramedical_restroom_tm1){
+        } else if (individual %in% id_corridor_tm1){
           ind_loc_t <- rooms[rooms$id == "R-PM-PE", "id_room"]
         } else if (individual %in% id_not_here_tm1){
           ind_loc_t <- "NOT HERE"
@@ -687,9 +676,9 @@ for (t in 3:n_subdivisions){
         
         if (individual %in% id_room_tm1){
           ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
-        } else if (individual %in% id_office_tm1){
+        } else if (individual %in% id_nursing_station_tm1){
           ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
-        } else if (individual %in% id_medical_paramed_tm1){
+        } else if (individual %in% id_office_tm1){
           ind_loc_t <- rooms[rooms$id == "ALL", "id_room"]
         } else if (individual %in% id_corridor_tm1){
           ind_loc_t <- rooms[rooms$id == "R-M-PE", "id_room"]
@@ -719,6 +708,7 @@ tb_no_int <- Sys.time()
 print(tb_no_int - ta_no_int)
 
 y <- do.call(rbind,global_localization)
+View(y%>% group_by(localization) %>% summarise (n = n()))
 ```
 
 

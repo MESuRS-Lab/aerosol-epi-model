@@ -116,14 +116,25 @@ sourceCpp(file.path(cpp_model_path,"dev-model-nodscov2.cpp"))
 
 ## PARAMETERS
 ```{r}
+## ALL RATE ARE EXPRESSED IN x/day
 beta <- 4
-epsilon <- 1
+
+B <- 0.48 *24 # Breating rate ( 0.48 m3/h)
+epsilon <- 1 # Airborne transmission rate -> epsilon = (B/V) * E(t_i)
+
+mu_air <- 4 * 24 # Quanta removal (4-6 Air changes/h)
+mu_inac <- (log(2)/1.1) * 24 # Quanta inactivation (computed with viral half life -> 0.63quanta inactivated/h) 
 mu <- 1
-nu <- 1
-dt <- 30
-tau <- 60 * 60 *24
+#mu <- mu_air + mu_inac
+
+
+nu <- 1 ## Quanta shedding
+#nu <- 10 * 24 #( 10 quanta/h)
+
+dt <- 30 # Time step
+tau <- 60 * 60 *24 # Seconds in 1 day
 deltat <- dt/tau
-env_thresold <- 0
+env_thresold <- 0 # Quanta threshold above which the environment is infectious
 ```
 
 ## INDEX
@@ -153,8 +164,8 @@ end_date - begin_date ##end of last interaction
 ## we take 24h
 new_begin_date <- begin_date + (5*60*60) ## OFFSET TO START THE DAY AT 12AM
 new_end_date <- new_begin_date + (24*60*60)
-new_end_date - new_begin_date
-t_begin <- 5*60*2
+print(new_end_date - new_begin_date)
+t_begin <- 5*60*2 ## OFFSET t
 t_end <- (t_begin + 24*60*2) - 1
 ```
 
