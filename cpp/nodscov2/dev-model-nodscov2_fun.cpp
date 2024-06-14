@@ -396,8 +396,8 @@ Rcpp::NumericVector Lambda_e (
     const Rcpp::DataFrame& lambda_tim1,
     const Rcpp::DataFrame& localization_ti,
     const Rcpp::DataFrame& environment_ti,
-    const Rcpp::DataFrame& admission, 
-    const double& epsilon,
+    const Rcpp::DataFrame& admission,
+    const double& B,
     const double& env_thresold,
     const double& deltat
 ) {
@@ -408,6 +408,7 @@ Rcpp::NumericVector Lambda_e (
     Rcpp::IntegerVector admission_int = admission["info"]; // "0" IF PATIENT, "1" IF HCW
     Rcpp::NumericVector environment = environment_ti["env"];
     Rcpp::IntegerVector rooms_environment = environment_ti["id_room"];
+    Rcpp::IntegerVector rooms_volume = environment_ti["volume"];
     
     double individual_weight;
     for (int j = 0; j < lambda_tim1.nrows(); ++j){
@@ -433,7 +434,7 @@ Rcpp::NumericVector Lambda_e (
         }
         // VIRAL LOAD THRESOLD
         if (environment[index_room] > env_thresold){
-            lambda_e_ti[j] = individual_weight * epsilon * deltat * environment[index_room];
+            lambda_e_ti[j] = individual_weight * (B/rooms_volume[index_room]) * deltat * environment[index_room];
         } else{
             lambda_e_ti[j] = 0;
         }
