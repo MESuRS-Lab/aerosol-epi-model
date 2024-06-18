@@ -5,12 +5,15 @@ library(dplyr)
 library(ggrepel)
 library(tidyr)
 
-loc_path <- file.path("C:/Users/Olivier/Documents/CNAM-PASTEUR-FIXE/projet-pacri/out/loc-nodscov2/dev-localization-nodscov2.RData")
-load(loc_path) ##overwrite admission
+
+#loc_path <- file.path("dev-localization-nodscov2.RData")
+wd <- getwd()
+loc_path <- file.path(wd, "..", "..", "out", "loc-nodscov2","dev-localization-nodscov2.RData")
+load(loc_path)
 
 distribute_points <- function(n) {
   theta <- seq(0, 2 * pi, length.out = n + 1)[-1]
-  radius <- 0.2  # Radius of the circle where the points will be plotted 
+  radius <- 0.2  # Radius of the circle where the points will be plotted
   x <- radius * cos(theta)
   y <- radius * sin(theta)
   return(data.frame(offset_x = x, offset_y = y))
@@ -41,7 +44,7 @@ rooms_coords <- rooms %>%
   distinct(id_room, .keep_all = TRUE) %>%
   select(localization, x, y)
 
-data <- do.call(rbind, global_localization) %>% filter(time < 150)
+data <- do.call(rbind, global_localization)
 data <- data %>%
   filter(localization != -1) %>%
   left_join(rooms_coords, by = c("localization")) %>%
@@ -91,9 +94,9 @@ p <- ggplot(data, aes(x = x_adj, y = y_adj, color = cat, group = id)) +
   #geom_segment(data = segments_data, aes(xend = x_end, yend = y_end), alpha = 0.5) +
   geom_text_repel(aes(label = id), size = 3, box.padding = 0.5, point.padding = 0.5, max.overlaps = Inf) +
   scale_color_discrete(name = "Category") +
-  scale_y_continuous(breaks = 1:4, labels = c("Chambre", "Corridor", "Office / Nursing station", "Restroom")) +
+  scale_y_continuous(breaks = 1:4, labels = c("Patient room", "Corridor", "Office / Nursing station", "Restroom")) +
   scale_x_continuous(breaks = 1:sum(rooms_coords$y == 1), labels = c(paste0("Chambre ", 1:sum(rooms_coords$y == 1)))) +
-  labs(title = 'Déplacement des individus au temps: {frame_time}', x = 'X', y = 'Type de pièce') +
+  labs(title = 'Individual position at time : {frame_time}', x = 'Patient room', y = 'Type of room') +
   theme_minimal()
 
 animation <- p +
@@ -102,6 +105,6 @@ animation <- p +
 
 
 nframes <- nrow(data%>%distinct(time))
-fps <- 10 
-duration <- nframes / fps  
-animate(animation, renderer = gifski_renderer("deplacement.gif"), width = 2000, height = 1333, duration = duration)
+fps <- 50
+duration <- nframes / fps
+animate(animation, renderer = gifski_renderer("deplacement.gif"), width = 2000, height = 1333, fps = 50, nframes = nframes, duration = duration)
