@@ -106,7 +106,7 @@ p <- ggplot(data, aes(x = x_adj, y = y_adj, color = cat, group = id)) +
   geom_text_repel(aes(label = id), size = 3, box.padding = 0.5, point.padding = 0.5, max.overlaps = Inf) +
   scale_color_discrete(name = "Category") +
   scale_y_continuous(breaks = 1:4, labels = c("Patient room", "Corridor", "Office / Nursing station", "Restroom")) +
-  scale_x_continuous(breaks = 1:sum(rooms_coords$y == 1), labels = c(paste0("Chambre ", 1:sum(rooms_coords$y == 1)))) +
+  scale_x_continuous(breaks = 1:sum((rooms_coords$y == 1)+1), labels = c(paste0("Chambre ", 1:(sum(rooms_coords$y == 1)+1)))) +
   labs(title = 'Individual position at time : {new_begin_date + (frame_time * 30)} \n Individual position at time step : {frame_time}', x = 'Patient room', y = 'Type of room') +
   theme_minimal()
 

@@ -177,7 +177,6 @@ save(truncated_interaction,
      n_days,
      new_begin_date,
      new_end_date,
-     data_sim_test,
      file = save_path
 )
 
