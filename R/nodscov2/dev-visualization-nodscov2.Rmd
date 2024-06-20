@@ -1,0 +1,168 @@
+---
+title: "dev-visualization"
+author: "Olivier GAUFRÈS"
+date: "2024-06-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+library(visNetwork)
+```
+
+```{r}
+wd <- getwd()
+knitr::opts_chunk$set(root.dir = wd)
+cpp_path <-  file.path(wd,"..", "..", "cpp")
+cpp_model_path <- file.path(cpp_path,"nodscov2")
+sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
+sensibility_path <- file.path(wd,'..','..','out','sensibility-analysis')
+
+id_sim <- "01"
+id_sim_path <- file.path(sim_nodscov2_path, id_sim)
+fig_sim_path <- file.path(id_sim_path, paste0(id_sim,"-fig"))
+
+
+if (!dir.exists(fig_sim_path)) {
+  dir.create(fig_sim_path, recursive = TRUE)
+}
+```
+
+
+```{r Load data}
+load(file.path(id_sim_path, paste0(id_sim, "-", "dev-simulation-nodscov2.RData")))
+load(file.path(sensibility_path, 'dev-sensibility-analysis.RData'))
+```
+
+```{r}
+id_interacting <- do.call(rbind,truncated_interaction) %>%
+  pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>%
+  distinct(individual) %>%
+  pull()
+id_total <- admission %>% distinct(id) %>% pull()
+id_not_interacting <- setdiff(id_total, id_interacting)
+```
+
+
+```{r}
+filter_interacting <- function(sim_list, id_interacting) {
+  lapply(sim_list, function(df) {
+    df %>% filter(id %in% id_interacting)
+  })
+}
+
+sim_C <- filter_interacting(sim_list = sim_C, id_interacting = id_interacting)
+sim_E <- filter_interacting(sim_list = sim_E, id_interacting = id_interacting)
+sim_C_E <- filter_interacting(sim_list = sim_C_E, id_interacting = id_interacting)
+
+```
+
+```{r}
+## Number of infected over time
+n_individual <- length(id_interacting)
+n_subdivisions <- new_n_subdivisions
+
+SEIR_counts <- function(status_sim, n_subdivisions, n_individual) {
+  lapply(1:n_subdivisions, function(t) {
+    df <- data.frame(status = c("Susceptible", "Exposed", "Infectious", "Recovered"), count = NA, proportion = NA, time = t)
+    
+    df$count[1] <- sum(status_sim$t_inf == -1 | status_sim$t_inf > t)
+    df$count[2] <- sum(status_sim$t_inf <= t & status_sim$t_incub > t)
+    df$count[3] <- sum(status_sim$t_incub <= t & status_sim$t_recover > t)
+    df$count[4] <- sum(status_sim$t_recover <= t & status_sim$t_inf != -1)
+    
+    df$proportion[1] <- df$count[1] * 100 / n_individual
+    df$proportion[2] <- df$count[2] * 100 / n_individual
+    df$proportion[3] <- df$count[3] * 100 / n_individual
+    df$proportion[4] <- df$count[4] * 100 / n_individual
+    
+    return(df)
+  })
+}
+
+SEIR_to_list <- function(sim_list, n_subdivisions, n_individual) {
+  lapply(sim_list, function(status_sim) {
+    SEIR_counts(status_sim, n_subdivisions, n_individual)
+  })
+}
+
+
+SEIR_counts_optimized <- function(status_sim, n_subdivisions, n_individual) {
+  ## Time steps
+  times <- 1:n_subdivisions
+
+  is_susceptible <- outer(times, status_sim$t_inf, `<`) | (status_sim$t_inf == -1)
+  is_exposed <- outer(times, status_sim$t_inf, `>=`) & outer(times, status_sim$t_incub, `<`)
+  is_infectious <- outer(times, status_sim$t_incub, `>=`) & outer(times, status_sim$t_recover, `<`)
+  is_recovered <- outer(times, status_sim$t_recover, `>=`) & (status_sim$t_inf != -1)
+  
+  counts_matrix <- matrix(0, nrow = n_subdivisions, ncol = 5)
+  colnames(counts_matrix) <- c("Susceptible", "Exposed", "Infectious", "Recovered", "time")
+  counts_matrix[, "Susceptible"] <- rowSums(is_susceptible)
+  counts_matrix[, "Exposed"] <- rowSums(is_exposed)
+  counts_matrix[, "Infectious"] <- rowSums(is_infectious)
+  counts_matrix[, "Recovered"] <- rowSums(is_recovered)
+  counts_matrix[, "time"] <- times
+  
+  
+  # Proportions
+  proportions_matrix <- counts_matrix[, 1:4] * 100 / n_individual
+  
+  ## Matrix to df
+  counts_df <- as.data.frame(counts_matrix)
+  counts_df <- counts_df %>%
+    pivot_longer(cols = c("Susceptible", "Exposed", "Infectious", "Recovered"), names_to = "status", values_to = "count") %>%
+    mutate(proportion = count * 100 / n_individual)
+  
+  return(counts_df)
+}
+
+counts_C <- SEIR_to_list(sim_C, n_subdivisions, n_individual)
+counts_E <- SEIR_to_list(sim_E, n_subdivisions, n_individual)
+counts_C_E <- SEIR_to_list(sim_C_E, n_subdivisions, n_individual)
+
+```
+
+
+## PLOT: SEIR
+```{r}
+# WIP"
+plot_seir <- function(counts_df, median_counts, title_suffix, fig_sim_path, id_sim) {
+  p_n <- ggplot() +
+    geom_line(data = counts_df, aes(x = time * 30 + begin_date, y = count, color = status), alpha = 0.3) +
+    geom_line(data = median_counts, aes(x = time * 30 + begin_date, y = count, color = status), size = 1.5) +
+    labs(title = paste("SEIR", title_suffix),
+         x = "Time",
+         y = "Number of individuals",
+         color = "Status") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  print(p_n)
+  ggsave(file = file.path(fig_sim_path, paste0(id_sim, "-SEIR-n-", title_suffix, ".png")), plot = p_n, height = 4, width = 20)
+  
+  p_p <- ggplot() +
+    geom_line(data = counts_df, aes(x = time * 30 + begin_date, y = proportion, color = status), alpha = 0.3) +
+    geom_line(data = median_counts, aes(x = time * 30 + begin_date, y = proportion, color = status), size = 1.5) +
+    labs(title = paste("SEIR", title_suffix),
+         x = "Time",
+         y = "Proportion of individuals",
+         color = "Status") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  print(p_p)
+  ggsave(file = file.path(fig_sim_path, paste0(id_sim, "-SEIR-p-", title_suffix, ".png")), plot = p_p, height = 4, width = 20)
+}
+
+# SEIR for C/E/E+C
+plot_seir(counts_df_C, median_counts_C, "Contact", fig_sim_path, id_sim)
+plot_seir(counts_df_E, median_counts_E, "Environment", fig_sim_path, id_sim)
+plot_seir(counts_df_C_E, median_counts_C_E, "Contact and Environment", fig_sim_path, id_sim)
+
+```
+
+
+
