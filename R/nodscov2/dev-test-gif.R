@@ -100,16 +100,24 @@ segments_data <- data %>%
 
 
 # Plot
-p <- ggplot(data, aes(x = x_adj, y = y_adj, color = cat, group = id)) +
+p <- ggplot(data %>% filter(time > 10), aes(x = x_adj, y = y_adj, color = cat, group = id)) +
   geom_point(size = 5) +
   #geom_segment(data = segments_data, aes(xend = x_end, yend = y_end), alpha = 0.5) +
   geom_text_repel(aes(label = id), size = 3, box.padding = 0.5, point.padding = 0.5, max.overlaps = Inf) +
   scale_color_discrete(name = "Category") +
   scale_y_continuous(breaks = 1:4, labels = c("Patient room", "Corridor", "Office / Nursing station", "Restroom")) +
-  scale_x_continuous(breaks = 1:sum((rooms_coords$y == 1)+1), labels = c(paste0("Chambre ", 1:(sum(rooms_coords$y == 1)+1)))) +
-  labs(title = 'Individual position at time : {new_begin_date + (frame_time * 30)} \n Individual position at time step : {frame_time}', x = 'Patient room', y = 'Type of room') +
-  theme_minimal()
+  scale_x_continuous(breaks = 1:(sum(rooms_coords$y == 1)+1), labels = c(paste0("Chambre ", 1:(sum(rooms_coords$y == 1)+1)))) +
+  labs(title = 'Individual position at time : {begin_date + (frame_time * 30)} \n Individual position at time step : {frame_time}', x = 'Patient room', y = 'Type of room') +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5), # 
+    axis.text = element_text(size = 12), 
+    axis.title = element_text(size = 14), 
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 14) 
+  )
 
+#print(p)
 animation <- p +
   transition_time(time) +
   ease_aes('linear')
