@@ -110,7 +110,7 @@ p <- ggplot(data %>% filter(time > 10), aes(x = x_adj, y = y_adj, color = cat, g
   labs(title = 'Individual position at time : {begin_date + (frame_time * 30)}, at time step : {frame_time}', x = 'Patient room', y = 'Type of room') +
   theme_minimal() + 
   theme(
-    plot.title = element_text(size = 12, hjust = 0.5), # 
+    plot.title = element_text(size = 22, hjust = 0.5), # 
     axis.text = element_text(size = 18), 
     axis.title = element_text(size = 18), 
     legend.text = element_text(size = 20),
