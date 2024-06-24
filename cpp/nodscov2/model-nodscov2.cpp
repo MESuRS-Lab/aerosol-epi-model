@@ -19,7 +19,7 @@ Rcpp::List simulation(
     double epsilon,
     double nu,
     double mu,
-    double env_thresold,
+    double env_threshold,
     double dt
     
 ) {
@@ -72,7 +72,7 @@ Rcpp::List simulation(
         // Update Lambda //
         ///////////////////
         lambda_ti = clone(lambda_template);
-        lambda_ti["lambda_e"] = Lambda_e(lambda_template, localization_ti, environment_ti, admission, epsilon, env_thresold, deltat);
+        lambda_ti["lambda_e"] = Lambda_e(lambda_template, localization_ti, environment_ti, admission, epsilon, env_threshold, deltat);
         lambda_ti["lambda_c"] = Lambda_c(lambda_template, interaction_ti, status_tim1, beta, deltat);
         global_lambda[t] = lambda_ti;
         

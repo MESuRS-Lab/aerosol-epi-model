@@ -398,7 +398,7 @@ Rcpp::NumericVector Lambda_e (
     const Rcpp::DataFrame& environment_ti,
     const Rcpp::DataFrame& admission,
     const double& B,
-    const double& env_thresold,
+    const double& env_threshold,
     const double& deltat
 ) {
     Rcpp::CharacterVector ids_lambda = lambda_tim1["id"];
@@ -432,8 +432,8 @@ Rcpp::NumericVector Lambda_e (
                 break;
             }
         }
-        // VIRAL LOAD THRESOLD
-        if (environment[index_room] > env_thresold){
+        // VIRAL LOAD threshold
+        if (environment[index_room] > env_threshold){
             lambda_e_ti[j] = individual_weight * (B/rooms_volume[index_room]) * deltat * environment[index_room];
         } else{
             lambda_e_ti[j] = 0;

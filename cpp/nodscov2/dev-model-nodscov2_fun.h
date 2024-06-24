@@ -81,7 +81,7 @@ RcppExport Rcpp::NumericVector Lambda_e (
     const Rcpp::DataFrame& environment_ti,
     const Rcpp::DataFrame& admission, 
     const double& B,
-    const double& env_thresold,
+    const double& env_threshold,
     const double& deltat
 );
 
