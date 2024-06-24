@@ -24,11 +24,11 @@ sensibility_path <- file.path(out_path,'sensibility-analysis')
 
 ## BETA CALCULATED W/ MEAN (c.f. Q. LECLERC ET AL. 2023 PREPRINT)
 id_sim <- "sim-mean"
-B_type <- "mean"
+beta_type <- "mean"
 
 ## BETA CALCULATED W/ MEDIAN (c.f. Q. LECLERC ET AL. 2023 PREPRINT)
 # id_sim <- "sim-median"
-# B_type <- "median"
+# beta_type <- "median"
 
 fig_path <- file.path(sensibility_path, paste0(id_sim,"-fig"))
 
@@ -40,7 +40,7 @@ if (!dir.exists(fig_path)) {
 ## LOAD SIMULATIONS DATA
 ```{r Load data}
 load(file.path(loc_path, paste0('dev-localization-nodscov2.RData')))
-load(file.path(sensibility_path, paste0('parameters-model-', B_type, '.RData')))
+load(file.path(sensibility_path, paste0('parameters-model-', beta_type, '.RData')))
 rm(test_localization)
 rm(test_interaction)
 rm(test_lambda)
@@ -62,7 +62,7 @@ truncated_localization <- global_localization[(u <- seq_along(global_localizatio
 ```
 ## SIM DATA
 ```{r}
-sim_path <- file.path(sensibility_path,paste0('sim-',B_type))
+sim_path <- file.path(sensibility_path,paste0('sim-',beta_type))
 rdata_files <- list.files(sim_path, pattern = "^sim-.*\\.RData$", full.names = TRUE)
 
 ## Lists
@@ -87,7 +87,7 @@ load_rdata_to_list <- function(file) {
   }
 }
 ## Apply function to load and order the df into lists
-lapply(rdata_files, load_rdata_to_list)
+invisible(lapply(rdata_files, load_rdata_to_list))
 ```
 
 
@@ -289,7 +289,7 @@ plot_SEIR <- function(counts_list, median_counts, min_counts, max_counts, title,
   ## SEIR : PROPORTION WITH MEDIAN AND MIN/MAX
   SEIR_p_t <- SEIR_p +
     geom_borderline(data = median_counts,
-                    aes(x = time * 30 + begin_date, y = count , color = status),
+                    aes(x = time * 30 + begin_date, y = proportion , color = status),
                     linewidth = 2,
                     linetype = "solid",
                     bordercolour = "white") +
@@ -306,13 +306,34 @@ plot_SEIR <- function(counts_list, median_counts, min_counts, max_counts, title,
               linewidth = 0.5,
               linetype = "solid")
   print(SEIR_p_t)
-  ggsave(file = file.path(fig_path, paste0(id_sim, "-SEIR-p-", title, ".png")), plot = SEIR_p_t, height = 30, width = 40)
+  ggsave(file = file.path(fig_path, paste0(id_sim, "-SEIR-p-total", title, ".png")), plot = SEIR_p_t, height = 30, width = 40)
 }
 
 
-plot_SEIR(counts_C, median_counts_C, min_counts_C, max_counts_C, "Contact", fig_path, id_sim)
-plot_SEIR(counts_E, median_counts_E, min_counts_E, max_counts_E, "Environment", fig_path, id_sim)
-plot_SEIR(counts_C_E, median_counts_C_E, min_counts_C_E, max_counts_C_E, "Contact and Environment", fig_path, id_sim)
+plot_SEIR(counts_C,
+          median_counts_C,
+          min_counts_C,
+          max_counts_C,
+          paste0("Contact - \u03b2 = ", substr(beta,1,4), ' (', beta_type, ')'),
+          fig_path,
+          id_sim)
+
+plot_SEIR(counts_E,
+          median_counts_E,
+          min_counts_E,
+          max_counts_E,
+          paste0("Environment - \u03b2 = ", substr(beta,1,4), ' (', beta_type, ')'),
+          fig_path,
+          id_sim)
+
+plot_SEIR(counts_C_E,
+          median_counts_C_E,
+          min_counts_C_E,
+          max_counts_C_E,
+          paste0("Contact and Environment - \u03b2 = ", substr(beta,1,4), ' (', beta_type, ')'),
+          fig_path,
+          id_sim)
+
 ```
 
 
