@@ -61,7 +61,7 @@ nu <- 10 * 24 #( 10 quanta/h)
 dt <- 30 # Time step
 tau <- 60 * 60 *24 # Seconds in 1 day
 deltat <- dt/tau
-env_thresold <- 0 # Quanta threshold above which the environment is infectious
+env_threshold <- 0 # Quanta threshold above which the environment is infectious
 
 
 ## INDEX
@@ -111,6 +111,24 @@ new_n_subdivisions <- (t_end-t_begin +1)*n_days
 ##SIMULATION
 n_sim <- 50
 
+save(n_sim,
+     n_days,
+     test_interaction,
+     test_localization,
+     test_environment,
+     test_lambda,
+     test_status,
+     admission_sim,
+     beta,
+     B,
+     nu,
+     mu,
+     env_threshold,
+     dt,
+     file = file.path("parameters-model.RData")
+     )
+
+
 sim_C <- replicate(n_sim, {
   simulation(
     global_interaction = test_interaction,
@@ -123,7 +141,7 @@ sim_C <- replicate(n_sim, {
     B = 0,
     nu = nu,
     mu = mu,
-    env_thresold = env_thresold,
+    env_threshold = env_threshold,
     dt = dt
   )
 }, simplify = FALSE)
@@ -140,7 +158,7 @@ sim_E <- replicate(n_sim, {
     B = B,
     nu = nu,
     mu = mu,
-    env_thresold = env_thresold,
+    env_threshold = env_threshold,
     dt = dt
   )
 }, simplify = FALSE)
@@ -157,7 +175,7 @@ sim_C_E <- replicate(n_sim, {
     B = B,
     nu = nu,
     mu = mu,
-    env_thresold = env_thresold,
+    env_threshold = env_threshold,
     dt = dt
   )
 }, simplify = FALSE)
@@ -176,7 +194,7 @@ save(truncated_interaction,
      nu,
      mu,
      B,
-     env_thresold,
+     env_threshold,
      dt,
      new_n_subdivisions,
      n_days,
