@@ -25,20 +25,24 @@ The aim of this project is to develop a mathematical model of respiratory pathog
 ### Dependencies
 <details>
   <summary> R </summary>
+  
+  * dplyr (1.1.4)
+  * epicontacts (1.1.4)
+  * gifski (1.12.0)
+  * gganimate (1.0.9)
+  * ggborderline (0.2.0)
+  * ggplot2 (3.5.0)
+  * ggh4x (0.2.8)
+  * hrbrthemes (0.8.7)
+  * igraph (2.0.3)
+  * lubridate (1.9.3)
+  * purrr (1.0.2)
+  * Rcpp (1.0.12)
+  * tidyr (1.3.1)
+  * tidyverse (2.0.0)
+  * viridis (0.6.5)
+  * visNetwork (2.1.2)
 
-* dplyr (1.1.4)
-* tidyr (1.3.1)
-* tidyverse (2.0.0)
-* lubridate (1.9.3)
-* ggplot2 (3.5.0)
-* ggh4x (0.2.8)
-* hrbrthemes (0.8.7)
-* viridis (0.6.5)
-* igraph (2.0.3)
-* Rcpp (1.0.12)
-* epicontacts (1.1.4)
-* gganimate (1.0.9)
-* gifski (1.12.0)
 </details>
 
 <details>
