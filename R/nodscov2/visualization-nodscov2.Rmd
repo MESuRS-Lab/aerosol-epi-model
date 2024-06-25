@@ -78,7 +78,7 @@ admission_truncated <- admission %>% filter(id %in% id_interacting)
 ## Number of infected over time
 n_individual <- length(id_interacting)
 counts <- lapply(1:n_subdivisions, function(t) {
-  df <- data.frame(status = c("Susceptible", "Exposed ", "Infectious", "Recovered"), count = NA, proportion = NA, time = t)
+  df <- data.frame(status = c("Susceptible", "Exposed", "Infectious", "Recovered"), count = NA, proportion = NA, time = t)
   
   df$count[1] <- sum(status_sim$t_inf == -1 | status_sim$t_inf > t)
   df$count[2] <- sum(status_sim$t_inf <= t & status_sim$t_incub > t)
@@ -96,7 +96,6 @@ counts <- lapply(1:n_subdivisions, function(t) {
 counts_df <- do.call(rbind, counts)
 ## S E I R as factor 
 counts_df$status <- factor(counts_df$status, levels = c("Susceptible", "Exposed", "Infectious", "Recovered"))
-
 ```
 
 ## SEIR
@@ -111,7 +110,7 @@ SEIR_n <- ggplot(counts_df, aes(x = time * 30 + begin_date, y = count, color = f
        x = "Time",
        y = "Number of individuals",
        color = "Status") +
-  scale_color_manual(values = SEIR_colors)
+  scale_color_manual(values = SEIR_colors) +
   theme_bw() +
   theme(axis.text.x=element_text(angle=45, hjust=1))
 print(SEIR_n)
@@ -123,6 +122,7 @@ SEIR_p <- ggplot(counts_df, aes(x = time * 30 + begin_date, y = proportion, colo
        x = "Time",
        y = "Proportion of individuals",
        color = "Status") +
+  scale_color_manual(values = SEIR_colors) +
   theme_bw() +
   theme(axis.text.x=element_text(angle=45, hjust=1))
 print(SEIR_p)
