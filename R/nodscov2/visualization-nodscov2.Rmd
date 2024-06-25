@@ -94,16 +94,24 @@ counts <- lapply(1:n_subdivisions, function(t) {
 })
 
 counts_df <- do.call(rbind, counts)
+## S E I R as factor 
+counts_df$status <- factor(counts_df$status, levels = c("Susceptible", "Exposed", "Infectious", "Recovered"))
+
 ```
 
 ## SEIR
 ```{r}
+## Custom colors
+SEIR_colors <- c("Susceptible" = "green", "Exposed" = "pink", "Infectious" = "red", "Recovered" = "blue")
+
+## PLOTS
 SEIR_n <- ggplot(counts_df, aes(x = time * 30 + begin_date, y = count, color = factor(status))) +
   geom_line() +
   labs(title = "SEIR",
        x = "Time",
        y = "Number of individuals",
        color = "Status") +
+  scale_color_manual(values = SEIR_colors)
   theme_bw() +
   theme(axis.text.x=element_text(angle=45, hjust=1))
 print(SEIR_n)
