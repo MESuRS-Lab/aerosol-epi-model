@@ -831,7 +831,7 @@ test_loc %>%
     ) +
     #ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
     xlab("") +
-    ylab("Cumulative time interacting (h)")
+    ylab("Cumulative time (h)")
 
 # Violin plot (Restroom & Corridor)    
 test_loc %>%
@@ -849,7 +849,7 @@ test_loc %>%
     ) +
     #ggtitle("Cumulative time spent in restroom or corridor by category of HCW") +
     xlab("") +
-    ylab("Cumulative time interacting (h)")
+    ylab("Cumulative time (h)")
     
 # Violin plot (Restroom)
 test_loc %>% filter(room == "Medical Restroom" | room == "Paramedical Restroom") %>%
@@ -866,7 +866,7 @@ test_loc %>% filter(room == "Medical Restroom" | room == "Paramedical Restroom")
     ) +
     #ggtitle("Cumulative time spent in Restrooms by category of HCW") +
     xlab("") +
-    ylab("Cumulative time interacting (h)")
+    ylab("Cumulative time (h)")
 ```
 ## ORDERED CUMULATIVE TIME SPENT IN ROOMS
 ```{r}
