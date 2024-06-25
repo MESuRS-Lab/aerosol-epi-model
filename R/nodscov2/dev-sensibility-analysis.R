@@ -47,6 +47,8 @@ rm(lambda_t)
 
 
 ##PARAMETERS
+
+# BETA
 p_PA_PA <- 2.3e-5
 p_PA_PE <- 1.19e-4
 p_PE_PA <- 7.89e-4
@@ -55,6 +57,9 @@ p_PE_PE <- 1.66e-4
 #p <- median(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
 p <- mean(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
 beta <- (-log(1-p))*(86400/30)
+
+
+## OTHER PARAMETERS
 B <- 0.48 *24 # Breating rate ( 0.48 m3/h)
 mu_air <- 4 * 24 # Quanta removal (4-6 Air changes/h)
 mu_inac <- (log(2)/1.1) * 24 # Quanta inactivation (computed with viral half life -> 0.63quanta inactivated/h) 
@@ -113,6 +118,11 @@ new_n_subdivisions <- (t_end-t_begin +1)*n_days
 ##SIMULATION
 n_sim <- 50
 
+
+# ##MANUAL SELECTION BETA
+# beta <- 5
+
+## SAVE
 save(n_sim,
      n_days,
      test_interaction,
@@ -128,7 +138,7 @@ save(n_sim,
      mu,
      env_threshold,
      dt,
-     file = file.path("parameters-model.RData")
+     file = file.path("parameters-model-beta-5.RData")
      )
 
 

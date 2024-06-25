@@ -22,15 +22,20 @@ out_path <- file.path(wd,'..','..','out')
 loc_path <- file.path(out_path, "loc-nodscov2")
 sensibility_path <- file.path(out_path,'sensibility-analysis')
 
-## BETA CALCULATED W/ MEAN (c.f. Q. LECLERC ET AL. 2023 PREPRINT)
-id_sim <- "sim-mean"
-beta_type <- "mean"
+# ## BETA CALCULATED W/ MEAN (c.f. Q. LECLERC ET AL. 2023 PREPRINT)
+# id_sim <- "sim-mean"
+# beta_type <- "mean"
 
 ## BETA CALCULATED W/ MEDIAN (c.f. Q. LECLERC ET AL. 2023 PREPRINT)
 # id_sim <- "sim-median"
 # beta_type <- "median"
 
-fig_path <- file.path(sensibility_path, paste0(id_sim,"-fig"))
+# BETA MANUALLY SELECTED
+beta <- 2
+id_sim <- paste0("sim-beta-",beta)
+beta_type <- paste0("beta-", beta)
+
+fig_path <- file.path(sensibility_path, id_sim, paste0(id_sim,"-fig"))
 
 if (!dir.exists(fig_path)) {
   dir.create(fig_path, recursive = TRUE)
@@ -40,7 +45,7 @@ if (!dir.exists(fig_path)) {
 ## LOAD SIMULATIONS DATA
 ```{r Load data}
 load(file.path(loc_path, paste0('dev-localization-nodscov2.RData')))
-load(file.path(sensibility_path, paste0('parameters-model-', beta_type, '.RData')))
+load(file.path(sensibility_path, id_sim, paste0('parameters-model-', beta_type, '.RData')))
 rm(test_localization)
 rm(test_interaction)
 rm(test_lambda)
@@ -62,7 +67,7 @@ truncated_localization <- global_localization[(u <- seq_along(global_localizatio
 ```
 ## SIM DATA
 ```{r}
-sim_path <- file.path(sensibility_path,paste0('sim-',beta_type))
+sim_path <- file.path(sensibility_path, paste0('sim-', beta_type), 'RData')
 rdata_files <- list.files(sim_path, pattern = "^sim-.*\\.RData$", full.names = TRUE)
 
 ## Lists
