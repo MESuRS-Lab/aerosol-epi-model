@@ -20,6 +20,7 @@ library(igraph)
 library(ggnetwork)
 library(ggtext)
 library(cowplot)
+library(RColorBrewer)
 
 ## Functions for graph analysis (https://github.com/qleclerc/network_algorithm/)
 ## Following script based on https://github.com/qleclerc/network_algorithm/blob/main/analysis/fig1.R
@@ -28,7 +29,7 @@ source(file.path("helper_functions.R"))
 pal = brewer.pal(6, "Set2")
 ```
 
-## Data import
+## Data import (i-Bird)
 ```{r}
 adm_data = read.csv(file.path(wd, "..", "..", "data","data-observed", "toy_admission.csv"), sep=";") %>%
   select(id, hospitalization, cat, ward)
@@ -42,7 +43,33 @@ adm_data = adm_data %>%
   mutate(staff = grepl("PE-", id))
 
 data = read.csv2(file.path(wd, "..", "..","data","data-simplified", "graph_1.csv"))
+```
 
+## Data import (NodsCov2)
+```{r}
+load(file.path(wd, "..", "..", "data","data-nodscov2", "admission_ctc_nodscov2.RData"))
+
+adm_data = admission %>%
+  select(id, hospitalization, cat, ward)
+adm_data$cat[is.na(adm_data$cat)] = adm_data$hospitalization[is.na(adm_data$cat)]
+adm_data = adm_data[,c(1,3,4)] %>%
+  distinct()
+
+
+eq_table = openxlsx::read.xlsx(file.path(wd, "..", "..","data", 'data-i-bird' ,"data-observed", "cat_groupings.xlsx")) %>%
+  select(cat, cat_ag)
+adm_data = adm_data %>%
+  left_join(eq_table, by = "cat") %>%
+  mutate(staff = grepl("PE-", id))
+
+load(file.path(wd, "..", "..", "data","data-nodscov2", "list_ward.RData"))
+
+data = list_ward[["Raymond_Poincare-Reanimation-20200506-20200507"]] %>% mutate(date_posix = date_posix_first)
+```
+
+
+
+```{r}
 graph_data = data %>%
   mutate(date_posix = as_datetime(date_posix)) %>%
   mutate(date_posix = floor_date(date_posix, "day")) %>%
