@@ -103,6 +103,30 @@ global_interaction <- lapply(1:n_subdivisions, function(t){
 
 ```
 
+## CUMULATIVE NUMBER OF INTERACTION OVER TIME
+```{r}
+p_number_int <- do.call(rbind, global_interaction) %>%
+  mutate(type_int = paste0(from_status, "-", to_status)) %>%
+  mutate(type_int = ifelse(type_int == "PA-PE", "PE-PA", type_int)) %>%
+  filter(type_int != "PA-PA") %>%
+  filter(between(time,600, 600 + 24*60*2)) %>%
+  group_by(time, type_int) %>%
+  summarise(n = n()) %>%
+  ggplot(aes(x=begin_date + time*30, y=n, color = type_int))+
+    geom_line() +
+    annotate("rect", xmin = as.POSIXct("2020-05-06 22:00:00"), xmax = as.POSIXct("2020-05-07 06:00:00"), ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "grey") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+    labs(title = "Number of interaction over time") +
+    labs(x = "Time", y = "Number of interactions")
+
+
+ggsave(file = file.path(fig_path, paste0("p_number_int", ".png")), plot = p_number_int, height = 10, width = 30)
+  
+```
+
+
+
 ## ROOMS
 ```{r Rooms}
 rooms <- admission %>%
@@ -793,6 +817,9 @@ save(clusters,
 
 
 
+
+
+
 ## DISTRIBUTION OF TIME SPENT IN RESTROOM/CORRIDOR BY CATEGORY OF HCW
 ```{r Time spent in Restroom/Corridor by HCW cat}
 load(file.path(loc_nodscov2_path,"dev-localization-nodscov2.RData")) ##overwrite admission
@@ -917,7 +944,7 @@ save_individual_path <- function(ind) {
 }
 
 #map -> apply function for each individual
-map(id_interacting, save_individual_path)
+invisible(map(id_interacting, save_individual_path))
 
 
 o <- do.call(rbind,global_localization) %>% filter(id %in% id_patient) %>% group_by(id,localization) %>% summarise(n = n())
