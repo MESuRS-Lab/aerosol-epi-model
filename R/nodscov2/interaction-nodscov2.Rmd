@@ -113,6 +113,20 @@ admission %>%
     theme(axis.text.x = element_text(angle = 35, hjust = 1))
 
 
+## FIGURE FOR RP REPORT
+admission %>%
+  filter(ward == "Reanimation" ) %>%
+  filter(hospital == "APHP - RAYMOND POINCARÉ") %>%
+  mutate(cat = ifelse(is.na(cat), "Patients", cat)) %>%
+  group_by(hospital, cat) %>%
+  summarise( n = n(), .groups = "drop") %>%
+    ggplot(., aes(x = cat, y = n)) +
+    geom_bar(stat = "identity") +
+    facet_grid(cols = vars(hospital)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+  labs(x = "Categories", y = "Number of individuals")
+
 ```
 
 
@@ -202,6 +216,7 @@ data_rea %>%
   theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
   labs(title = "Number of interaction over time") +
   labs(x = "Hour of the day", y = "Number of interactions")
+
 ```
 
 
