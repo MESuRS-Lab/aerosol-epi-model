@@ -89,8 +89,10 @@ adm_data$type <- factor(adm_data$type, levels = c("Medical", "Paramedical", "Pat
 ### COLOR PALETTES /!\ to factor order
 ## Nodscov2 color palette
 pal = brewer.pal(4, "Set2")
-## Epicontact infection network color palette
+## Epicontact infection network color palette (B3 -> HEX CODE FOR ALPHA = 70%)
 pal = c("#5CD6D6B3", "#A9B9E8B3", "#FFA766B3", "#666699B3")
+## ALPHA = 1 
+pal = c("#5CD6D6", "#A9B9E8", "#FFA766", "#666699")
 
 ## Category groupings
 eq_table = openxlsx::read.xlsx(file.path(wd, "..", "..","data", 'data-nodscov2', "cat_groupings_nodscov2.xlsx")) %>%
@@ -404,7 +406,7 @@ pd = ggplot(ggnetwork(graph_example_PA_PE, layout = igraph::layout_with_kk(graph
 ```{r}
 pa = ggplot(ggnetwork(graph_example, layout = igraph::layout_with_kk(graph_example)),
             aes(x = x, y = y, xend = xend, yend = yend)) +
-  geom_edges(alpha = 0.7) +
+  geom_edges(alpha = 0.5) +
   geom_nodes(aes(colour = type, shape = staff), size = 4) +
   theme_blank() +
   scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
@@ -415,7 +417,7 @@ pa = ggplot(ggnetwork(graph_example, layout = igraph::layout_with_kk(graph_examp
 
 pb = ggplot(ggnetwork(graph_example_PA_PA, layout = igraph::layout_with_kk(graph_example_PA_PA)),
             aes(x = x, y = y, xend = xend, yend = yend)) +
-  geom_edges(alpha = 0.7) +
+  geom_edges(alpha = 0.5) +
   geom_nodes(aes(colour = type, shape = staff), size = 3) +
   theme_blank() +
   scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
@@ -427,7 +429,7 @@ pb = ggplot(ggnetwork(graph_example_PA_PA, layout = igraph::layout_with_kk(graph
 
 pc = ggplot(ggnetwork(graph_example_PE_PE, layout = igraph::layout_with_kk(graph_example_PE_PE)),
             aes(x = x, y = y, xend = xend, yend = yend)) +
-  geom_edges(alpha = 0.7) +
+  geom_edges(alpha = 0.5) +
   geom_nodes(aes(colour = type, shape = staff), size = 3) +
   theme_blank() +
   scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
@@ -439,7 +441,7 @@ pc = ggplot(ggnetwork(graph_example_PE_PE, layout = igraph::layout_with_kk(graph
 
 pd = ggplot(ggnetwork(graph_example_PA_PE, layout = igraph::layout_with_kk(graph_example_PA_PE)),
             aes(x = x, y = y, xend = xend, yend = yend)) +
-  geom_edges(alpha = 0.7) +
+  geom_edges(alpha = 0.5) +
   geom_nodes(aes(colour = type, shape = staff), size = 3) +
   theme_blank() +
   scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
