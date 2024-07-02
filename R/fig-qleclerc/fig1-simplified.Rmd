@@ -26,7 +26,11 @@ library(RColorBrewer)
 ## Following script based on https://github.com/qleclerc/network_algorithm/blob/main/analysis/fig1.R
 source(file.path("helper_functions.R"))
 
+## i-Bird color palette
 pal = brewer.pal(6, "Set2")
+
+## Nodscov2 color palette
+pal = brewer.pal(4, "Set2")
 ```
 
 ## Data import (i-Bird)
@@ -56,6 +60,23 @@ adm_data$cat[is.na(adm_data$cat)] = adm_data$hospitalization[is.na(adm_data$cat)
 adm_data = adm_data[,c(1,3,4)] %>%
   distinct()
 
+## ADDING PATIENT / PARAMEDICAL / MEDICAL
+admission %>% distinct(cat) %>% pull()
+cat_paramedical <- c("nurse", "student nurse", "aux nurse")
+cat_medical <- c("physician", "ext physician", "reeducation staff", "other")
+id_paramedical <- admission %>% filter(cat %in% cat_paramedical) %>% pull(id)
+id_medical <- admission %>% filter(cat %in% cat_medical) %>% pull(id)
+id_hcw <- admission %>% filter(status == "PE") %>% pull(id)
+id_patient <- admission %>% filter(status == "PA") %>% pull(id)
+
+adm_data <- adm_data %>%
+  mutate(type = case_when(
+    substr(id,4,100) %in% id_paramedical ~ "Paramedical",
+    substr(id,4,100) %in% id_medical ~ "Medical",
+    substr(id,4,100) %in% id_patient ~ "Patient",
+    .default = "Other"
+  ))
+adm_data$type <- factor(adm_data$type, levels = c("Medical", "Paramedical", "Patient", "Other"))
 
 
 eq_table = openxlsx::read.xlsx(file.path(wd, "..", "..","data", 'data-nodscov2', "cat_groupings_nodscov2.xlsx")) %>%
@@ -189,7 +210,9 @@ graph_example = graph_example %>%
   set_vertex_attr("cat", value = vertex_atts$cat) %>%
   set_vertex_attr("cat_ag", value = vertex_atts$cat_ag) %>%
   set_vertex_attr("staff", value = vertex_atts$staff) %>%
-  set_vertex_attr("ward", value = vertex_atts$ward)
+  set_vertex_attr("ward", value = vertex_atts$ward) %>%
+  set_vertex_attr("type", value = vertex_atts$type) 
+  
 ```
 
 ## PA-PA graph
@@ -212,7 +235,8 @@ graph_example_PA_PA = graph_example_PA_PA %>%
   set_vertex_attr("cat", value = vertex_atts$cat) %>%
   set_vertex_attr("cat_ag", value = vertex_atts$cat_ag) %>%
   set_vertex_attr("staff", value = vertex_atts$staff) %>%
-  set_vertex_attr("ward", value = vertex_atts$ward)
+  set_vertex_attr("ward", value = vertex_atts$ward) %>%
+  set_vertex_attr("type", value = vertex_atts$type) 
 ```
 
 ## PE-PE graph
@@ -235,7 +259,8 @@ graph_example_PE_PE = graph_example_PE_PE %>%
   set_vertex_attr("cat", value = vertex_atts$cat) %>%
   set_vertex_attr("cat_ag", value = vertex_atts$cat_ag) %>%
   set_vertex_attr("staff", value = vertex_atts$staff) %>%
-  set_vertex_attr("ward", value = vertex_atts$ward)
+  set_vertex_attr("ward", value = vertex_atts$ward) %>%
+  set_vertex_attr("type", value = vertex_atts$type) 
 ```
 
 ## PA-PE graph
@@ -258,10 +283,11 @@ graph_example_PA_PE = graph_example_PA_PE %>%
   set_vertex_attr("cat", value = vertex_atts$cat) %>%
   set_vertex_attr("cat_ag", value = vertex_atts$cat_ag) %>%
   set_vertex_attr("staff", value = vertex_atts$staff) %>%
-  set_vertex_attr("ward", value = vertex_atts$ward)
+  set_vertex_attr("ward", value = vertex_atts$ward) %>%
+  set_vertex_attr("type", value = vertex_atts$type) 
 ```
 
-## Plots
+## Plots (nodes colored by ward)
 ```{r}
 pa = ggplot(ggnetwork(graph_example, layout = igraph::layout_with_kk(graph_example)),
             aes(x = x, y = y, xend = xend, yend = yend)) +
@@ -311,11 +337,61 @@ pd = ggplot(ggnetwork(graph_example_PA_PE, layout = igraph::layout_with_kk(graph
   guides(shape = "none", colour = "none")
 ```
 
+## Plots (nodes colored by type)
+```{r}
+pa = ggplot(ggnetwork(graph_example, layout = igraph::layout_with_kk(graph_example)),
+            aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_edges(alpha = 0.5) +
+  geom_nodes(aes(colour = type, shape = staff), size = 4) +
+  theme_blank() +
+  scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
+                     values = c(15,17)) +
+  scale_colour_discrete(type = pal) +
+  labs(colour = "Type:", shape = "Category:") +
+  theme(legend.text = element_text(size=12))
+
+pb = ggplot(ggnetwork(graph_example_PA_PA, layout = igraph::layout_with_kk(graph_example_PA_PA)),
+            aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_edges(alpha = 0.5) +
+  geom_nodes(aes(colour = type, shape = staff), size = 3) +
+  theme_blank() +
+  scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
+                     values = c(15,17)) +
+  scale_colour_discrete(type = pal[-c(1,2,4)]) + ## PATIENT COLOR -> factor
+  labs(colour = "Type:", shape = "Category:") +
+  theme(legend.text = element_text(size=12)) +
+  guides(shape = "none", colour = "none")
+
+pc = ggplot(ggnetwork(graph_example_PE_PE, layout = igraph::layout_with_kk(graph_example_PE_PE)),
+            aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_edges(alpha = 0.5) +
+  geom_nodes(aes(colour = type, shape = staff), size = 3) +
+  theme_blank() +
+  scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
+                     values = c(15,17)) +
+  scale_colour_discrete(type = pal) +
+  labs(colour = "Type:", shape = "Category:") +
+  theme(legend.text = element_text(size=12)) +
+  guides(shape = "none", colour = "none")
+
+pd = ggplot(ggnetwork(graph_example_PA_PE, layout = igraph::layout_with_kk(graph_example_PA_PE)),
+            aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_edges(alpha = 0.5) +
+  geom_nodes(aes(colour = type, shape = staff), size = 3) +
+  theme_blank() +
+  scale_shape_manual(breaks = c("TRUE", "FALSE"), labels = c("Staff", "Patients"),
+                     values = c(15,17)) +
+  scale_colour_discrete(type = pal) +
+  labs(colour = "Type:", shape = "Category:") +
+  theme(legend.text = element_text(size=12)) +
+  guides(shape = "none", colour = "none")
+```
+
 ## Figure export
 ```{r}
 plot_grid(pa,
-          plot_grid(pb,pc,pd,nrow=1, labels = c("b)", "c)", "d)"), hjust = 0),
-          pe, rel_heights = c(1,0.7,0.5), ncol = 1, labels = c("a)", "", "e)"), hjust = 0)
+          plot_grid(pb,pc,pd,nrow=1, labels = c("B", "C", "D"), hjust = 0),
+          pe, rel_heights = c(1,0.7,0.5), ncol = 1, labels = c("A", "", "E"), hjust = 0)
 
 #ggsave(file.path(wd, "..", "..", "Figures", "fig1-ibird.png"), height = 12, width = 10)
 ggsave(file.path(wd, "..", "..", "out", "fig1-nodscov2-RP-ICU.png"), height = 12, width = 10)
