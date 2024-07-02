@@ -262,13 +262,14 @@ linelist <- linelist %>%
   mutate(type = ifelse(id == id_index, "INDEX", type)) %>%
   mutate(info = ifelse(info == 1, "HCW", "PATIENT"))
 
+
 env_linelist <- data.frame(id = paste0("ENVIRONMENT-",rooms %>% distinct(id_room, .keep_all = TRUE) %>% pull(id_room)),
                            type = "ROOM",
                            room = rooms %>% distinct(id_room, .keep_all = TRUE) %>% pull(id_room),
                            info = rooms %>% distinct(id_room, .keep_all = TRUE) %>% pull(room))
 
 linelist <- bind_rows(linelist,env_linelist)
-
+linelist$type = factor(linelist$type, levels = c('INDEX', 'PATIENT', 'MEDICAL', 'PARAMEDICAL', 'ROOM'))
 
 ## contacts object
 environmental_contacts <- status_sim %>%
