@@ -189,6 +189,14 @@ arbitrary_date <- "2020-05-06"
 
 example_date = as_date(arbitrary_date)
 example_data = data %>% filter(as_date(date_posix) == example_date) ## was date_posix only --> filters to 0 ??
+
+## FILTER TO KEEP ONLY TRUNCATED DATA FROM RAYMOND POINCARÉ ICU
+begin_date <- as.POSIXct("2020-05-06 12:00:00")
+end_date <- as.POSIXct("2020-05-07 12:00:00")
+
+example_data_bis = data %>% 
+  filter(as.POSIXct(date_posix) + length >= begin_date) %>%
+  filter(as.POSIXct(date_posix) < end_date)
 ```
 
 ## Full graph
