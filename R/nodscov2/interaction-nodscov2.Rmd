@@ -114,19 +114,26 @@ admission %>%
 
 
 ## FIGURE FOR RP REPORT
-admission %>%
+p_n_RP <- admission %>%
   filter(ward == "Reanimation" ) %>%
   filter(hospital == "APHP - RAYMOND POINCARÉ") %>%
   mutate(cat = ifelse(is.na(cat), "Patients", cat)) %>%
   group_by(hospital, cat) %>%
-  summarise( n = n(), .groups = "drop") %>%
-    ggplot(., aes(x = cat, y = n)) +
+  summarise(n = n(), .groups = "drop") %>%
+    ggplot(., aes(x = reorder(cat, -n), y = n)) +
     geom_bar(stat = "identity") +
-    facet_grid(cols = vars(hospital)) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
-  labs(x = "Categories", y = "Number of individuals")
+  labs(title = "APHP - RAYMOND POINCARÉ" ,x = "Categories", y = "Number of individuals") +
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1),
+    plot.title = element_text(size = 45, hjust = 0.5), #
+    axis.text = element_text(size = 40),
+    axis.title = element_text(size = 40),
+    legend.text = element_text(size = 40),
+    legend.title = element_text(size = 40)) +
+  geom_text(aes(label=n), vjust=-0.25, size=5)
 
+ggsave(filename = file.path(wd, '..', '..', 'out', 'RP-number-individual.png'), plot = p_n_RP, height = 14, width = 26)
 ```
 
 
