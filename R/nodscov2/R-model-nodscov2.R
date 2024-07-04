@@ -90,6 +90,7 @@ nu <- 5
 dt <- 30
 tau <- 60 * 60 *24
 deltat <- dt/tau
+env_threshold <- 0
 
 
 ## INDEX
