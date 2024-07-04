@@ -71,24 +71,6 @@ deltat <- dt/tau
 env_threshold <- 0 # Quanta threshold above which the environment is infectious
 
 
-## INDEX
-id_index <- "001-0038-B-S"
-status <- global_status %>%
-  mutate(t_inf = ifelse(id == id_index,
-                        as.integer(1),
-                        t_inf),
-         t_incub = ifelse(id == id_index, 
-                          as.integer(t_inf + runif(1, min = 2880*1, max = 2880*5)),
-                          t_recover),
-         t_recover = ifelse(id == id_index,
-                            as.integer(t_incub + runif(1, min = 2880*3, max = 2880*7)),
-                            t_recover),
-         inf_by = ifelse(id == id_index,
-                         "INDEX",
-                         inf_by))
-
-
-
 ## endless day
 end_date - begin_date ##end of last interaction
 new_begin_date <- begin_date + (5*60*60) ## OFFSET TO START THE DAY AT 12AM
@@ -103,7 +85,7 @@ truncated_interaction <- global_interaction[(u <- seq_along(global_interaction))
 truncated_localization <- global_localization[(u <- seq_along(global_localization)) %in% t_begin:(t_end)]
 truncated_lambda <- global_lambda[(u <- seq_along(global_lambda)) %in% t_begin:(t_end)]
 truncated_environment <- global_environment[(u <- seq_along(global_environment)) %in% t_begin:(t_end)]
-truncated_status <- status
+truncated_status <- global_status
 
 ## ENDLESS DAY OBJECTS
 n_days <- 7*7
@@ -119,10 +101,31 @@ new_n_subdivisions <- (t_end-t_begin +1)*n_days
 n_sim <- 50
 
 
-# ##MANUAL SELECTION BETA
-beta <- 1
 
-## SAVE
+
+## SAVE ALL BETA CONFIGURATIONS
+# for (beta in seq(from = 0.5, to = 10, by = 0.5)){
+#   save(n_sim,
+#        n_days,
+#        test_interaction,
+#        test_localization,
+#        test_environment,
+#        test_lambda,
+#        test_status,
+#        admission_sim,
+#        beta,
+#        B,
+#        nu,
+#        mu,
+#        env_threshold,
+#        dt,
+#        file = file.path(paste0("parameters-model-beta-", beta, ".RData"))
+#   )
+# }
+## MEDIAN BETA
+p_median <- median(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
+beta<- (-log(1-p_median))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step)
+
 save(n_sim,
      n_days,
      test_interaction,
@@ -131,15 +134,57 @@ save(n_sim,
      test_lambda,
      test_status,
      admission_sim,
-     id_index,
      beta,
      B,
      nu,
      mu,
      env_threshold,
      dt,
-     file = file.path("parameters-model-beta-1.RData")
-     )
+     file = file.path("parameters-model-beta-median.RData")
+)
+## MEAN
+p_mean <- mean(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
+beta <- (-log(1-p_mean))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step)
+save(n_sim,
+     n_days,
+     test_interaction,
+     test_localization,
+     test_environment,
+     test_lambda,
+     test_status,
+     admission_sim,
+     beta,
+     B,
+     nu,
+     mu,
+     env_threshold,
+     dt,
+     file = file.path("parameters-model-beta-mean.RData")
+)
+
+
+###### launch_sensibility.R (CLUSTER)
+load(file.path("parameters-model-beta-10.RData"))
+
+## RANDOM INDEX CASE
+id_index <- sample( x = admission_sim %>% distinct(id) %>% pull(), size = 1)
+# UPDATE STATUs
+
+## INDEX
+id_index <- "001-0038-B-S"
+test_status <- test_status %>%
+  mutate(t_inf = ifelse(id == id_index,
+                        as.integer(1),
+                        t_inf),
+         t_incub = ifelse(id == id_index, 
+                          as.integer(t_inf + runif(1, min = 2880*1, max = 2880*5)),
+                          t_recover),
+         t_recover = ifelse(id == id_index,
+                            as.integer(t_incub + runif(1, min = 2880*3, max = 2880*7)),
+                            t_recover),
+         inf_by = ifelse(id == id_index,
+                         "INDEX",
+                         inf_by))
 
 
 sim_C <- replicate(n_sim, {
