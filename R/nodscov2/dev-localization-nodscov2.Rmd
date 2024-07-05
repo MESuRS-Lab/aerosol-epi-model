@@ -180,6 +180,92 @@ clusters <- lapply(global_interaction, function(df) {
 })
 ```
 
+## TEMP: EXTRACTING DOUBLE/TRIPLE ROOMS
+```{r}
+id_patient <- admission %>% filter(status == 'PA') %>% pull(id)
+## IN RP ICU DURING THE STUDY -> ADDED BEDS, 2 DOUBLE ROOMS and 2 "TRIPLE ROOMS"
+# equivalence id_patient <-> integer
+# will give NA if not a patient -> excluded
+# if < 2 patients -> will be skipped
+name_to_index <- setNames(seq_along(id_patient), id_patient)
+
+update_co_occurrence_matrix <- function(cluster, matrix, name_to_index) {
+  
+  if (length(cluster) > 1) {
+    for (i in 1:(length(cluster) - 1)) {
+      for (j in (i + 1):length(cluster)) {
+        idx_i <- name_to_index[cluster[i]]
+        idx_j <- name_to_index[cluster[j]]
+        matrix[idx_i, idx_j] <- matrix[idx_i, idx_j] + 1
+        matrix[idx_j, idx_i] <- matrix[idx_j, idx_i] + 1
+      }
+    }
+  }
+  return(matrix)
+}
+
+
+# Initialize co_occurrence_matrix with zeros
+co_occurrence_matrix <- matrix(0, nrow = length(id_patient), ncol = length(id_patient))
+rownames(co_occurrence_matrix) <- id_patient
+colnames(co_occurrence_matrix) <- id_patient
+
+## for eahc time step -> count
+for (t in clusters) {
+  for (cluster in t) {
+    co_occurrence_matrix <- update_co_occurrence_matrix(cluster, co_occurrence_matrix, name_to_index)
+  }
+}
+
+## MATRIX TO DF (filtering to remove duplicates, matrix is symmetrical..., and orderit by highest count) 
+co_occurrence_df <- as.data.frame(as.table(co_occurrence_matrix))
+co_occurrence_df <- co_occurrence_df[co_occurrence_df$Var1 != co_occurrence_df$Var2, ]
+co_occurrence_df <- co_occurrence_df[!duplicated(t(apply(co_occurrence_df, 1, sort))), ]
+co_occurrence_df <- co_occurrence_df[order(-co_occurrence_df$Freq), ]
+
+## function
+find_double_rooms <- function(df, n_double) {
+  selected_clusters <- character()
+  double_rooms <- list()
+  
+  # Select double rooms
+  for (i in 1:n_double) {
+    pair <- df[!df$Var1 %in% selected_clusters & !df$Var2 %in% selected_clusters, ][1, ]
+    if (nrow(pair) > 0) {
+      double_rooms[[i]] <- c(as.character(pair$Var1), as.character(pair$Var2))
+      selected_clusters <- c(selected_clusters, as.character(pair$Var1), as.character(pair$Var2))
+    }
+  }
+ 
+  return(list(double_rooms = double_rooms))
+}
+
+double_rooms <- find_rooms(co_occurrence_df, n_double = 2)
+print(rooms$double_rooms)
+
+```
+```{r}
+library(gtools)
+triplets <- as.data.frame(combinations(n = 18, r = 3, v = id_patient)) %>% mutate(Freq = 0)
+
+## Freq each triplet in a cluster
+for (t in clusters) {
+  for (cluster in t) {
+    if (length(cluster) > 2){
+      for (j in 1:nrow(triplets)) {
+        triplet <- triplets[j, ]
+        if (all(triplet %in% cluster)) {
+          triplets[j,]$Freq <- triplets[j,]$Freq + 1
+        }
+      }
+    }
+  }
+}
+
+```
+
+
+
 
 
 ## SHIFTS INFERENCE
