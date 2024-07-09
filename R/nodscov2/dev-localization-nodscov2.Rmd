@@ -14,6 +14,8 @@ library(igraph)
 library(tidyr)
 library(viridis)
 library(purrr)
+library(stringr)
+
 ```
 
 ```{r Paths setup}
@@ -952,8 +954,10 @@ o <- do.call(rbind,global_localization) %>% filter(id %in% id_patient) %>% group
 
 ## DIFF BETWEEN DEV AND MAIN BRANCH
 ```{r}
-new <- do.call(rbind, global_localization)
-old <- do.call(rbind, global_localization_bis)
+global_localization_bis <- global_localization
+load(file.path(loc_nodscov2_path,"dev-localization-nodscov2.RData")) ##overwrite admission
+old <- do.call(rbind, global_localization)
+new <- do.call(rbind, global_localization_bis)
 diff <- setdiff(new, old)
 ```
 
