@@ -191,57 +191,57 @@ shifts <- df_long %>%
   left_join(admission %>% select(id,cat,status), by = c("individual" = "id")) %>%
   filter(status == "PE")
 
-## check which indivuals have > 3 "shifts"
-sup_3_shifts <- shifts %>% 
-  group_by(individual) %>% 
-  summarise(n_shifts = n()) %>% 
-  filter(n_shifts > 3) %>%
-  left_join(admission %>% select(id,cat), by = c("individual" = "id")) %>%
-  select(individual, cat, n_shifts)
+# ## check which indivuals have > 3 "shifts"
+# sup_3_shifts <- shifts %>% 
+#   group_by(individual) %>% 
+#   summarise(n_shifts = n()) %>% 
+#   filter(n_shifts > 3) %>%
+#   left_join(admission %>% select(id,cat), by = c("individual" = "id")) %>%
+#   select(individual, cat, n_shifts)
 ```
 
 ## SHIFTS VS INTERACTION
 ```{r}
-df_long <- data %>%
-  mutate(date_posix_end = date_posix_first + length) %>% 
-  pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>%
-  arrange(individual, date_posix_first)
-
-calculate_actual_interaction_time <- function(df) {
-  if(nrow(df) == 0) return(0)
-  
-  df <- df %>% arrange(date_posix_first)
-  total_time <- 0
-  current_start <- df$date_posix_first[1]
-  current_end <- df$date_posix_end[1]
-  
-  for(i in 2:nrow(df)) {
-    if(df$date_posix_first[i] <= current_end) {
-      current_end <- max(current_end, df$date_posix_end[i])
-    } else {
-      total_time <- total_time + as.numeric(difftime(current_end, current_start, units = "hours"))
-      current_start <- df$date_posix_first[i]
-      current_end <- df$date_posix_end[i]
-    }
-  }
-  total_time <- total_time + as.numeric(difftime(current_end, current_start, units = "hours"))
-  return(total_time)
-}
-
-len_int <- df_long %>%
-  group_by(individual) %>%
-  summarise(total_int = calculate_actual_interaction_time(cur_data()))
-
-len_shifts <- shifts %>%
-  group_by(individual) %>%
-  summarise(total_shift = sum(shift_length))
-
-len_tot <- left_join(len_shifts, len_int, by = join_by(individual))  %>%
-  mutate(len_diff = total_shift - total_int) %>%
-  left_join(admission %>% select(id,cat), by = c("individual" = "id"))
-
-
-len_tot %>% filter(total_int > total_shift) 
+# df_long <- data %>%
+#   mutate(date_posix_end = date_posix_first + length) %>% 
+#   pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>%
+#   arrange(individual, date_posix_first)
+# 
+# calculate_actual_interaction_time <- function(df) {
+#   if(nrow(df) == 0) return(0)
+#   
+#   df <- df %>% arrange(date_posix_first)
+#   total_time <- 0
+#   current_start <- df$date_posix_first[1]
+#   current_end <- df$date_posix_end[1]
+#   
+#   for(i in 2:nrow(df)) {
+#     if(df$date_posix_first[i] <= current_end) {
+#       current_end <- max(current_end, df$date_posix_end[i])
+#     } else {
+#       total_time <- total_time + as.numeric(difftime(current_end, current_start, units = "hours"))
+#       current_start <- df$date_posix_first[i]
+#       current_end <- df$date_posix_end[i]
+#     }
+#   }
+#   total_time <- total_time + as.numeric(difftime(current_end, current_start, units = "hours"))
+#   return(total_time)
+# }
+# 
+# len_int <- df_long %>%
+#   group_by(individual) %>%
+#   summarise(total_int = calculate_actual_interaction_time(cur_data()))
+# 
+# len_shifts <- shifts %>%
+#   group_by(individual) %>%
+#   summarise(total_shift = sum(shift_length))
+# 
+# len_tot <- left_join(len_shifts, len_int, by = join_by(individual))  %>%
+#   mutate(len_diff = total_shift - total_int) %>%
+#   left_join(admission %>% select(id,cat), by = c("individual" = "id"))
+# 
+# 
+# len_tot %>% filter(total_int > total_shift) 
 ```
 
 
@@ -351,18 +351,18 @@ global_localization <- lapply(1:n_subdivisions, function(t) {
 
 ## checkup
 ```{r}
-test_loc <-  do.call(rbind, global_localization) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
-checkup <- (test_loc %>% filter(id %in% id_hcw) %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")))
-
-## Check multiple patients in clusters
-n_nplet <- do.call(rbind, cluster_info_list) %>%
-  group_by(cluster, time) %>%
-  summarise(
-    n_patients = n(),
-    patients = str_c(Patients, collapse = ", "),
-    .groups = 'drop'
-  ) %>%
-  select(time, cluster, patients, n_patients)
+# test_loc <-  do.call(rbind, global_localization) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
+# checkup <- (test_loc %>% filter(id %in% id_hcw) %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room")))
+# 
+# ## Check multiple patients in clusters
+# n_nplet <- do.call(rbind, cluster_info_list) %>%
+#   group_by(cluster, time) %>%
+#   summarise(
+#     n_patients = n(),
+#     patients = str_c(Patients, collapse = ", "),
+#     .groups = 'drop'
+#   ) %>%
+#   select(time, cluster, patients, n_patients)
 ```
 
 ## SMOOTHING (SUCCESSIVE INTERACTION IN THE SAME ROOM WITH <5min GAP)
@@ -423,19 +423,19 @@ test_global_localization <- lapply(1:n_subdivisions, function(t) {
 })
 
 
-c <- data.frame()
-for (t in 1:n_subdivisions){
-  a <- setdiff(test_global_localization[[t]], global_localization[[t]])
-  c <- bind_rows(c,a)
-}
-
-check_smoothing <- (do.call(rbind, test_global_localization) %>%
-                      filter(id == "001-0001-D-J") %>%
-                      filter(time < 800 & time > 450) %>%
-                      left_join(do.call(rbind,global_localization) %>%
-                                  filter(id =="001-0001-D-J" ) %>%
-                                  filter(time < 800 & time > 450)
-                                , by = join_by(time)))
+# c <- data.frame()
+# for (t in 1:n_subdivisions){
+#   a <- setdiff(test_global_localization[[t]], global_localization[[t]])
+#   c <- bind_rows(c,a)
+# }
+# 
+# check_smoothing <- (do.call(rbind, test_global_localization) %>%
+#                       filter(id == "001-0001-D-J") %>%
+#                       filter(time < 800 & time > 450) %>%
+#                       left_join(do.call(rbind,global_localization) %>%
+#                                   filter(id =="001-0001-D-J" ) %>%
+#                                   filter(time < 800 & time > 450)
+#                                 , by = join_by(time)))
 ```
 
 ## (TEMP)
@@ -490,21 +490,21 @@ test_global_localization_corridor <- lapply(1:n_subdivisions, function(t) {
 })
 
 
-d <- data.frame()
-for (t in 1:n_subdivisions){
-  a <- setdiff(test_global_localization_corridor[[t]], global_localization[[t]])
-  d <- bind_rows(d,a)
-}
-
-check_smoothing_corridor <- (do.call(rbind, test_global_localization_corridor) %>%
-                      filter(id == "001-0001-D-J") %>%
-                      filter(time < 470 & time > 50) %>%
-                      left_join(do.call(rbind,global_localization) %>%
-                                  filter(id =="001-0001-D-J" ) %>%
-                                  filter(time < 470 & time > 50)
-                                , by = join_by(time)))
-
-
+# d <- data.frame()
+# for (t in 1:n_subdivisions){
+#   a <- setdiff(test_global_localization_corridor[[t]], global_localization[[t]])
+#   d <- bind_rows(d,a)
+# }
+# 
+# check_smoothing_corridor <- (do.call(rbind, test_global_localization_corridor) %>%
+#                       filter(id == "001-0001-D-J") %>%
+#                       filter(time < 470 & time > 50) %>%
+#                       left_join(do.call(rbind,global_localization) %>%
+#                                   filter(id =="001-0001-D-J" ) %>%
+#                                   filter(time < 470 & time > 50)
+#                                 , by = join_by(time)))
+# 
+# 
 
 ```
 
@@ -531,7 +531,7 @@ test_global_localization_fill_patient <- lapply(1:n_subdivisions, function(t) {
 })
 
 
-x <- do.call(rbind,test_global_localization_fill_patient) %>% filter(id %in% id_patient) %>% group_by(id,localization) %>% summarise(n = n()) %>% arrange(id,localization)
+# x <- do.call(rbind,test_global_localization_fill_patient) %>% filter(id %in% id_patient) %>% group_by(id,localization) %>% summarise(n = n()) %>% arrange(id,localization)
 ```
 ## (TEMP)
 ```{r}
@@ -542,7 +542,7 @@ rm(test_global_localization_fill_patient)
 
 
 ```{r}
-u <- do.call(rbind,global_localization) %>% group_by(id,localization) %>% summarise(n = n()) %>% arrange(id,localization)
+# u <- do.call(rbind,global_localization) %>% group_by(id,localization) %>% summarise(n = n()) %>% arrange(id,localization)
 ```
 
 
@@ -690,13 +690,11 @@ for (t in 3:n_subdivisions){
 ```
 
 ```{r}
-y <- do.call(rbind,global_localization) %>% group_by(localization) %>% summarise (n = n())
-test_loc_ter <- do.call(rbind,global_localization) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
-checkup_end <- test_loc_ter %>% filter(id %in% id_hcw) %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
+# y <- do.call(rbind,global_localization) %>% group_by(localization) %>% summarise (n = n())
+# test_loc_ter <- do.call(rbind,global_localization) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
+# checkup_end <- test_loc_ter %>% filter(id %in% id_hcw) %>% group_by(localization) %>% summarise (n = n()) %>% left_join(rooms %>% select(id_room, room), by = c("localization" = "id_room"))
 ```
 
-
-## TEMPORARY
 #SAVE TO .RData FILES
 ```{r Save to .RData}
 save(clusters,
@@ -719,6 +717,25 @@ save(clusters,
 
 ## TEMP: EXTRACTING DOUBLE/TRIPLE ROOMS
 ```{r}
+wd <- getwd()
+knitr::opts_chunk$set(root.dir = wd)
+data_path <- file.path(wd,"..", "..", "data")
+nodscov2_path <- file.path(data_path, "data-nodscov2") 
+loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
+fig_path <- file.path(loc_nodscov2_path,"..","fig")
+ind_paths_path <- file.path(fig_path, "individual-paths")
+load(file.path(loc_nodscov2_path,"dev-localization-nodscov2.RData")) ##overwrite admission
+## TRUNCATE TO KEEP ONLY 24H (24/05/06 12:00 TO 24/05/07 12:00)
+end_date - begin_date ##end of last interaction
+new_begin_date <- begin_date + (5*60*60) ## OFFSET TO START THE DAY AT 12AM
+new_end_date <- new_begin_date + (24*60*60)
+print(new_end_date - new_begin_date)
+t_begin <- 5*60*2 ## OFFSET t
+t_end <- (t_begin + 24*60*2) - 1
+
+
+
+
 id_patient <- admission %>% filter(status == 'PA') %>% pull(id)
 ## IN RP ICU DURING THE STUDY -> ADDED BEDS, 2 DOUBLE ROOMS and 2 "TRIPLE ROOMS"
 # equivalence id_patient <-> integer

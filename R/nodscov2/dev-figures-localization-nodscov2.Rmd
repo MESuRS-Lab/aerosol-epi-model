@@ -39,8 +39,32 @@ if (!dir.exists(nodscov2_path)) {
 }
 ```
 
+```{r}
+load(file.path(loc_nodscov2_path,"dev-localization-nodscov2.RData"))
+```
 
 
+```{r IDS interactings}
+## IDS INTERACTING
+id_interacting <- do.call(rbind, global_interaction) %>%
+  pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>% distinct(individual) %>% pull()
+id_total <- admission %>% distinct(id) %>% pull()
+id_not_interacting <- setdiff(id_total, id_interacting)
+
+admission %>% distinct(cat) %>% pull()
+cat_paramedical <- c("nurse", "student nurse", "aux nurse")
+cat_medical <- c("physician", "ext physician", "reeducation staff", "other")
+## IDS BY CATEGORY
+id_paramedical <- admission %>% filter(id %in% id_interacting & cat %in% cat_paramedical) %>% pull(id)
+id_medical <- admission %>% filter(id %in% id_interacting & cat %in% cat_medical) %>% pull(id)
+id_hcw <- admission %>% filter(id %in% id_interacting & status == "PE") %>% pull(id)
+id_patient <- admission %>% filter(id %in% id_interacting & status == "PA") %>% pull(id)
+
+id_room_patient <- rooms %>% 
+  filter(id %in% (admission %>% filter(status == "PA") %>% pull(id))) %>%
+  distinct(id_room) %>%
+  pull()
+```
 
 
 
