@@ -416,28 +416,35 @@ Rcpp::NumericVector Lambda_c (
     Rcpp::List list_ind_r;
     int nb_inf_r; 
 
+
     for (int j = 0; j < lambda_tim1.nrows(); ++j){
         id = ids[j];
         nb_inf_r = 0;
         list_ind_r = List_encountered(id, interaction_ti);
-        // Dont use List_inf_encountered because we dont need admission for Lambda_c
-        for (int i = 0; i < list_ind_r.size(); ++i){
-            Rcpp::String id_r = list_ind_r[i];
-            // Search for the index of individual encountered in ids vector 
-            int index_r = -1;
-            for (int k = 0; k < ids.size(); ++k) {
-                if (ids[k] == id_r) {
-                    index_r = k;
-                    break;
+        if(list_ind_r.size() > 0){
+            // Dont use List_inf_encountered because we dont need admission for Lambda_c
+            for (int i = 0; i < list_ind_r.size(); ++i){
+                Rcpp::String id_r = list_ind_r[i];
+                // Search for the index of individual encountered in ids vector 
+                int index_r = -1;
+                for (int k = 0; k < ids.size(); ++k) {
+                    if (ids[k] == id_r) {
+                        index_r = k;
+                        break;
+                    }
+                }
+                // if individual r is INFECTIOUS & we found its index (for safety)
+                if (index_r != -1 && status_ti[index_r] == 2) { // 2 = INFECTIOUS
+                    nb_inf_r += 1;
                 }
             }
-            // if individual r is INFECTIOUS & we found its index (for safety)
-            if (index_r != -1 && status_ti[index_r] == 2) { // 2 = INFECTIOUS
-                nb_inf_r += 1;
-            }
+            
+            lambda_c_ti[j] = beta * deltat * nb_inf_r;
+
+        } else {
+            lambda_c_ti[j] = 0;
         }
         
-        lambda_c_ti[j] = beta * deltat * nb_inf_r;
     }
 
     return lambda_c_ti;

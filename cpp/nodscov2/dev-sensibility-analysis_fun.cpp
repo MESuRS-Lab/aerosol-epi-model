@@ -314,22 +314,20 @@ Rcpp::NumericVector Update_environment(
     Rcpp::IntegerVector rooms_environment = environment_tim1["id_room"];
     Rcpp::CharacterVector ids = admission["id"];
     Rcpp::IntegerVector admission_int = admission["info"];
-
-    double individual_weigth;
-
+    double individual_weight = 1;
     // EXPONENTIAL INACTIVATION 
     Rcpp::NumericVector env_ti = as<NumericVector>(environment_tim1["env"]) * exp(-mu * deltat);
     
     // INFECTING INDIVIDUALS SHEDDING
     for (int j = 0; j < admission.nrows(); ++j) {
-        if (admission_int[j] == 0){
-            individual_weigth = 1;
-        } else if (admission_int[j] == 1){
-            individual_weigth = 1; // mask?
-        } else {
-            individual_weigth = 1;
-        }
-
+    // each individual can have a shedding weight (e.g. mask...)
+    //     if (admission_int[j] == 0){
+    //         individual_weight = 1;
+    //     } else if (admission_int[j] == 1){
+    //         individual_weight = 1; // mask?
+    //     } else {
+    //         individual_weight = 1;
+    //     }
         if (status_tim1[j] == 2){ // 2 = INFECTIOUS -> SHEDDING
         int room_j = Get_loc_j(ids[j], localization_ti);
             // Search for the index of the room in environment dataframe
@@ -341,7 +339,7 @@ Rcpp::NumericVector Update_environment(
                 }
             }
             if(index_room_j != -1){
-                env_ti[index_room_j] += individual_weigth * nu * deltat;}
+                env_ti[index_room_j] += individual_weight * nu * deltat;}
         }
     }
 
@@ -387,7 +385,7 @@ Rcpp::List List_inf_encountered(
     Rcpp::List list_inf_encountered;
     for (int j = 0; j < list_encountered.size(); j++){
         Rcpp::String id_encountered = list_encountered[j];
-        // 0 = Susceptible, 1 = Exposed, 2 = Infected, 3 = Recovered
+        // 0 = Susceptible, 1 = Exposed, 2 = Infectious, 3 = Recovered
         if (Get_status_j(id_encountered, global_status, admission, t) == 2){ //INFECTIOUS
             list_inf_encountered.push_back(id_encountered);
         }
@@ -415,28 +413,35 @@ Rcpp::NumericVector Lambda_c (
     Rcpp::List list_ind_r;
     int nb_inf_r; 
 
+
     for (int j = 0; j < lambda_tim1.nrows(); ++j){
         id = ids[j];
         nb_inf_r = 0;
         list_ind_r = List_encountered(id, interaction_ti);
-        // Dont use List_inf_encountered because we dont need admission for Lambda_c
-        for (int i = 0; i < list_ind_r.size(); ++i){
-            Rcpp::String id_r = list_ind_r[i];
-            // Search for the index of individual encountered in ids vector 
-            int index_r = -1;
-            for (int k = 0; k < ids.size(); ++k) {
-                if (ids[k] == id_r) {
-                    index_r = k;
-                    break;
+        if(list_ind_r.size() > 0){
+            // Dont use List_inf_encountered because we dont need admission for Lambda_c
+            for (int i = 0; i < list_ind_r.size(); ++i){
+                Rcpp::String id_r = list_ind_r[i];
+                // Search for the index of individual encountered in ids vector 
+                int index_r = -1;
+                for (int k = 0; k < ids.size(); ++k) {
+                    if (ids[k] == id_r) {
+                        index_r = k;
+                        break;
+                    }
+                }
+                // if individual r is INFECTIOUS & we found its index (for safety)
+                if (index_r != -1 && status_ti[index_r] == 2) { // 2 = INFECTIOUS
+                    nb_inf_r += 1;
                 }
             }
-            // if individual r is INFECTIOUS & we found its index (for safety)
-            if (index_r != -1 && status_ti[index_r] == 2) { // 2 = INFECTIOUS
-                nb_inf_r += 1;
-            }
+            
+            lambda_c_ti[j] = beta * deltat * nb_inf_r;
+
+        } else {
+            lambda_c_ti[j] = 0;
         }
         
-        lambda_c_ti[j] = beta * deltat * nb_inf_r;
     }
 
     return lambda_c_ti;
@@ -463,19 +468,19 @@ Rcpp::NumericVector Lambda_e (
     Rcpp::IntegerVector rooms_environment = environment_ti["id_room"];
     Rcpp::IntegerVector rooms_volume = environment_ti["volume"];
     
-    double individual_weight;
+    double individual_weight = 1;
     for (int j = 0; j < lambda_tim1.nrows(); ++j){
         Rcpp::String id_j = ids_lambda[j];
         // TWO CASES (PATIENTS AND HCWS)
-        if (admission_int[j] == 0){
-            // CASE 1. IF INDIVIDUAL j IS A PATIENT --> 
-            individual_weight = 1;
-        } else if (admission_int[j] == 1){
-            // CASE 2. IF INDIVIDUAL j IS A HCW
-            individual_weight = 1;
-        } else {
-            individual_weight = 1;
-        }
+        // if (admission_int[j] == 0){
+        //     // CASE 1. IF INDIVIDUAL j IS A PATIENT --> 
+        //     individual_weight = 1;
+        // } else if (admission_int[j] == 1){
+        //     // CASE 2. IF INDIVIDUAL j IS A HCW
+        //     individual_weight = 1;
+        // } else {
+        //     individual_weight = 1;
+        // }
         int room_j = Get_loc_j(id_j, localization_ti);
         // Search for the index of patient's room
         int index_room = -1;
