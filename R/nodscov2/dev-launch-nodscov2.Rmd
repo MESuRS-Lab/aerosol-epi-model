@@ -11,12 +11,10 @@ library(dplyr)
 library(Rcpp)
 ```
 
-
 ```{r}
 wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
 args = commandArgs(trailingOnly=TRUE)
-
 sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
 set.seed(123)
 ```
@@ -57,12 +55,9 @@ new_n_subdivisions <- (t_end-t_begin +1)*n_days
 
 ```{r}
 ## RANDOM INDEX CASE
-print('sampling a random index case')
-#id_index <- sample(x= admission_sim %>% distinct(id) %>% pull(), size = 1)
-id_index <- "001-0038-B-S"
-print(id_index)
+id_index <- sample(x= admission_sim %>% distinct(id) %>% pull(), size = 1)
+
 # Update global status
-print('updating global status')
 test_status <- test_status %>%
   mutate(t_inf = ifelse(id == id_index,
                         as.integer(1),
@@ -78,6 +73,57 @@ test_status <- test_status %>%
                          inf_by))
 
 ```
+
+
+```{r}
+ta <- Sys.time()
+result <- simulation(global_interaction = test_interaction,
+                     global_environment = test_environment,
+                     global_data = test_data,
+                     global_status = test_status,
+                     admission = admission_sim,
+                     beta = beta,
+                     B = B,
+                     nu = nu,
+                     mu = mu,
+                     env_threshold = env_threshold,
+                     dt = dt)
+tb <- Sys.time()
+print(tb - ta)
+
+```
+
+<!-- ############################ GARBAGE ############################  -->
+
+
+```{r}
+id_sim <- ifelse(length(args)==0, "dev-test-endless-day", args[1])
+id_sim_path <- file.path(sim_nodscov2_path, id_sim)
+
+if (!dir.exists(id_sim_path)) {
+  dir.create(id_sim_path, recursive = TRUE)
+}
+
+
+save(truncated_interaction,
+     truncated_localization,
+     truncated_environment,
+     admission_sim,
+     beta,
+     nu,
+     mu,
+     B,
+     env_threshold,
+     dt,
+     new_n_subdivisions,
+     n_days,
+     t_begin,
+     t_end,
+     result,
+     file = file.path(id_sim_path, paste0(id_sim, "-", "dev-cpp-dev-simulation-nodscov2.RData"))
+     )
+```
+
 
 ```{r}
 t = 23914
@@ -148,59 +194,6 @@ Update_environment(
   t = t
 )
 ```
-
-
-
-
-
-```{r}
-beta = 0.79
-ta <- Sys.time()
-result <- simulation(global_interaction = test_interaction,
-                     global_environment = test_environment,
-                     global_data = test_data,
-                     global_status = test_status,
-                     admission = admission_sim,
-                     beta = beta,
-                     B = B,
-                     nu = nu,
-                     mu = mu,
-                     env_threshold = env_threshold,
-                     dt = dt)
-tb <- Sys.time()
-print(tb - ta)
-
-```
-
-
-```{r}
-id_sim <- ifelse(length(args)==0, "dev-test-endless-day", args[1])
-id_sim_path <- file.path(sim_nodscov2_path, id_sim)
-
-if (!dir.exists(id_sim_path)) {
-  dir.create(id_sim_path, recursive = TRUE)
-}
-
-
-save(truncated_interaction,
-     truncated_localization,
-     truncated_environment,
-     admission_sim,
-     beta,
-     nu,
-     mu,
-     B,
-     env_threshold,
-     dt,
-     new_n_subdivisions,
-     n_days,
-     t_begin,
-     t_end,
-     result,
-     file = file.path(id_sim_path, paste0(id_sim, "-", "dev-cpp-dev-simulation-nodscov2.RData"))
-     )
-```
-
 
 
 
