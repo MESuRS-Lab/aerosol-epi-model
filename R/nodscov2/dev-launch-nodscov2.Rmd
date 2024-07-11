@@ -81,7 +81,6 @@ result <- simulation(global_interaction = test_interaction,
                      global_environment = test_environment,
                      global_data = test_data,
                      global_status = test_status,
-                     admission = admission_sim,
                      beta = beta,
                      B = B,
                      nu = nu,
@@ -92,9 +91,6 @@ tb <- Sys.time()
 print(tb - ta)
 
 ```
-
-<!-- ############################ GARBAGE ############################  -->
-
 
 ```{r}
 id_sim <- ifelse(length(args)==0, "dev-test-endless-day", args[1])
@@ -124,76 +120,10 @@ save(truncated_interaction,
      )
 ```
 
-
-```{r}
-t = 23914
-id = id_index
-tau = 60 * 60 * 24
-dt = 30
-deltat = dt/(tau)
-
-status_ti_j <- Get_status_j(
-  id = id_index,
-  global_status = test_status,
-  t = t
-)
-
-status_ti <- Get_status_t(
-  global_status = test_status,
-  ids = test_data[[t]]$id,
-  t = t
-)
-
-status_tim1 <- Get_status_t(
-  global_status = test_status,
-  ids = test_data[[t]]$id,
-  t = t - 1
-)
-
-list_encountered <- List_encountered(
-  id = id_index,
-  interaction_ti = test_interaction[[t]]
-)
-
-list_inf_encountered <- List_inf_encountered(
-  id = id_index,
-  interaction_ti =  test_interaction[[t]],
-  global_status = test_status,
-  t = t
-)
-
-lambda_c <- Lambda_c(
-  ids_ti = test_data[[100000]]$id,
-  interaction_ti = test_interaction[[100000]],
-  status_ti = status_ti,
-  beta = beta,
-  deltat = deltat
-)
-
-lambda_e <- Lambda_e(
-  info_ti = test_data[[t]]$info,
-  localization_ti = test_data[[t]]$localization_ti,
-  environment_ti = test_environment[[t]] %>% mutate(env = 40),
-  B = B,
-  env_threshold = 0,
-  deltat = deltat
-)
-```
+<!-- ############################ GARBAGE ############################  -->
 
 
-```{r}
-Update_environment(
-  ids_ti = test_data[[1]]$id,
-  info_ti = test_data[[1]]$info,
-  environment_tim1 = test_environment[[1]],
-  localization_ti = test_data[[1]]$localization_ti,
-  status_tim1 = status_tim1,
-  mu = mu,
-  nu = nu,
-  deltat = deltat,
-  t = t
-)
-```
+
 
 
 
