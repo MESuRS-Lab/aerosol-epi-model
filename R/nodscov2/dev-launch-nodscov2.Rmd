@@ -161,6 +161,7 @@ Update_environment(
 
 
 ```{r}
+ta <- ystem.time()
 result <- simulation(global_interaction = test_interaction,
                      global_environment = test_environment,
                      global_data = test_data,
