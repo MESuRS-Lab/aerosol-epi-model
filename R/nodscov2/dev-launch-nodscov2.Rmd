@@ -16,6 +16,9 @@ library(Rcpp)
 wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
 args = commandArgs(trailingOnly=TRUE)
+
+sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
+set.seed(123)
 ```
 
 ```{r}
@@ -49,14 +52,14 @@ test_interaction <- rep(truncated_interaction, n_days)
 test_data <- rep(global_data, n_days)
 test_environment <- rep(truncated_environment, n_days)
 test_status <- truncated_status
-
 new_n_subdivisions <- (t_end-t_begin +1)*n_days
 ```
 
 ```{r}
 ## RANDOM INDEX CASE
 print('sampling a random index case')
-id_index <- sample(x= admission_sim %>% distinct(id) %>% pull(), size = 1)
+#id_index <- sample(x= admission_sim %>% distinct(id) %>% pull(), size = 1)
+id_index <- "001-0038-B-S"
 print(id_index)
 # Update global status
 print('updating global status')
@@ -77,7 +80,7 @@ test_status <- test_status %>%
 ```
 
 ```{r}
-t = 23567
+t = 23914
 id = id_index
 tau = 60 * 60 * 24
 dt = 30
@@ -133,47 +136,71 @@ lambda_e <- Lambda_e(
 
 
 ```{r}
-
-```
-
-
-```{r}
 Update_environment(
   ids_ti = test_data[[1]]$id,
   info_ti = test_data[[1]]$info,
   environment_tim1 = test_environment[[1]],
   localization_ti = test_data[[1]]$localization_ti,
-  status_tim1 = test_status,
+  status_tim1 = status_tim1,
   mu = mu,
   nu = nu,
   deltat = deltat,
   t = t
 )
-
-
-
-
-
-
 ```
 
 
 
 
+
 ```{r}
-ta <- ystem.time()
+beta = 0.79
+ta <- Sys.time()
 result <- simulation(global_interaction = test_interaction,
                      global_environment = test_environment,
                      global_data = test_data,
                      global_status = test_status,
                      admission = admission_sim,
                      beta = beta,
-                     B = 0,
+                     B = B,
                      nu = nu,
                      mu = mu,
                      env_threshold = env_threshold,
                      dt = dt)
+tb <- Sys.time()
+print(tb - ta)
 
 ```
+```{r}
+id_sim <- ifelse(length(args)==0, "dev-test-endless-day", args[1])
+id_sim_path <- file.path(sim_nodscov2_path, id_sim)
+
+if (!dir.exists(id_sim_path)) {
+  dir.create(id_sim_path, recursive = TRUE)
+}
+
+
+save(truncated_interaction,
+     truncated_localization,
+     admission,
+     rooms,
+     beta,
+     nu,
+     mu,
+     B,
+     env_thresold,
+     dt,
+     new_n_subdivisions,
+     n_days,
+     new_begin_date,
+     new_end_date,
+     result,
+     clusters,
+     file = file.path(id_sim_path, paste0(id_sim, "-", "dev-simulation-nodscov2.RData"))
+     )
+```
+
+
+
 
 
