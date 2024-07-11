@@ -182,21 +182,20 @@ if (!dir.exists(id_sim_path)) {
 
 save(truncated_interaction,
      truncated_localization,
-     admission,
-     rooms,
+     truncated_environment,
+     admission_sim,
      beta,
      nu,
      mu,
      B,
-     env_thresold,
+     env_threshold,
      dt,
      new_n_subdivisions,
      n_days,
-     new_begin_date,
-     new_end_date,
+     t_begin,
+     t_end,
      result,
-     clusters,
-     file = file.path(id_sim_path, paste0(id_sim, "-", "dev-simulation-nodscov2.RData"))
+     file = file.path(id_sim_path, paste0(id_sim, "-", "dev-cpp-dev-simulation-nodscov2.RData"))
      )
 ```
 

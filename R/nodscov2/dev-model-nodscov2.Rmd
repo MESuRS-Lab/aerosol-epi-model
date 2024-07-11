@@ -137,7 +137,7 @@ nu <- 10 * 24 #( 10 quanta/h)
 dt <- 30 # Time step
 tau <- 60 * 60 *24 # Seconds in 1 day
 deltat <- dt/tau
-env_thresold <- 0 # Quanta threshold above which the environment is infectious
+env_threshold <- 0 # Quanta threshold above which the environment is infectious
 
 #epsilon <- 1 # Airborne transmission rate -> epsilon = (B/V) * E(t_i)
 #mu <- 1
@@ -210,7 +210,7 @@ data_sim_test <- simulation(global_interaction = test_interaction,
            B = B,
            nu = nu,
            mu = mu,
-           env_thresold,
+           env_threshold,
            dt = dt
            )
 tb <- Sys.time()
@@ -237,7 +237,7 @@ save(truncated_interaction,
      nu,
      mu,
      B,
-     env_thresold,
+     env_threshold,
      dt,
      new_n_subdivisions,
      n_days,
