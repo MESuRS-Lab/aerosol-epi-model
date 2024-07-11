@@ -31,6 +31,7 @@ global_data <- lapply(1:length(truncated_localization), function(t){
   df <- data.frame(id = truncated_localization[[t]]$id,
                    info = admission_sim$info,
                    #room = admission_sim$room,
+                   #interacting = ifelse(id %in% truncated_interaction$from | id %in% truncated_interaction$to, T, F)
                    localization_ti = truncated_localization[[t]]$localization,
                    lambda_c = 0,
                    lambda_e = 0
@@ -45,11 +46,133 @@ global_data <- lapply(1:length(truncated_localization), function(t){
 ```{r}
 ## CREATE ENDLESS DAY OBJECTS
 test_interaction <- rep(truncated_interaction, n_days)
-test_localization <- rep(truncated_localization, n_days)
-test_lambda <- rep(truncated_lambda, n_days)
+test_data <- rep(global_data, n_days)
 test_environment <- rep(truncated_environment, n_days)
 test_status <- truncated_status
 
 new_n_subdivisions <- (t_end-t_begin +1)*n_days
 ```
+
+```{r}
+## RANDOM INDEX CASE
+print('sampling a random index case')
+id_index <- sample(x= admission_sim %>% distinct(id) %>% pull(), size = 1)
+print(id_index)
+# Update global status
+print('updating global status')
+test_status <- test_status %>%
+  mutate(t_inf = ifelse(id == id_index,
+                        as.integer(1),
+                        t_inf),
+         t_incub = ifelse(id == id_index,
+                          as.integer(t_inf + runif(1, min = 2880*1, max = 2880*5)),
+                          t_recover),
+         t_recover = ifelse(id == id_index,
+                            as.integer(t_incub + runif(1, min = 2880*3, max = 2880*7)),
+                            t_recover),
+         inf_by = ifelse(id == id_index,
+                         "INDEX",
+                         inf_by))
+
+```
+
+```{r}
+t = 23567
+id = id_index
+tau = 60 * 60 * 24
+dt = 30
+deltat = dt/(tau)
+
+status_ti_j <- Get_status_j(
+  id = id_index,
+  global_status = test_status,
+  t = t
+)
+
+status_ti <- Get_status_t(
+  global_status = test_status,
+  ids = test_data[[t]]$id,
+  t = t
+)
+
+status_tim1 <- Get_status_t(
+  global_status = test_status,
+  ids = test_data[[t]]$id,
+  t = t - 1
+)
+
+list_encountered <- List_encountered(
+  id = id_index,
+  interaction_ti = test_interaction[[t]]
+)
+
+list_inf_encountered <- List_inf_encountered(
+  id = id_index,
+  interaction_ti =  test_interaction[[t]],
+  global_status = test_status,
+  t = t
+)
+
+lambda_c <- Lambda_c(
+  ids_ti = test_data[[t]]$id,
+  interaction_ti = test_interaction[[t]],
+  status_ti = status_ti,
+  beta = beta,
+  deltat = deltat
+)
+
+lambda_e <- Lambda_e(
+  info_ti = test_data[[t]]$info,
+  localization_ti = test_data[[t]]$localization_ti,
+  environment_ti = test_environment[[t]] %>% mutate(env = 40),
+  B = B,
+  env_threshold = 0,
+  deltat = deltat
+)
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+Update_environment(
+  ids_ti = test_data[[1]]$id,
+  info_ti = test_data[[1]]$info,
+  environment_tim1 = test_environment[[1]],
+  localization_ti = test_data[[1]]$localization_ti,
+  status_tim1 = test_status,
+  mu = mu,
+  nu = nu,
+  deltat = deltat,
+  t = t
+)
+
+
+
+
+
+
+```
+
+
+
+
+```{r}
+result <- simulation(global_interaction = test_interaction,
+                     global_environment = test_environment,
+                     global_data = test_data,
+                     global_status = test_status,
+                     admission = admission_sim,
+                     beta = beta,
+                     B = 0,
+                     nu = nu,
+                     mu = mu,
+                     env_threshold = env_threshold,
+                     dt = dt)
+
+```
+
 

@@ -38,6 +38,7 @@ Rcpp::List simulation(
     Rcpp::IntegerVector localization_ti;
     Rcpp::IntegerVector localization_tmi;
 
+    Rcpp::DataFrame global_data_t;
     Rcpp::CharacterVector ids_ti;
     Rcpp::IntegerVector info_ti;
     
@@ -45,10 +46,10 @@ Rcpp::List simulation(
     ///////////////
     // R's t = 1 //
     ///////////////
-    Rcpp::CharacterVector ids_ti = Get_t(global_data, 0)["id"];
-    Rcpp::IntegerVector info_ti = Get_t(global_data, 0)["info"];
-    Rcpp::IntegerVector localization_ti = Get_t(global_data, 0)["localization_ti"];
-    Rcpp::IntegerVector status_tim1 = Get_status_t(global_status, ids_ti, 0); 
+    ids_ti = Get_t(global_data, 0)["id"];
+    info_ti = Get_t(global_data, 0)["info"];
+    localization_ti = Get_t(global_data, 0)["localization_ti"];
+    status_tim1 = Get_status_t(global_status, ids_ti, 0); 
     // Shedding of the index patient
     environment_ti["env"] = Update_environment(ids_ti, info_ti, environment_tim1, localization_ti, status_tim1, mu, nu, deltat, 0);
     global_environment[0] = environment_ti;

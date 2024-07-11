@@ -44,11 +44,11 @@ RcppExport int Inf_period_uniform();
     
 
 RcppExport Rcpp::NumericVector Update_environment(
-    const Rcpp::CharacterVector ids_ti,
+    const Rcpp::CharacterVector& ids_ti,
     const Rcpp::IntegerVector& info_ti,
     const Rcpp::DataFrame& environment_tim1,
     const Rcpp::IntegerVector& localization_ti,
-    const Rcpp::DataFrame& admission,
+    const Rcpp::IntegerVector& status_tim1,
     const double& mu,
     const double& nu,
     const double& deltat,

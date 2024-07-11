@@ -41,13 +41,14 @@ Rcpp::IntegerVector Get_status_t(
     Rcpp::CharacterVector ids_status = global_status["id"];
     
     int n_ind_ti = ids_ti.size();
-    Rcpp::IntegerVector status_ti(n_ind_ti);
+    Rcpp::IntegerVector status_ti(n_ind_ti, -1);
     
     for(int j = 0; j < n_ind_ti; j++) {
+        Rcpp::String id_j = ids_ti[j];
         int index_id = -1;
         // Find the index in global_status where the 'id' matches
         for (int k = 0; k < t_inf.size(); k++) {
-            if (ids_status[k] == ids_ti[j]) {
+            if (id_j == ids_status[k]) {
                 index_id = k;
                 break;
             }
@@ -58,11 +59,11 @@ Rcpp::IntegerVector Get_status_t(
             status_ti[j] = -1; // Example: Set status to -1 for not found
         } else {
             // Determine status based on t_inf, t_incub, t_recover
-            if (t_inf[index_id] != -1 && (t+1) >= t_inf[j] && (t+1) <= t_incub[j]) {
+            if (t_inf[index_id] != -1 && (t+1) >= t_inf[index_id] && (t+1) <= t_incub[index_id]) {
                 status_ti[j] = 1; // individual j is EXPOSED
-            } else if (t_inf[index_id] != -1 && (t+1) > t_incub[j] && (t+1) <= t_recover[j]) {
+            } else if (t_inf[index_id] != -1 && (t+1) > t_incub[index_id] && (t+1) <= t_recover[index_id]) {
                 status_ti[j] = 2; // individual j is INFECTIOUS
-            } else if (t_inf[index_id] != -1 && (t+1) > t_recover[j]) {
+            } else if (t_inf[index_id] != -1 && (t+1) > t_recover[index_id]) {
                 status_ti[j] = 3; // individual j is RECOVERED
             } else {
                 status_ti[j] = 0; // individual j is SUSCEPTIBLE
@@ -193,9 +194,10 @@ Rcpp::DataFrame Update_status_bis(
     Rcpp::NumericVector FOI = (lambda_c_ti.size(), 1) - exp(- (lambda_c_ti  + lambda_e_ti));
 
     for (int j=0; j < ids_ti.size(); j++){
+        Rcpp::String id_j = ids_ti[j];
         int index_j = -1;
         for (int k = 0; k < global_status.nrows(); k++){
-            if (ids_total[k] == ids_ti[j]){
+            if (id_j == ids_total[k]){
                 index_j = k;
             }
         }
@@ -241,12 +243,11 @@ Rcpp::DataFrame Get_t(
 //////////////////////////////////////////////
 // [[Rcpp::export]]
 Rcpp::NumericVector Update_environment(
-    const Rcpp::CharacterVector ids_ti,
+    const Rcpp::CharacterVector& ids_ti,
     const Rcpp::IntegerVector& info_ti,
     const Rcpp::DataFrame& environment_tim1,
     const Rcpp::IntegerVector& localization_ti,
     const Rcpp::IntegerVector& status_tim1,
-    const Rcpp::DataFrame& admission,
     const double& mu,
     const double& nu,
     const double& deltat,
@@ -354,9 +355,10 @@ Rcpp::NumericVector Lambda_c (
     const double& beta,
     const double& deltat
 ) {
-    Rcpp::NumericVector lambda_c_ti (0, ids_ti.size());
+    Rcpp::NumericVector lambda_c_ti (ids_ti.size(), 0);
     Rcpp::List list_ind_r;
     int nb_inf_r; 
+
     for (int j = 0; j < ids_ti.size(); ++j){
         nb_inf_r = 0;
         list_ind_r = List_encountered(ids_ti[j], interaction_ti);
@@ -395,7 +397,7 @@ Rcpp::NumericVector Lambda_e (
     const double& env_threshold,
     const double& deltat
 ) {
-    Rcpp::NumericVector lambda_e_ti (0, localization_ti.size());
+    Rcpp::NumericVector lambda_e_ti (localization_ti.size(), 0);
     Rcpp::NumericVector environment = environment_ti["env"];
     Rcpp::IntegerVector rooms_environment = environment_ti["id_room"];
     Rcpp::IntegerVector rooms_volume = environment_ti["volume"];
