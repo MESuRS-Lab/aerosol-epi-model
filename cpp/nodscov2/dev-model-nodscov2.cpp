@@ -13,7 +13,6 @@ Rcpp::List simulation(
     Rcpp::List global_environment,
     Rcpp::List global_data,
     Rcpp::DataFrame global_status,
-    Rcpp::DataFrame admission,
     double beta,
     double B,
     double nu,

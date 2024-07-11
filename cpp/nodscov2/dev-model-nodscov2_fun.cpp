@@ -81,7 +81,7 @@ int Get_status_j(
     const Rcpp::DataFrame& global_status,
     const int& t
 ) {
-    int status_j = -1; // if returns -1 --> error (id not in admission)
+    int status_j = -1; // if returns -1 --> error (id not in global_status)
     Rcpp::CharacterVector ids = global_status["id"];
     Rcpp::IntegerVector t_inf = global_status["t_inf"];
     Rcpp::IntegerVector t_incub = global_status["t_incub"];
@@ -363,7 +363,7 @@ Rcpp::NumericVector Lambda_c (
         nb_inf_r = 0;
         list_ind_r = List_encountered(ids_ti[j], interaction_ti);
         if(list_ind_r.size() > 0){
-            // Dont use List_inf_encountered because we dont need admission for Lambda_c
+            // Dont use List_inf_encountered because we dont need global_status (only check individuals encountered) for Lambda_c
             for (int i = 0; i < list_ind_r.size(); ++i){
                 Rcpp::String id_r = list_ind_r[i];
                 // Search for the index of individual encountered in ids vector 
