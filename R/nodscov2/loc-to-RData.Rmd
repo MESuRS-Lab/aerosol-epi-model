@@ -139,9 +139,9 @@ beta <- (-log(1-p))*(86400/30)
 ```{r}
 for (beta in seq(from = 0.5, to = 10, by = 0.5)){
   parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta))
-  if (!dir.exists(parameters_path)) {
-    dir.create(parameters_path, recursive = TRUE)
-  }
+  dir.create(parameters_path, recursive = TRUE)
+  dir.create(file.path(parameters_path, 'results'))
+  
   save(n_days,
        truncated_interaction,
        truncated_environment,
@@ -165,9 +165,9 @@ for (beta in seq(from = 0.5, to = 10, by = 0.5)){
 ```{r}
 beta <- 'median'
 parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta))
-if (!dir.exists(parameters_path)) {
-  dir.create(parameters_path, recursive = TRUE)
-}
+
+dir.create(parameters_path, recursive = TRUE)
+dir.create(file.path(parameters_path, 'results'))
 
 p_median <- median(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
 beta<- (-log(1-p_median))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step)
@@ -197,9 +197,8 @@ save(n_days,
 ```{r}
 beta <- 'mean'
 parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta))
-if (!dir.exists(parameters_path)) {
-  dir.create(parameters_path, recursive = TRUE)
-}
+dir.create(parameters_path, recursive = TRUE)
+dir.create(file.path(parameters_path, 'results'))
 
 p_mean <- mean(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
 beta <- (-log(1-p_mean))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step)
@@ -221,7 +220,7 @@ save(n_days,
      file = file.path(parameters_path, paste0('parameters-model-beta-mean', '.RData'))
 )
 ```
-
+## CP THE SENSIBILITY/FOLDER TO CLUSTER/OUT
 
 <!-- ###### launch_sensibility.R (CLUSTER) ######  -->
 ```{r}
@@ -275,6 +274,7 @@ test_status <- test_status %>%
                          'INDEX',
                          inf_by))
 ```
+
 
 
 
