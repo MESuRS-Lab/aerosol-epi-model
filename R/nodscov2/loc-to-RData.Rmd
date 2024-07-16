@@ -296,7 +296,7 @@ result <- simulation(global_interaction = test_interaction,
 ```{r}
 args = commandArgs(trailingOnly=TRUE)
 id_sim <- ifelse(length(args)==0, "dev-test-endless-day", args[1])
-id_sim_path <- file.path(sim_nodscov2_path, id_sim)
+id_sim_path <- file.path(wd, '..', '..', 'out', 'sim-nodscov2' , id_sim)
 
 if (!dir.exists(id_sim_path)) {
   dir.create(id_sim_path, recursive = TRUE)
@@ -327,7 +327,7 @@ save(truncated_interaction,
 
 ## MULTIPLE SIMULATIONS (C/E/C+E)
 ```{r}
-n_sim <- 50
+n_sim <- 1
 
 sim_C <- replicate(n_sim, {
   simulation(
