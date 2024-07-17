@@ -46,11 +46,6 @@ if (!dir.exists(fig_path)) {
 ```{r Load data}
 load(file.path(loc_path, paste0('dev-localization-nodscov2.RData')))
 load(file.path(sensibility_path, id_sim, paste0('parameters-model-', beta_type, '.RData')))
-rm(test_localization)
-rm(test_interaction)
-rm(test_lambda)
-rm(test_environment)
-rm(test_status)
 ```
 
 ## TRUNCATED DATA
@@ -61,13 +56,10 @@ print(new_end_date - new_begin_date)
 t_begin <- 5*60*2 ## OFFSET t
 t_end <- (t_begin + 24*60*2) - 1
 new_n_subdivisions <- (t_end-t_begin +1)*n_days
-
-truncated_interaction <- global_interaction[(u <- seq_along(global_interaction)) %in% t_begin:(t_end)]
-truncated_localization <- global_localization[(u <- seq_along(global_localization)) %in% t_begin:(t_end)]
 ```
 ## SIM DATA
 ```{r}
-sim_path <- file.path(sensibility_path, paste0('sim-', beta_type), 'RData')
+sim_path <- file.path(sensibility_path, paste0('sim-', beta_type), 'results')
 rdata_files <- list.files(sim_path, pattern = "^sim-.*\\.RData$", full.names = TRUE)
 
 ## Lists

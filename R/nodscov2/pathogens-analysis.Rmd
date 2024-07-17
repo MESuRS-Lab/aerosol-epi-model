@@ -86,22 +86,6 @@ launch_simulation <- function(pathogen, intervention, beta, nu, q, mu){
 
 ## Simulation (cluster)
 ```{r}
-load_rdata_to_list <- function(file, ) {
-  load(file)
-  file_name <- basename(file)
-  sim_id <- sub("sim-(\\d+)-.*", "\\1", file_name)
-  sim_type <- sub("sim-\\d+-(.*)\\.RData", "\\1", file_name)
-  object_name <- paste0("sim_", sim_id, "_", sim_type)
-  ## Put in list according to sim_type
-  if (sim_type == "C") {
-    sim_C[[sim_id]] <<- get(object_name)
-  } else if (sim_type == "E") {
-    sim_E[[sim_id]] <<- get(object_name)
-  } else if (sim_type == "CE") {
-    sim_C_E[[sim_id]] <<- get(object_name)
-  }
-}
-
 
 for (pathogen in list_pathogen){
   
@@ -118,6 +102,32 @@ for (pathogen in list_pathogen){
 }
 ```
 
+
+## Load results
+```{r}
+load_rdata_to_list <- function(file, ) {
+  load(file)
+  file_name <- basename(file)
+  sim_id <- sub("sim-(\\d+)-.*", "\\1", file_name)
+  sim_type <- sub("sim-\\d+-(.*)\\.RData", "\\1", file_name)
+  object_name <- paste0("sim_", sim_id, "_", sim_type)
+  ## Put in list according to sim_type
+  if (sim_type == "C") {
+    sim_C[[sim_id]] <<- get(object_name)
+  } else if (sim_type == "E") {
+    sim_E[[sim_id]] <<- get(object_name)
+  } else if (sim_type == "CE") {
+    sim_C_E[[sim_id]] <<- get(object_name)
+  }
+}
+
+## Lists
+sim_C <- list()
+sim_E <- list()
+sim_C_E <- list()
+
+invisible(lapply(rdata_files, load_rdata_to_list))
+```
 
 
 ## Secondary attack rates
