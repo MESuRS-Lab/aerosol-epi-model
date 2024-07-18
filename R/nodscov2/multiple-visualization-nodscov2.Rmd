@@ -98,20 +98,6 @@ id_total <- admission %>% distinct(id) %>% pull()
 id_not_interacting <- setdiff(id_total, id_interacting)
 ```
 
-## FILTER INDIVIDUALS NOT INTERACTING
-```{r}
-## NOW FILTERED BEFORE SIMULATING
-# filter_interacting <- function(sim_list, id_interacting) {
-#   lapply(sim_list, function(df) {
-#     df %>% filter(id %in% id_interacting)
-#   })
-# }
-# 
-# sim_C <- filter_interacting(sim_list = sim_C, id_interacting = id_interacting)
-# sim_E <- filter_interacting(sim_list = sim_E, id_interacting = id_interacting)
-# sim_C_E <- filter_interacting(sim_list = sim_C_E, id_interacting = id_interacting)
-```
-
 
 ## COUNTS DATAFRAMES
 ```{r}
