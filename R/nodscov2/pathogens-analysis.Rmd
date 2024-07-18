@@ -16,34 +16,38 @@ library(ggborderline)
 ```
 
 ```{r}
-wd <- getwd()
-knitr::opts_chunk$set(root.dir = wd)
-out_path <- file.path(wd,'..','..','out')
-loc_path <- file.path(out_path, "loc-nodscov2")
-sensibility_path <- file.path(out_path,'sensibility-analysis')
-```
-
-
-```{r}
 ###########
 ## PATHS ##
 ###########
-beta <- 3
-beta <- 'mean'
-beta <- 'median'
-
 wd <- getwd()
-loc_path <- file.path(wd,'..','..', 'out','loc-nodscov2','dev-localization-nodscov2.RData')
-pathogens_path <- file.path(wd,'..','..', 'out', 'pathogens-analysis')
-RData_path <- file.path(pathogens_path, paste0('sim-beta-', beta), paste0('parameters-model-beta-', beta, '.RData'))
-cpp_path <- file.path(wd, '..', '..', 'cpp', 'nodscov2', 'dev-sensibility-analysis.cpp')
+knitr::opts_chunk$set(root.dir = wd)
 
+out_path <- file.path(wd,'..','..','out')
+loc_path <- file.path(out_path, "loc-nodscov2")
+sensibility_path <- file.path(out_path,'sensibility-analysis')
+pathogens_path <- file.path(wd,'..','..', 'out', 'pathogens-analysis')
+cpp_path <- file.path(wd, '..', '..', 'cpp', 'nodscov2')
+```
+
+```{r}
+list_pathogen <- c('HCov', 'IV', 'SRV', 'Staphylococcus-Aureus', 'Acinetobacter-baumannii')
+list_intervention <-  c('Baseline', 'Masks', 'Ventilation', 'Air-Treatment')
+
+for (pathogen in list_pathogen){
+  for (intervention in list_intervention){
+    dir.create(path = file.path(pathogens_path, pathogen, intervention), recursive = T, showWarnings = F)
+  }
+}
+```
+
+
+
+```{r}
 ####################
 ## RDATA AND RCPP ##
 ####################
-load(RData_path)
-sourceCpp(cpp_path)
-
+load(file.path(loc_path, 'dev-localization-nodscov2.RData'))
+sourceCpp(file.path(cpp_path, 'dev-sensibility-analysis.cpp'))
 ```
 
 
