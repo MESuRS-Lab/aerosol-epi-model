@@ -10,11 +10,14 @@ date: "2024-07-22"
 library(dplyr)
 library(Rcpp)
 library(tidyr)
+library(data.table)
+library(purrr)
 
 ##PATHS
 wd <- getwd()
 loc_path <- file.path(wd,'..','..', 'out','loc-nodscov2','dev-localization-nodscov2.RData')
 sensibility_path <- file.path(wd,'..','..', 'out', 'sensibility-analysis')
+intervention_path <- file.path(wd,'..','..', 'out', 'intervention-analysis')
 ```
 
 
@@ -164,7 +167,7 @@ save(n_days,
 ## ADMISSIONS/DISCHARGES
 ```{r}
 library(dplyr)
-library(data.table)
+
 
 # Load necessary data
 wd <- getwd()
@@ -176,7 +179,7 @@ n_days = 90
 
 
 ```{r}
-library(purrr)
+##remove useless variables
 truncated_interaction <- map(truncated_interaction, select, c(from,to,localization))
 
 test_interaction <- rep(truncated_interaction, n_days)
@@ -241,7 +244,7 @@ for (patient in id_patient){
 
 
 ```{r}
-# Split the long data.tables back into lists for each time step
+# df to list of df with split 
 global_data <- split(df_data_long, df_data_long$time)
 global_interaction <- split(df_interaction_long, df_interaction_long$time)
 global_environment <- test_environment
@@ -257,11 +260,12 @@ t_end <- (t_begin + 24*60*2) - 1
 
 ```{r}
 save_path <- file.path(intervention_path, "parameters-admission-nodscov2.RData")
-save(global_interaction,
-     global_environment,
+save(global_interaction,,
      global_data,
      global_status,
+     global_environment,
      admission_sim,
+     admission,
      beta,
      nu,
      mu,
@@ -270,13 +274,29 @@ save(global_interaction,
      dt,
      new_n_subdivisions,
      n_days,
+     t_begin,
+     t_end,
      file = save_path
 )
+##SMALLER RDATA
+# save(global_interaction,,
+#      global_data,
+#      global_status,
+#      truncated_environment,
+#      admission_sim,
+#      beta,
+#      nu,
+#      mu,
+#      B,
+#      env_threshold,
+#      dt,
+#      new_n_subdivisions,
+#      n_days,
+#      t_begin,
+#      t_end,
+#      file = save_path
+# )
 ```
-
-
-
-
 
 
 <!-- ###### launch_sensibility.R (CLUSTER) ######  -->
@@ -285,29 +305,27 @@ save(global_interaction,
 ## PATHS ##
 ###########
 beta <- 3
-beta <- 'mean'
-beta <- 'median'
+
 
 wd <- getwd()
 loc_path <- file.path(wd,'..','..', 'out','loc-nodscov2','dev-localization-nodscov2.RData')
-sensibility_path <- file.path(wd,'..','..', 'out', 'sensibility-analysis')
-RData_path <- file.path(sensibility_path, paste0('sim-beta-', beta), paste0('parameters-model-beta-', beta, '.RData'))
+intervention_path <- file.path(wd, '..', '..', 'out', 'intervention-analysis')
 cpp_path <- file.path(wd, '..', '..', 'cpp', 'nodscov2', 'dev-sensibility-analysis.cpp')
 
 ####################
 ## RDATA AND RCPP ##
 ####################
-load(RData_path)
+load(file.path(intervention_path, "parameters-admission-nodscov2.RData"))
 sourceCpp(cpp_path)
 
 ################################
 ## CREATE ENDLESS DAY OBJECTS ##
 ################################
-test_interaction <- rep(truncated_interaction, n_days)
-test_environment <- rep(truncated_environment, n_days)
-test_data <- rep(truncated_data, n_days)
-test_status <- truncated_status
-new_n_subdivisions <- (t_end-t_begin +1)*n_days
+# global_interaction <- rep(truncated_interaction, n_days)
+# global_environment <- rep(truncated_environment, n_days)
+# global_data <- rep(truncated_data, n_days)
+# global_status <- truncated_status
+# new_n_subdivisions <- (t_end-t_begin +1)*n_days
 ```
 
 
@@ -315,9 +333,9 @@ new_n_subdivisions <- (t_end-t_begin +1)*n_days
 #######################
 ## RANDOM INDEX CASE ##
 #######################
-id_index <- sample( x = admission_sim %>% distinct(id) %>% pull(), size = 1)
-# UPDATE STATUs
-test_status <- test_status %>%
+id_index <- sample( x = admission %>% filter(id %in% admission_sim$id) %>% distinct(id) %>% pull(), size = 1) ## index case in individuals that are here at the beginning of the simulation
+# UPDATE STATUS
+global_status <- global_status %>%
   mutate(t_inf = ifelse(id == id_index,
                         as.integer(1),
                         t_inf),
@@ -338,18 +356,45 @@ test_status <- test_status %>%
 <!-- ################################# SIMULATION (LOCAL) #################################  -->
 ## SINGLE SIMULATION (dev-model)
 ```{r}
+load()
 cpp_path <- file.path(wd, '..', '..', 'cpp', 'nodscov2')
 sourceCpp(file.path(cpp_path, 'dev-model-nodscov2.cpp'))
-data_sim <- simulation(global_interaction = test_interaction,
-                     global_environment = test_environment,
-                     global_data = test_data,
-                     global_status = test_status,
+sourceCpp(file.path(cpp_path, 'dev-sensibility-analysis.cpp'))
+a <-Sys.time()
+data_sim <- simulation(global_interaction = global_interaction,
+                     global_environment = global_environment,
+                     global_data = global_data,
+                     global_status = global_status,
                      beta = beta,
                      B = B,
                      nu = nu,
                      mu = mu,
                      env_threshold = env_threshold,
                      dt = dt)
+b <-Sys.time()
+print(b-a)
+
+
+save(global_interaction,
+     global_data,
+     global_environment,
+     admission,
+     admission_sim,
+     beta,
+     nu,
+     mu,
+     B,
+     env_threshold,
+     dt,
+     new_n_subdivisions,
+     n_days,
+     new_begin_date,
+     new_end_date,
+     t_begin,
+     t_end,
+     data_sim,
+     file = file.path(id_sim_path, paste0(id_sim, "-", "test-unique-simulation-nodscov2.RData"))
+     )
 ```
 
 ```{r}
@@ -394,10 +439,10 @@ sourceCpp(file.path(cpp_path, 'dev-sensibility-analysis.cpp'))
 
 sim_C <- replicate(n_sim, {
   simulation(
-    global_interaction = test_interaction,
-    global_environment = test_environment,
-    global_data = test_data,
-    global_status = test_status,
+    global_interaction = global_interaction,
+    global_environment = global_environment,
+    global_data = global_data,
+    global_status = global_status,
     beta = beta,
     B = 0,
     nu = nu,
@@ -409,10 +454,10 @@ sim_C <- replicate(n_sim, {
 
 sim_E <- replicate(n_sim, {
   simulation(
-    global_interaction = test_interaction,
-    global_environment = test_environment,
-    global_data = test_data,
-    global_status = test_status,
+    global_interaction = global_interaction,
+    global_environment = global_environment,
+    global_data = global_data,
+    global_status = global_status,
     beta = 0,
     B = B,
     nu = nu,
@@ -424,10 +469,10 @@ sim_E <- replicate(n_sim, {
 
 sim_C_E <- replicate(n_sim, {
   simulation(
-    global_interaction = test_interaction,
-    global_environment = test_environment,
-    global_data = test_data,
-    global_status = test_status,
+    global_interaction = global_interaction,
+    global_environment = global_environment,
+    global_data = global_data,
+    global_status = global_status,
     beta = beta,
     B = B,
     nu = nu,
@@ -471,10 +516,10 @@ save(sim_C,
 ## BENCHMARK
 ```{r}
 library(microbenchmark)
-a <- microbenchmark(simulation(global_interaction = test_interaction,
-                     global_environment = test_environment,
-                     global_data = test_data,
-                     global_status = test_status,
+a <- microbenchmark(simulation(global_interaction = global_interaction,
+                     global_environment = global_environment,
+                     global_data = global_data,
+                     global_status = global_status,
                      beta = beta,
                      B = B,
                      nu = nu,
