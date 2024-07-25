@@ -93,7 +93,7 @@ pal = brewer.pal(4, "Set2")
 pal = c("#5CD6D6B3", "#A9B9E8B3", "#FFA766B3", "#666699B3")
 ## ALPHA = 1 
 pal = c("#5CD6D6", "#A9B9E8", "#FFA766", "#666699")
-names(pal) <- c('PARAMEDICAL', 'PATIENT', 'MEDICAL', 'ROOM')
+names(pal) <- c('MEDICAL', 'PARAMEDICAL', 'PATIENT', 'ROOM')
 ## Category groupings
 eq_table = openxlsx::read.xlsx(file.path(wd, "..", "..","data", 'data-nodscov2', "cat_groupings_nodscov2.xlsx")) %>%
   select(cat, cat_ag)
