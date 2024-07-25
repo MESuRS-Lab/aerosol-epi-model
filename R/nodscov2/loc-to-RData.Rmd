@@ -7,14 +7,21 @@ output: html_document
 
 ```{r}
 ## LIBRARIES
+library(data.table)
 library(dplyr)
 library(Rcpp)
 library(tidyr)
+library(purrr)
+
 
 ##PATHS
 wd <- getwd()
-loc_path <- file.path(wd,'..','..', 'out','loc-nodscov2','dev-localization-nodscov2.RData')
-sensibility_path <- file.path(wd,'..','..', 'out', 'sensibility-analysis')
+out_path <- file.path(wd,'..','..', 'out')
+
+loc_path <- file.path(out_path,'loc-nodscov2','dev-localization-nodscov2.RData')
+sensibility_path <- file.path(out_path, 'sensibility-analysis')
+pathogen_path <- file.path(out_path, 'pathogen-analysis')
+intervention_path <- file.path(out_path, 'intervention-analysis')
 ```
 
 
@@ -35,11 +42,10 @@ admission_sim <- admission %>%
   select(id,info) %>%
   mutate(id_ind = id) %>% 
   left_join(rooms, by = c('id_ind' = 'id')) %>%
-  mutate(room = ifelse(info == 1, rooms[rooms$id == 'M-PM', 'id_room'], room)) %>%
+  mutate(room = ifelse(info == 1, as.integer(rooms[rooms$id == 'M-PM', 'id_room']), as.integer(room)),
+         info = as.integer(info)) %>%
   select(id,info,room)
 
-admission_sim$info <- as.integer(admission_sim$info)
-admission_sim$room <- as.integer(admission_sim$room)
 
 env_t <- rooms %>%
   distinct(room) %>%
@@ -62,6 +68,7 @@ global_status = data.frame(id = admission$id, t_inf = as.integer(-1), t_incub = 
 #######################
 ## TRUNCATED OBJECTS ## 
 #######################
+
 ## TRUNCATE TO KEEP ONLY 24H (24/05/06 12:00 TO 24/05/07 12:00)
 end_date - begin_date ##end of last interaction
 new_begin_date <- begin_date + (5*60*60) ## OFFSET TO START THE DAY AT 12AM
@@ -70,31 +77,31 @@ print(new_end_date - new_begin_date)
 t_begin <- 5*60*2 ## OFFSET t
 t_end <- (t_begin + 24*60*2) - 1
 
-
-## TRUNCATED INFO
+## TRUNCATED INFO EXTRACTED FROM TOTAL STUDY (KEEP 24HOURS OF THE 36HOURS)
 truncated_interaction <- global_interaction[(u <- seq_along(global_interaction)) %in% t_begin:(t_end)]
+truncated_interaction <- map(truncated_interaction, select, c(from,to,localization)) ##remove useless variables
 truncated_localization <- global_localization[(u <- seq_along(global_localization)) %in% t_begin:(t_end)]
 truncated_environment <- global_environment[(u <- seq_along(global_environment)) %in% t_begin:(t_end)]
-truncated_status <- global_status
-
 
 ## FILTER INDIVIDUALS NOT INTERACTING
 id_interacting <- do.call(rbind,truncated_interaction) %>%
   pivot_longer(cols = c(from, to), names_to = 'direction', values_to = 'individual') %>%
   distinct(individual) %>%
   pull()
-id_total <- admission %>% distinct(id) %>% pull()
-id_not_interacting <- setdiff(id_total, id_interacting)
 
+
+    
+## FILTER THE DFS TO RE:OVE USELESS ROWS (INDIVIDUALS NOT INTERACTING)
 filter_interacting <- function(list_df, id_interacting) {
   lapply(list_df, function(df) {
     df %>% filter(id %in% id_interacting)
   })
 }
 
-admission_sim <- admission_sim %>% filter(id %in% id_interacting)
 truncated_localization <- filter_interacting(truncated_localization, id_interacting )
-truncated_status <- truncated_status %>% filter(id %in% id_interacting)
+truncated_status <- global_status %>% filter(id %in% id_interacting)
+admission_sim <- admission_sim  %>% filter(id %in% id_interacting)
+
 truncated_data <- lapply(1:length(truncated_localization), function(t){
   df <- data.frame(id = truncated_localization[[t]]$id,
                    info = admission_sim$info,
@@ -107,117 +114,123 @@ truncated_data <- lapply(1:length(truncated_localization), function(t){
   df <- df %>% filter(localization_ti != -1)
   return(df)
 })
-
-## ENDLESS DAY OBJECTS
-n_days <- 7*10
 ```
 
 
 ```{r}
-##PARAMETERS
-B <- 0.48 *24 # Breathing rate (0.48 m3/h)
-mu_air <- 4 * 24 # Quanta removal (4-6 Air changes/h)
+#########################
+## ENDLESS DAY OBJECTS ##
+#########################
+n_days <- 90
+new_n_subdivisions <- (t_end - t_begin + 1) * n_days
+
+global_interaction <- rep(truncated_interaction, n_days)
+global_environment <- rep(truncated_environment, n_days)
+global_data <- rep(truncated_data, n_days)
+global_status <- truncated_status
+```
+
+
+```{r}
+###############################
+## ADMISSIONS AND DISCHARGES ##
+###############################
+df_data_long <- rbindlist(global_data, idcol='time')
+df_data_long$time <- df_data_long$time + (t_begin - 1) ##OFFSET
+
+df_interaction_long <- rbindlist(global_interaction, idcol='time')
+df_interaction_long$time <- df_interaction_long$time + (t_begin - 1) ##OFFSET
+
+
+id_patient <- admission_sim %>% 
+  filter(info == 0) %>%
+  pull(id)
+base_id <- substr(tail(admission_sim$id, 1), 1, 4)
+
+# increment IDs
+increment_id <- function(last_id, base_id) {
+  last_number <- substr(last_id, 5, 8)
+  new_number <- sprintf("%04d", as.numeric(last_number) + 1)
+  paste0(base_id, new_number, '-N-P')
+}
+
+## ADD NEW PATIENTS
+for (patient in id_patient){
+  i <- t_begin ##OFFSET DUE TO TRUNCATED DATA
+  iter <- 0
+  info_patient <- admission_sim %>% filter(id == patient)
+  status_patient <- data.frame(id = NA, t_inf = -1, t_incub = -1, t_recover = -1, inf_by = NA, inf_room = -1)
+  
+  while (i < new_n_subdivisions & iter < 25) {
+    i_sampled <- as.integer(runif(1, min = 6*24*60*2, max = 13*24*60*2)) ## MEAN TIME ICU W/O AND W/ COVID-19
+    
+    last_id <- tail(admission_sim$id, 1)
+    new_id <- increment_id(last_id, base_id)
+    df_data_long[id == patient & between(time, i, i + i_sampled - 1), id := new_id]
+    df_interaction_long[from == patient & between(time, i, i + i_sampled - 1), from := new_id]
+    df_interaction_long[to == patient & between(time, i, i + i_sampled - 1), to := new_id]
+    iter <- iter + 1
+    i <- i + i_sampled
+    ## ADD THE NEW PATIENT
+    status_patient$id <- new_id
+    info_patient$id <- new_id
+    admission_sim <- rbind(admission_sim,  info_patient)
+    global_status <- rbind(global_status, status_patient )
+  }
+}
+
+# DATAFRAME TO LIST OF DATAFRAME 
+global_data <- split(df_data_long, df_data_long$time)
+global_interaction <- split(df_interaction_long, df_interaction_long$time)
+rm(df_data_long, df_interaction_long)
+```
+
+```{r}
+################
+## PARAMETERS ##
+################
+
+B <- 0.48 * 24 # Breathing rate (0.48 m3/h)
+mu_air <- 1 # Natural ventilation, Quanta removal (1 changes/day)
+mu_ventilation <-  4 * 24 # Mechanical ventilation, Quanta removal (4-6 Air changes/h)
 mu_inac <- (log(2)/1.1) * 24 # Quanta inactivation (computed with viral half life -> 0.63 quanta inactivated/h) 
-mu <- mu_air + mu_inac
-nu <- 10 * 24 # (10 quanta/h)
+mu <- mu_air + mu_inac #+ (mu_ventilation - mu_air)
 dt <- 30 # Time step
 tau <- 60 * 60 *24 # Seconds in 1 day
 deltat <- dt/tau
 env_threshold <- 0 # Quanta threshold above which the environment is infectious
 
-# BETA
-p_PA_PA <- 2.3e-5
-p_PA_PE <- 1.19e-4
-p_PE_PA <- 7.89e-4
-p_PE_PE <- 1.66e-4
-#p <- median(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
-p <- mean(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
-beta <- (-log(1-p))*(86400/30)
+## BETA AND NU COUPLES (tested to give the same 20% SAR)
+beta <- 1
+nu <- 1 * 24 # (10 quanta/h)
 ```
 
-## SAVE ALL BETA CONFIGURATIONS
+
 ```{r}
-for (beta in seq(from = 0.5, to = 10, by = 0.5)){
-  parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta))
-  dir.create(file.path(parameters_path, 'results'), showWarnings = F, recursive = T)
-  
-  save(n_days,
-       truncated_interaction,
-       truncated_environment,
-       truncated_data,
-       truncated_status,
-       admission_sim,
-       beta,
-       B,
-       nu,
-       mu,
-       env_threshold,
-       dt,
-       t_begin,
-       t_end,
-       file = file.path(parameters_path, paste0('parameters-model-beta-', beta, '.RData'))
-  )
-}
-```
+save_path <- file.path(intervention_path, "parameters-admission-nodscov2.RData")
 
-## MEDIAN BETA
-```{r}
-beta <- 'median'
-
-parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta))
-dir.create(file.path(parameters_path, 'results'), showWarnings = F, recursive = T)
-
-p_median <- median(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
-beta<- (-log(1-p_median))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step)
-
-
-
-save(n_days,
-     truncated_interaction,
-     truncated_environment,
-     truncated_data,
-     truncated_status,
+save(global_interaction,
+     global_data,
+     global_status,
+     global_environment,
      admission_sim,
+     admission,
      beta,
-     B,
      nu,
      mu,
-     env_threshold,
-     dt,
-     t_begin,
-     t_end,
-     file = file.path(parameters_path, paste0('parameters-model-beta-median', '.RData'))
-)
-```
-
-
-## BETA MEAN
-```{r}
-beta <- 'mean'
-parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta))
-dir.create(file.path(parameters_path, 'results'), showWarnings = F, recursive = T)
-
-p_mean <- mean(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE))
-beta <- (-log(1-p_mean))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step)
-
-save(n_days,
-     truncated_interaction,
-     truncated_environment,
-     truncated_data,
-     truncated_status,
-     admission_sim,
-     beta,
      B,
-     nu,
-     mu,
      env_threshold,
      dt,
+     new_n_subdivisions,
+     n_days,
      t_begin,
      t_end,
-     file = file.path(parameters_path, paste0('parameters-model-beta-mean', '.RData'))
-)
+     file = save_path)
 ```
-## CP THE SENSIBILITY/FOLDER TO CLUSTER/OUT
+
+
+## CP THE $ANALYSIS/FOLDER TO CLUSTER/OUT
+
 
 
 <!-- ###### launch_sensibility.R (CLUSTER) ######  -->
@@ -256,8 +269,8 @@ new_n_subdivisions <- (t_end-t_begin +1)*n_days
 #######################
 ## RANDOM INDEX CASE ##
 #######################
-id_index <- sample( x = admission_sim %>% distinct(id) %>% pull(), size = 1)
-# UPDATE STATUs
+id_index <- sample( x = admission_sim %>% filter(id %in% admissiom$id) %>% distinct(id) %>% pull(), size = 1)
+# UPDATE STATUS
 test_status <- test_status %>%
   mutate(t_inf = ifelse(id == id_index,
                         as.integer(1),
@@ -423,4 +436,117 @@ a <- microbenchmark(simulation(global_interaction = test_interaction,
                      env_threshold = env_threshold,
                      dt = dt), times = 10)
 ```
+
+
+
+
+<!-- ########################## -->
+<!-- ## SENSIBILITY ANALYSIS ## -->
+<!-- ########################## -->
+<!-- Simulation without the new admissions/discharges -->
+
+<!-- ```{r} -->
+<!-- ##PARAMETERS -->
+<!-- B <- 0.48 *24 # Breathing rate (0.48 m3/h) -->
+<!-- mu_air <- 4 * 24 # Quanta removal (4-6 Air changes/h) -->
+<!-- mu_inac <- (log(2)/1.1) * 24 # Quanta inactivation (computed with viral half life -> 0.63 quanta inactivated/h)  -->
+<!-- mu <- mu_air + mu_inac -->
+<!-- nu <- 10 * 24 # (10 quanta/h) -->
+<!-- dt <- 30 # Time step -->
+<!-- tau <- 60 * 60 *24 # Seconds in 1 day -->
+<!-- deltat <- dt/tau -->
+<!-- env_threshold <- 0 # Quanta threshold above which the environment is infectious -->
+
+<!-- # BETA -->
+<!-- p_PA_PA <- 2.3e-5 -->
+<!-- p_PA_PE <- 1.19e-4 -->
+<!-- p_PE_PA <- 7.89e-4 -->
+<!-- p_PE_PE <- 1.66e-4 -->
+<!-- #p <- median(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE)) -->
+<!-- p <- mean(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE)) -->
+<!-- beta <- (-log(1-p))*(86400/30) -->
+<!-- ``` -->
+
+<!-- ## SAVE ALL BETA CONFIGURATIONS -->
+<!-- ```{r} -->
+<!-- for (beta in seq(from = 0.5, to = 10, by = 0.5)){ -->
+<!--   parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta)) -->
+<!--   dir.create(file.path(parameters_path, 'results'), showWarnings = F, recursive = T) -->
+
+<!--   save(n_days, -->
+<!--        truncated_interaction, -->
+<!--        truncated_environment, -->
+<!--        truncated_data, -->
+<!--        truncated_status, -->
+<!--        admission_sim, -->
+<!--        beta, -->
+<!--        B, -->
+<!--        nu, -->
+<!--        mu, -->
+<!--        env_threshold, -->
+<!--        dt, -->
+<!--        t_begin, -->
+<!--        t_end, -->
+<!--        file = file.path(parameters_path, paste0('parameters-model-beta-', beta, '.RData')) -->
+<!--   ) -->
+<!-- } -->
+<!-- ``` -->
+
+<!-- ## MEDIAN BETA -->
+<!-- ```{r} -->
+<!-- beta <- 'median' -->
+
+<!-- parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta)) -->
+<!-- dir.create(file.path(parameters_path, 'results'), showWarnings = F, recursive = T) -->
+
+<!-- p_median <- median(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE)) -->
+<!-- beta<- (-log(1-p_median))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step) -->
+
+
+
+<!-- save(n_days, -->
+<!--      truncated_interaction, -->
+<!--      truncated_environment, -->
+<!--      truncated_data, -->
+<!--      truncated_status, -->
+<!--      admission_sim, -->
+<!--      beta, -->
+<!--      B, -->
+<!--      nu, -->
+<!--      mu, -->
+<!--      env_threshold, -->
+<!--      dt, -->
+<!--      t_begin, -->
+<!--      t_end, -->
+<!--      file = file.path(parameters_path, paste0('parameters-model-beta-median', '.RData')) -->
+<!-- ) -->
+<!-- ``` -->
+
+
+<!-- ## BETA MEAN -->
+<!-- ```{r} -->
+<!-- beta <- 'mean' -->
+<!-- parameters_path <- file.path(sensibility_path, paste0('sim-beta-', beta)) -->
+<!-- dir.create(file.path(parameters_path, 'results'), showWarnings = F, recursive = T) -->
+
+<!-- p_mean <- mean(c(p_PA_PA,p_PA_PE,p_PE_PA,p_PE_PE)) -->
+<!-- beta <- (-log(1-p_mean))*(86400/30) ##SEC IN A DAY/30 SEC (30sec time-step) -->
+
+<!-- save(n_days, -->
+<!--      truncated_interaction, -->
+<!--      truncated_environment, -->
+<!--      truncated_data, -->
+<!--      truncated_status, -->
+<!--      admission_sim, -->
+<!--      beta, -->
+<!--      B, -->
+<!--      nu, -->
+<!--      mu, -->
+<!--      env_threshold, -->
+<!--      dt, -->
+<!--      t_begin, -->
+<!--      t_end, -->
+<!--      file = file.path(parameters_path, paste0('parameters-model-beta-mean', '.RData')) -->
+<!-- ) -->
+<!-- ``` -->
 
