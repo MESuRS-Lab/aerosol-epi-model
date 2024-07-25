@@ -183,9 +183,8 @@ test_loc %>% filter(room == "Medical Restroom" | room == "Paramedical Restroom")
 
 ## ORDERED CUMULATIVE TIME SPENT IN ROOMS
 ```{r}
-pal = c("#5CD6D6", "#A9B9E8", "#FFA766", "#666699")
-pal = c("#5CD6D6BF", "#A9B9E8BF", "#FFA766BF", "#666699BF") #ALPHA = 0.75
-names(pal) <- c('PARAMEDICAL', 'PATIENT', 'MEDICAL', 'ROOM')
+pal = c('MEDICAL' = "#5CD6D6", 'PARAMEDICAL' = "#A9B9E8", 'PATIENT' = "#FFA766", 'ROOM' = "#666699")
+pal = c('MEDICAL' = "#5CD6D6BF", 'PARAMEDICAL' = "#A9B9E8BF", 'PATIENT' = "#FFA766BF", 'ROOM' = "#666699BF") #ALPHA = 0.75
 
 
 ## Cumulative time in patients rooms
@@ -241,6 +240,7 @@ save_individual_path <- function(ind) {
   p <- ggplot(paths %>% filter(id == ind), aes(x = time * 30 + begin_date, y = room)) +
     geom_path(aes(group = id)) +  # geom_path -> connected lines
     geom_point(aes(shape = id)) +  # geom_point -> points
+    scale_x_continuous(breaks = time_breaks, labels = time_labels) +
     labs(title = title, x = "Time", y = "Room") +
     theme_bw() +
     theme(
@@ -258,6 +258,7 @@ save_individual_path <- function(ind) {
 
 #map -> apply function for each individual
 invisible(map(id_interacting, save_individual_path))
+
 
 ```
 
