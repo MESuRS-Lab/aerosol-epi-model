@@ -231,7 +231,22 @@ paths <- do.call(rbind, global_localization) %>% filter(between(time, 600, 600+2
   left_join(rooms %>%
               distinct(id_room, .keep_all = T) %>%
               select(id_room,room), by = c("localization" = "id_room")) %>%
-  mutate(room = ifelse(is.na(room), "-1 NOT HERE", room))
+  mutate(room = ifelse(is.na(room), "Not here", room)) 
+
+
+## FIX ISSUE WITH Y LABELS OF DIFF LENGTH
+max_n <- max(nchar(unique(paths$room)))
+paths <- paths %>%
+  mutate(room = str_pad(room ,max_n, side = "right")) 
+
+not_here_long <- as.character(unique(paths[grep('Not here', paths$room), 'room']))
+## FACTOR TO HAVE Not here down YAXIS
+paths <- paths %>% 
+  mutate(room = factor(room, levels = c(not_here_long , setdiff(stringr::str_sort(unique(paths$room), numeric=T), not_here_long))))
+
+time_breaks <- seq(as.POSIXct(begin_date) + 600 * 30 , as.POSIXct(begin_date) + (600 + 2880)* 30, by = 480*30) # Breaks every 4 hours
+start_time <- as.POSIXct(begin_date + 600*30)
+end_time <- start_time + (max(time_breaks) - min(time_breaks))
 
 
 save_individual_path <- function(ind) {
@@ -240,24 +255,30 @@ save_individual_path <- function(ind) {
   p <- ggplot(paths %>% filter(id == ind), aes(x = time * 30 + begin_date, y = room)) +
     geom_path(aes(group = id)) +  # geom_path -> connected lines
     geom_point(aes(shape = id)) +  # geom_point -> points
-    scale_x_continuous(breaks = time_breaks, labels = time_labels) +
-    labs(title = title, x = "Time", y = "Room") +
+    labs(title = title, x = "Time", y = "") +
     theme_bw() +
+    scale_x_continuous(breaks = time_breaks, labels = time_labels) +
     theme(
-    plot.title = element_text(size = 25, hjust = 0.5), #
-    axis.text = element_text(size = 20),
-    axis.title = element_text(size = 20),
-    legend.text = element_text(size = 20),
-    legend.title = element_text(size = 20),
+    plot.title = element_text(size = 25, hjust = 0.5, family = "Arial monospaced for SAP"), #
+    axis.text = element_text(size = 20, family = "Arial monospaced for SAP"),
+    axis.title = element_text(size = 20, family = "Arial monospaced for SAP"),
+    legend.text = element_text(size = 20, family = "Arial monospaced for SAP"),
+    legend.title = element_text(size = 20, family = "Arial monospaced for SAP"),
     legend.position="none") 
     
   # filename
   file_name <- file.path(ind_paths_path, paste0(ind,"_", ind_cat, "_fig-traj", ".png"))
-  ggsave(file = file_name, plot = p, height = 6, width = 30)
+  ggsave(file = file_name, plot = p, height = 6, width = 30, units = "in")
 }
 
 #map -> apply function for each individual
 invisible(map(id_interacting, save_individual_path))
+
+```
+
+
+
+```{r}
 
 
 ```
