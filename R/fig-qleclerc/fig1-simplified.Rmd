@@ -89,11 +89,11 @@ adm_data$type <- factor(adm_data$type, levels = c("Medical", "Paramedical", "Pat
 ### COLOR PALETTES /!\ to factor order
 ## Nodscov2 color palette
 pal = brewer.pal(4, "Set2")
-## Epicontact infection network color palette (B3 -> HEX CODE FOR ALPHA = 70%)
-pal = c("#5CD6D6B3", "#A9B9E8B3", "#FFA766B3", "#666699B3")
+## Epicontact infection network color palette (BF -> HEX CODE FOR ALPHA = 75%)
+pal = c('MEDICAL' = "#5CD6D6BF", 'PARAMEDICAL' = "#A9B9E8BF", 'PATIENT' = "#FFA766BF", 'ROOM' = "#666699BF") #ALPHA = 0.75
 ## ALPHA = 1 
-pal = c("#5CD6D6", "#A9B9E8", "#FFA766", "#666699")
-names(pal) <- c('MEDICAL', 'PARAMEDICAL', 'PATIENT', 'ROOM')
+pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Room' = "#666699")
+
 ## Category groupings
 eq_table = openxlsx::read.xlsx(file.path(wd, "..", "..","data", 'data-nodscov2', "cat_groupings_nodscov2.xlsx")) %>%
   select(cat, cat_ag)
