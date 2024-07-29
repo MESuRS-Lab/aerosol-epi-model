@@ -245,6 +245,7 @@ paths <- paths %>%
   mutate(room = factor(room, levels = c(not_here_long , setdiff(stringr::str_sort(unique(paths$room), numeric=T), not_here_long))))
 
 time_breaks <- seq(as.POSIXct(begin_date) + 600 * 30 , as.POSIXct(begin_date) + (600 + 2880)* 30, by = 480*30) # Breaks every 4 hours
+time_labels <- format(time_breaks, "%m/%d %H:%M")
 start_time <- as.POSIXct(begin_date + 600*30)
 end_time <- start_time + (max(time_breaks) - min(time_breaks))
 
