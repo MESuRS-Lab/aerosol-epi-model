@@ -180,7 +180,32 @@ animate(animation, renderer = gifski_renderer("trajectories-gif.gif"), width = 3
 ## .mp4 conversion with ffmpeg
 ## ffmpeg -i trajectories-gif.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" trajectories.mp4
 
+############ OLD #########
 
+## OLD VERSION FOR ROOMS COORDINATES
+# rooms_coords <- rooms %>%
+#   mutate(
+#     x = case_when(
+#       grepl("001", id) ~ id_room,
+#       grepl("Corridor", room) ~ 1,
+#       room == "Office" ~ 1,
+#       room == "Nursing station" ~ 3,
+#       room == "Medical Restroom"~ 1,
+#       room == "Paramedical Restroom"~ 3,
+#       TRUE ~ NA_real_
+#     ),
+#     y = case_when(
+#       grepl("001", id) ~ 1,
+#       grepl("Corridor", room) ~ 2,
+#       room == "Office" ~ 3,
+#       room == "Nursing station" ~ 3,
+#       grepl("Restroom", room) ~ 4,
+#       TRUE ~ NA_real_
+#     )
+#   ) %>%
+#   mutate(localization = id_room) %>%
+#   distinct(id_room, .keep_all = TRUE) %>%
+#   select(localization, x, y)
 
 
 
