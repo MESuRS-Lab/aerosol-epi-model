@@ -44,7 +44,7 @@ if (!dir.exists(fig_path)) {
 
 ## LOAD SIMULATIONS DATA
 ```{r Load data}
-load(file.path(loc_path, paste0('dev-localization-nodscov2.RData')))
+load(file.path(loc_path, 'dev-localization-nodscov2.RData'))
 load(file.path(sensibility_path, id_sim, paste0('parameters-model-', beta_type, '.RData')))
 ```
 
