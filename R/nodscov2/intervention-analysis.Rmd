@@ -87,8 +87,9 @@ list_SAR <- get_all_SAR(list_sim = list_sim,
 all_SAR_metrics <- get_all_SAR_metrics(list_SAR = list_SAR)
 
 ##SELECT COUPLES FOR SAR +/- 20%
+
 all_SAR_metrics %>% filter(dplyr::between(SAR_median, 0.10, 0.30))
-all_SAR_metrics %>% filter(dplyr::between(SAR_mean, 0.15, 0.25))
+all_SAR_metrics %>% filter(dplyr::between(SAR_mean, 0.10, 0.30)) %>% select(beta, nu , SAR_mean, SAR_median, SAR_sd)
 ```
 
 ## SAR_distribution  
@@ -115,6 +116,8 @@ all_epidemic_duration_metrics <- get_all_epidemic_duration_metrics(list_epidemic
 ```{r}
 all_metrics <- left_join(all_SAR_metrics, all_epidemic_duration_metrics, by="couple", suffix=c("",".y")) %>%
   select(-ends_with(".y"))
+
+write.csv2(all_metrics, file = file.path(intervention_path, 'intervention-all_metrics.csv'), row.names = F)
 ```
 
 
@@ -123,7 +126,9 @@ all_metrics <- left_join(all_SAR_metrics, all_epidemic_duration_metrics, by="cou
 ```{r}
 id_global <- global_status %>% distinct(id) %>% pull()
 n_individual <- length(id_global)
+n_subdivisions <- new_n_subdivisions
 
+list_SEIR <- get_all_SEIR(list_sim = list_sim, n_subdivisions = n_subdivisions)
 
 list_SEIR <- list()
 
