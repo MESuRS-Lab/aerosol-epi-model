@@ -17,3 +17,7 @@ R_libs_4.3.1
 sim-nodscov2
 *.gif
 *.mp4
+*.tar
+*.zip
+*.gz
+*.tar.gz
