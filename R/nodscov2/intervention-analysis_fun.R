@@ -47,6 +47,13 @@ compute_SAR <- function(global_status) {
   ## CLOSE CONTACT / ENVIRONMENT (SUM EQUALS TO GLOBAL)
   SAR_environment <- length(global_status %>% filter(grepl('ENVIRONMENT', inf_by)) %>% pull(id)) / n_individual
   SAR_contact <- length(global_status %>% filter(grepl('CONTACT', inf_by)) %>% pull(id)) / n_individual
+  
+  SAR_patient_e <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / (n_patient)
+  SAR_patient_c <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / (n_patient)
+  SAR_medical_e <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / n_medical
+  SAR_medical_c <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / n_medical
+  SAR_paramedical_e <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / n_paramedical
+  SAR_paramedical_c <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / n_paramedical
   ##DF
   SAR_df <- data.frame(
     Global = SAR_global,
@@ -55,7 +62,13 @@ compute_SAR <- function(global_status) {
     Paramedical = SAR_paramedical,
     Medical = SAR_medical,
     Environment = SAR_environment,
-    Contact = SAR_contact)
+    Contact = SAR_contact,
+    Patient_Contact = SAR_patient_c,
+    Patient_Environment = SAR_patient_e,
+    Paramedical_Contact = SAR_paramedical_c,
+    Paramedical_Environment = SAR_paramedical_e,
+    Medical_Contact = SAR_medical_c,
+    Medical_Environment = SAR_medical_e)
   
   return(SAR_df)
 }
@@ -82,7 +95,7 @@ get_all_SAR <- function(list_sim, id_patient, id_hcw, id_paramedical, id_medical
 #################
 
 ################# SAR METRICS FOR ONE COUPLE
-get_SAR_metrics <- function(couple, list_SAR){
+get_SAR_g_metrics <- function(couple, list_SAR){
   couple_parts <- strsplit(couple, "_")[[1]]
   SAR_df <- rbindlist(list_SAR[[couple]])
   SAR_df_metrics <- data.frame(couple = couple,
@@ -97,16 +110,76 @@ get_SAR_metrics <- function(couple, list_SAR){
 }
 
 ################# SAR METRICS FOR EVERY COUPLES
-get_all_SAR_metrics <- function(list_SAR){
+get_all_SAR_g_metrics <- function(list_SAR){
   all_SAR_metrics <- data.frame()
   for(couple in names(list_SAR)){
-    all_SAR_metrics <- rbind(all_SAR_metrics, get_SAR_metrics(couple = couple, list_SAR = list_SAR) )
+    all_SAR_g_metrics <- rbind(all_SAR_metrics, get_SAR_g_metrics(couple = couple, list_SAR = list_SAR) )
   }
-  return(all_SAR_metrics)
+  return(all_SAR_g_metrics)
   
 }
 
-
+compute_all_SAR_metrics <- function(list_SAR) {
+  all_metrics <- list()
+  for (couple in names(list_SAR)) {
+    SAR_dfs <- list_SAR[[couple]]
+    
+    SAR_couple <- rbindlist(SAR_dfs)
+    
+    SAR_metrics <- data.frame(
+      couple = couple,
+      Global_min = min(SAR_couple$Global),
+      Global_max = max(SAR_couple$Global),
+      Global_mean = mean(SAR_couple$Global),
+      Global_median = median(SAR_couple$Global),
+      Global_sd = sd(SAR_couple$Global),
+      
+      HCW_min = min(SAR_couple$HCW),
+      HCW_max = max(SAR_couple$HCW),
+      HCW_mean = mean(SAR_couple$HCW),
+      HCW_median = median(SAR_couple$HCW),
+      HCW_sd = sd(SAR_couple$HCW),
+      
+      Patient_min = min(SAR_couple$Patient),
+      Patient_max = max(SAR_couple$Patient),
+      Patient_mean = mean(SAR_couple$Patient),
+      Patient_median = median(SAR_couple$Patient),
+      Patient_sd = sd(SAR_couple$Patient),
+      
+      Paramedical_min = min(SAR_couple$Paramedical),
+      Paramedical_max = max(SAR_couple$Paramedical),
+      Paramedical_mean = mean(SAR_couple$Paramedical),
+      Paramedical_median = median(SAR_couple$Paramedical),
+      Paramedical_sd = sd(SAR_couple$Paramedical),
+      
+      Medical_min = min(SAR_couple$Medical),
+      Medical_max = max(SAR_couple$Medical),
+      Medical_mean = mean(SAR_couple$Medical),
+      Medical_median = median(SAR_couple$Medical),
+      Medical_sd = sd(SAR_couple$Medical),
+      
+      Environment_min = min(SAR_couple$Environment),
+      Environment_max = max(SAR_couple$Environment),
+      Environment_mean = mean(SAR_couple$Environment),
+      Environment_median = median(SAR_couple$Environment),
+      Environment_sd = sd(SAR_couple$Environment),
+      
+      Contact_min = min(SAR_couple$Contact),
+      Contact_max = max(SAR_couple$Contact),
+      Contact_mean = mean(SAR_couple$Contact),
+      Contact_median = median(SAR_couple$Contact),
+      Contact_sd = sd(SAR_couple$Contact)
+    )
+    
+    # Append the metrics data frame to the list
+    all_metrics[[couple]] <- SAR_metrics
+  }
+  
+  # Combine all metrics into one data frame
+  all_metrics_df <- do.call(rbind, all_metrics)
+  
+  return(all_metrics_df)
+}
 
 ########################
 ## EPIDEMIC DURATIONS ##
