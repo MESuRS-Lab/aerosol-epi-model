@@ -199,16 +199,12 @@ for (id_couple in selected_couples){
   
 }
 
-
-print(wilcox.test(x = df_SAR %>% filter(couple == id_couple) %>% pull(Contact),
-         y = df_SAR %>% filter(couple == id_couple) %>% pull(Global) - df_SAR %>% filter(couple == id_couple) %>% pull(Contact),
-         paired = T))
 ```
 
 
-
+## PLOTS
 ```{r}
-df_SAR_long %>%
+p_all_c <- df_SAR_long %>%
   ggplot( aes(x=couple, y=SAR, fill=couple)) +
     geom_boxplot() +
     geom_jitter(color="black", size=0.4, alpha=0.9) +
@@ -220,9 +216,7 @@ df_SAR_long %>%
       axis.text.x = element_text(angle = 35, hjust = 1)
     )
   
-
-
- p <- selected_df %>%
+ p_selected_c <- selected_df %>%
   ggplot( aes(x=couple, y=SAR, fill=couple)) +
     geom_boxplot() +
     geom_jitter(color="black", size=0.4, alpha=0.9) +
@@ -234,10 +228,11 @@ df_SAR_long %>%
       axis.text.x = element_text(angle = 35, hjust = 1)
     )
 
-print(p)
+print(p_all_c)
+print(p_selected_c)
 ```
 
-
+## FINAL PLOTS - CONTRIBUTION
 ```{r}
 library(ggpubr)
 pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Room' = "#666699")
@@ -317,11 +312,12 @@ p4 = selected_df %>%
 
 ggarrange(p1, p2, p3, p4, labels = c("A", "B", "C", "D"), nrow = 2, ncol = 2, align = "hv")
 
-?t.test
 
-all_SAR_metrics <- compute_all_SAR_metrics(list_SAR = list_SAR)
+
+
 ```
 ```{r}
+all_SAR_metrics <- compute_all_SAR_metrics(list_SAR = list_SAR)
 list_gs_df <- list()
 for(couple in selected_couples){
   list_gs_df[[couple]] <- rbindlist(list_sim[[couple]], idcol = 'id_sim') %>% mutate(couple = couple)
