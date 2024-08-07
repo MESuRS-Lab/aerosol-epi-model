@@ -111,19 +111,41 @@ admission %>%
     facet_grid(cols = vars(hospital)) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 35, hjust = 1))
+```
 
 
+```{r}
 ## FIGURE FOR RP REPORT
-p_n_RP <- admission %>%
+## CATEGORY GROUPING INTO TYPE
+cat_other <- c('logistic', 'visitor', 'investigation', 'administration')
+cat_paramedical <- c("nurse", "student nurse", "aux nurse")
+cat_medical <- c("physician", "ext physician", "reeducation staff", "other")
+
+pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Other' = "#666699")
+
+adm_plot <- admission %>%
   filter(ward == "Reanimation" ) %>%
   filter(hospital == "APHP - RAYMOND POINCARÉ") %>%
-  mutate(cat = ifelse(is.na(cat), "Patients", cat)) %>%
-  group_by(hospital, cat) %>%
-  summarise(n = n(), .groups = "drop") %>%
-    ggplot(., aes(x = reorder(cat, -n), y = n)) +
-    geom_bar(stat = "identity") +
-    theme_bw() +
-  labs(title = "APHP - RAYMOND POINCARÉ" ,x = "Categories", y = "Number of individuals") +
+  mutate(cat = ifelse(is.na(cat), "patient", cat)) %>%
+  mutate(Type = case_when(
+    cat %in% cat_paramedical ~ 'Paramedical',
+    cat %in% cat_medical ~ 'Medical',
+    cat == 'patient' ~ 'Patient',
+    .default = 'Other'
+  )) %>% 
+  group_by(hospital, cat, Type) %>%
+  summarise(n = n(), .groups = "drop")
+adm_plot$Type <- factor(adm_plot$Type, levels = c('Paramedical', 'Medical', 'Patient', 'Other'))
+adm_plot <- adm_plot %>%
+  arrange(Type, desc(n))
+adm_plot$cat <- factor(adm_plot$cat, levels = adm_plot$cat)
+
+p_n_RP <- ggplot(adm_plot, aes(x = cat, y = n, fill = Type)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  scale_fill_manual(values = pal) +
+  labs(title = "" ,x = "", y = "Number of individuals") +
+  #labs(title = "APHP - RAYMOND POINCARÉ" ,x = "Categories", y = "Number of individuals") +
   theme(
     axis.text.x = element_text(angle = 35, hjust = 1),
     plot.title = element_text(size = 45, hjust = 0.5), #
@@ -131,8 +153,9 @@ p_n_RP <- admission %>%
     axis.title = element_text(size = 40),
     legend.text = element_text(size = 40),
     legend.title = element_text(size = 40)) +
-  geom_text(aes(label=n), vjust=-0.25, size=5)
+  geom_text(aes(label=n), vjust=-0.25, size=10)
 
+print(p_n_RP)
 ggsave(filename = file.path(wd, '..', '..', 'out', 'fig', 'RP-number-individual.png'), plot = p_n_RP, height = 14, width = 26)
 ```
 

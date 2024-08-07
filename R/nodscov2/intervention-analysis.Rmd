@@ -6,26 +6,33 @@ output: html_document
 ---
 
 ```{r}
-## LIBRARIES
-library(ggplot2)
+#### LIBRARIES
+## DATA MANAGEMENT
 library(dplyr)
 library(tidyr)
 library(purrr)
 library(data.table)
+## PLOTS
+library(ggplot2)
+library(ggpubr)
+## 3D PLOTS 
+library(reshape2)
+library(plotly)
 ```
 
 
 ```{r}
 ##PATHS
 wd <- getwd()
-
-source(file.path(wd, 'intervention-analysis_fun.R'))
 out_path <- file.path(wd,'..','..', 'out')
 loc_path <- file.path(out_path,'loc-nodscov2')
 intervention_path <- file.path(out_path, 'intervention-analysis')
+
+## LOAD FUNCTIONS
+source(file.path(wd, 'intervention-analysis_fun.R'))
 ```
 
-
+## TEMP - READ SIMULATION FILES WITHOUT EXTRACTING THE WHOLE ARCHIVE
 ```{r}
 archive_path <- file.path(intervention_path, 'out-01-08-24.tar.gz')
 archive_path <- file.path(intervention_path, 'out-01-08-24-bis.tar.gz')
@@ -184,7 +191,7 @@ selected_df$couple <- factor(selected_df$couple, levels = selected_couples)
 ```
 
 ```{r}
-## t TEST
+## t TEST/ Wilcoxon test (significative difference between SAR contact/env)
 
 for (id_couple in selected_couples){
   print(id_couple)
@@ -234,7 +241,7 @@ print(p_selected_c)
 
 ## FINAL PLOTS - CONTRIBUTION
 ```{r}
-library(ggpubr)
+
 pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Room' = "#666699")
 p1 = selected_df %>%
   filter(Type_SAR %in% c("Contact", "Environment")) %>%
@@ -422,8 +429,7 @@ ggplot(all_metrics, aes(x = beta, y = nu, fill = SAR_median)) +
 
 ```{r}
 ### 3D SURFACE PLOT USING PLOTLY
-library(reshape2)
-library(plotly)
+
 
 # Reshape the data
 grid_data <- dcast(all_metrics, beta ~ nu, value.var = "SAR_median")
