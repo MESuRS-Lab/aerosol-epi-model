@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
+library(ggpubr)
 library(lubridate)
 library(igraph)
 library(tidyr)
@@ -95,7 +96,108 @@ p_number_int <- do.call(rbind, global_interaction) %>%
 print(p_number_int)
 ggsave(file = file.path(fig_path, paste0("p_number_int", ".png")), plot = p_number_int, height = 3, width = 12)
 ```
+## NUMBER OF INDIVIDUAL BEFORE/AFTER TRUNCATION
+```{r}
+load(file.path(nodscov2_path, "admission_ctc_nodscov2.RData"))
+Encoding(admission$hospital) <- 'latin1'
+admission <- admission %>%
+  ## Remove visitors/admin/logistics/investigators
+  filter(ward == "Reanimation") %>% 
+  filter(hospital == "APHP - RAYMOND POINCARÉ")
 
+## CATEGORY GROUPING INTO TYPE
+cat_other <- c('logistic', 'visitor', 'investigation', 'administration')
+cat_paramedical <- c("nurse", "student nurse", "aux nurse")
+cat_medical <- c("physician", "ext physician", "reeducation staff", "other")
+
+## BEFORE REMOVING INDIVIDUALS WHO ARE NOT HCW/PATIENTS
+adm_raw <- admission %>%
+  filter(ward == "Reanimation" ) %>%
+  filter(hospital == "APHP - RAYMOND POINCARÉ") %>%
+  mutate(cat = ifelse(is.na(cat), "patient", cat)) %>%
+  mutate(Type = case_when(
+    cat %in% cat_paramedical ~ 'Paramedical',
+    cat %in% cat_medical ~ 'Medical',
+    cat == 'patient' ~ 'Patient',
+    .default = 'Other'
+  )) %>% 
+  group_by(hospital, cat, Type) %>%
+  summarise(n = n(), .groups = "drop")
+adm_raw$Type <- factor(adm_raw$Type, levels = c('Paramedical', 'Medical', 'Patient', 'Other'))
+adm_raw <- adm_raw %>%
+  arrange(Type, desc(n))
+adm_raw$cat <- factor(adm_raw$cat, levels = adm_raw$cat)
+
+
+## AFTER 36h->24h truncation + removing ids not interacting
+t_begin <- 5*60*2 ## OFFSET t
+t_end <- (t_begin + 24*60*2) - 1
+
+# TRUNCATED INFO EXTRACTED FROM TOTAL STUDY (KEEP 24HOURS OF THE 36HOURS)
+truncated_interaction <- global_interaction[(u <- seq_along(global_interaction)) %in% t_begin:(t_end)]
+
+id_interacting <- do.call(rbind, truncated_interaction) %>%
+  pivot_longer(cols = c(from, to), names_to = "direction", values_to = "individual") %>% distinct(individual) %>% pull()
+
+adm_trunc <- admission %>%
+  filter(id %in% id_interacting) %>%
+  filter(ward == "Reanimation" ) %>%
+  filter(hospital == "APHP - RAYMOND POINCARÉ") %>%
+  mutate(cat = ifelse(is.na(cat), "patient", cat)) %>%
+  mutate(Type = case_when(
+    cat %in% cat_paramedical ~ 'Paramedical',
+    cat %in% cat_medical ~ 'Medical',
+    cat == 'patient' ~ 'Patient',
+    .default = 'Other'
+  )) %>% 
+  group_by(hospital, cat, Type) %>%
+  summarise(n = n(), .groups = "drop")
+adm_trunc$Type <- factor(adm_trunc$Type, levels = c('Paramedical', 'Medical', 'Patient', 'Other'))
+adm_trunc <- adm_trunc %>%
+  arrange(Type, desc(n))
+adm_trunc$cat <- factor(adm_trunc$cat, levels = adm_trunc$cat)
+
+
+## PLOTS 
+pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Other' = "#666699")
+
+p_n_RP_1 <- ggplot(adm_raw, aes(x = cat, y = n, fill = Type)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  scale_fill_manual(values = pal) +
+  labs(title = "" ,x = "", y = "Number of individuals") +
+  #labs(title = "APHP - RAYMOND POINCARÉ" ,x = "Categories", y = "Number of individuals") +
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1)) +
+  geom_text(aes(label=n), vjust=-0.25, size=3) +
+  theme(legend.position="none")
+
+p_n_RP_2 <- ggplot(adm_trunc, aes(x = cat, y = n, fill = Type)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  scale_fill_manual(values = pal) +
+  labs(title = "" ,x = "", y = "") +
+  #labs(title = "APHP - RAYMOND POINCARÉ" ,x = "Categories", y = "Number of individuals") +
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1)) +
+  geom_text(aes(label=n), vjust=-0.25, size=3)
+
+p_n_RP <- ggarrange(p_n_RP_1, p_n_RP_2, labels = c("A", "B"), nrow = 1, ncol = 2, common.legend = TRUE, legend="right")
+
+print(p_n_RP)
+ggsave(filename = file.path(wd, '..', '..', 'out', 'fig', 'RP-number-individual.png'), plot = p_n_RP, height = 4, width = 8)
+
+
+### RETRIEVING FILTERED ADMISSION
+admission <- admission %>%
+  ## Remove visitors/admin/logistics/investigators
+  filter(ward == "Reanimation") %>% 
+  filter(hospital == "APHP - RAYMOND POINCARÉ") %>%
+  filter(!(cat %in% c("administration",
+                  "investigation",
+                  "logistic",
+                  "visitor")))
+```
 
 ## DISTRIBUTION OF TIME SPENT IN RESTROOM/CORRIDOR BY CATEGORY OF HCW
 ```{r Time spent in Restroom/Corridor by HCW cat}
