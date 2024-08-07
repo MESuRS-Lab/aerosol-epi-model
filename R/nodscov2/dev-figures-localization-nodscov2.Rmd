@@ -71,8 +71,6 @@ id_room_patient <- rooms %>%
 
 ## CUMULATIVE NUMBER OF INTERACTION OVER TIME
 ```{r}
-
-
 p_number_int <- do.call(rbind, global_interaction) %>%
   mutate(type_int = paste0(from_status, "-", to_status)) %>%
   mutate(type_int = ifelse(type_int == "PA-PE", "PE-PA", type_int)) %>%
@@ -82,20 +80,23 @@ p_number_int <- do.call(rbind, global_interaction) %>%
   summarise(n = n()) %>%
   ggplot(aes(x=begin_date + time*30, y=n, color = type_int))+
     geom_line(linewidth = 0.3) +
-    annotate("rect", xmin = as.POSIXct("2020-05-06 12:00:00"), xmax = as.POSIXct("2020-05-07 12:00:00"), ymin = -Inf, ymax = Inf, alpha = 0.3, fill = "lightgrey") +  
-    annotate("rect", xmin = as.POSIXct("2020-05-06 22:00:00"), xmax = as.POSIXct("2020-05-07 06:00:00"), ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "darkgrey") +
+    annotate("rect", xmin = as.POSIXct("2020-05-06 12:00:00"), xmax = as.POSIXct("2020-05-07 12:00:00"), ymin = -Inf, ymax = Inf, alpha = 0.3, fill = "darkgrey") +  
+    #annotate("rect", xmin = as.POSIXct("2020-05-06 22:00:00"), xmax = as.POSIXct("2020-05-07 06:00:00"), ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "darkgrey") +
   
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+    #theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
     labs(x = "Time", y = "Number of interactions", color = "Type of interaction") +
     # labs(title = "Number of interaction over time") +
-    scale_color_manual(values = c("PE-PA" = "orange", "PE-PE" = "purple"), 
+    scale_color_manual(values = c("PE-PA" = "darkorange", "PE-PE" = "orchid"), 
                        labels = c("PE-PA" = "Patient - HCW", 
-                                  "PE-PE" = "HCW - HCW"))
+                                  "PE-PE" = "HCW - HCW")) +
+    theme(legend.position="top")
 
 print(p_number_int)
-ggsave(file = file.path(fig_path, paste0("p_number_int", ".png")), plot = p_number_int, height = 3, width = 12)
+ggsave(file = file.path(fig_path, 'number-int-icu-rp.png'), plot = p_number_int, height = 3, width = 14)
 ```
+
+
 ## NUMBER OF INDIVIDUAL BEFORE/AFTER TRUNCATION
 ```{r}
 load(file.path(nodscov2_path, "admission_ctc_nodscov2.RData"))
