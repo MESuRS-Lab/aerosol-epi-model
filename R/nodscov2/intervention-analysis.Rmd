@@ -242,17 +242,27 @@ print(p_selected_c)
 ## FINAL PLOTS - CONTRIBUTION
 ```{r}
 pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Room' = "#666699")
+env_pal = c('Contact' = 'darkorange', 'Environment' =  'orchid')
+
+selected_df <- selected_df %>%
+  mutate(scenario = case_when(
+    couple == 'sim_1-4_20'~ 'Scenario 1',
+    couple == 'sim_1-2_16'~ 'Scenario 2',
+    couple == 'sim_3-4_12'~ 'Scenario 3',
+    couple == 'sim_1_8'~ 'Scenario 4',
+    couple == 'sim_3-2_5'~ 'Scenario 5'))
+selected_df$scenario <- factor(selected_df$scenario, levels = c(paste0(rep('Scenario ',5), 1:5)))
 
 p1 = selected_df %>%
   filter(Type_SAR %in% c("Contact", "Environment")) %>%
-  ggplot( aes(x=couple, y=SAR, col = Type_SAR)) +
+  ggplot( aes(x=scenario, y=SAR, col = Type_SAR)) +
     geom_boxplot(position = position_dodge(width = 0.8), width = 0.5) +
     geom_jitter(size=0.4, alpha=0.9, position = position_jitterdodge()) +
-    scale_color_manual(values = c("Contact" = "darkorange", "Environment" = "orchid")) +
+    scale_color_manual(values = env_pal) +
     theme_bw() +
     theme(
-      plot.title = element_text(size=11),
-      axis.text.x = element_text(angle = 35, hjust = 1)
+      #axis.text.x = element_text(angle = 35, hjust = 1),
+      plot.title = element_text(size=11)
     ) + 
   labs(x = "", col = "")
 
@@ -260,14 +270,15 @@ p1 = selected_df %>%
 p2 = selected_df %>%
   filter(Type_SAR %in% c("Patient", "Paramedical", "Medical")) %>%
   mutate(Type_SAR = factor(Type_SAR, c("Paramedical", "Medical", "Patient"))) %>%
-  ggplot( aes(x=couple, y=SAR, col = Type_SAR)) +
+  ggplot( aes(x=scenario, y=SAR, col = Type_SAR)) +
     geom_boxplot(position = position_dodge(width = 0.8), width = 0.5) +
     geom_jitter(size=0.4, alpha=0.9, position = position_jitterdodge()) +
     scale_color_manual(values = pal[1:3]) +
     theme_bw() +
     theme(
-      plot.title = element_text(size=11),
-      axis.text.x = element_text(angle = 35, hjust = 1)
+      #axis.text.x = element_text(angle = 35, hjust = 1),
+      plot.title = element_text(size=11)
+      
     ) + 
   labs(x = "", col = "") 
 
@@ -281,14 +292,15 @@ p3 = selected_df %>%
     Medical = Medical * length(id_medical)
   ) %>%
   pivot_longer(cols =  c(Patient, Paramedical, Medical), names_to = "Type_SAR", values_to = 'n') %>%
-  group_by(couple, Type_SAR) %>%
+  group_by(scenario, Type_SAR) %>%
   summarise(n = mean(n), .groups = "drop") %>%
-  group_by(couple) %>%
+  group_by(scenario) %>%
   mutate(n = n/sum(n)) %>%
   ungroup() %>%
-  ggplot(., aes(x = couple, y = n, fill = Type_SAR)) +
+  ggplot(., aes(x = scenario, y = n, fill = Type_SAR)) +
   geom_bar(stat = "identity", position = "fill") +
   theme_bw() +
+  #theme(axis.text.x = element_text(hjust = 1, angle = 30)) +
   scale_fill_manual(values = pal[1:3]) +
   labs(x  = "", y = "Proportion of infected\nindividuals by type", fill = "")
 
@@ -304,25 +316,30 @@ p4 = selected_df %>%
     ind_type = gsub("_.*$", "", Type_SAR),
     source_inf = gsub("^.*_", "", Type_SAR)
   ) %>%
-  group_by(couple, Type_SAR, ind_type, source_inf) %>%
+  group_by(scenario, Type_SAR, ind_type, source_inf) %>%
   summarise(n = mean(n), .groups = "drop") %>%
-  group_by(couple, ind_type) %>%
+  group_by(scenario, ind_type) %>%
   mutate(n = n/sum(n)) %>%
   ungroup() %>%
-  ggplot(., aes(x = couple, y = n, fill = source_inf)) +
+  ggplot(., aes(x = scenario, y = n, fill = source_inf)) +
   geom_bar(stat = "identity", position = "fill") +
+  scale_fill_manual(values = env_pal) +
   facet_grid(cols = vars(ind_type)) +
   theme_bw() +
   theme(axis.text.x = element_text(hjust = 1, angle = 30)) +
   labs(x  = "", y = "Contribution of modes of transmission", fill = "")
 
 
-ggarrange(p1, p2, p3, p4, labels = c("A", "B", "C", "D"), nrow = 2, ncol = 2, align = "hv")
-
+p_contrib <- ggarrange(p1, p2, p3, p4, labels = c("A", "B", "C", "D"), nrow = 2, ncol = 2, align = "hv")
+ggsave(filename = file.path(intervention_path, 'fig', 'scenario-contribution.png'), plot = p_contrib, height = 7, width = 14)
 
 
 
 ```
+
+
+
+
 ```{r}
 all_SAR_metrics <- compute_all_SAR_metrics(list_SAR = list_SAR)
 list_gs_df <- list()

@@ -157,7 +157,7 @@ p_n_RP <- ggplot(adm_plot, aes(x = cat, y = n, fill = Type)) +
   geom_text(aes(label=n), vjust=-0.25, size=10)
 
 print(p_n_RP)
-ggsave(filename = file.path(wd, '..', '..', 'out', 'fig', 'RP-number-individual.png'), plot = p_n_RP, height = 14, width = 26)
+ggsave(filename = file.path(wd, '..', '..', 'out', 'fig', 'RP-number-individual-before.png'), plot = p_n_RP, height = 14, width = 26)
 ```
 
 
