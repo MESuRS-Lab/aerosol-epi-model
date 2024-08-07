@@ -241,8 +241,8 @@ print(p_selected_c)
 
 ## FINAL PLOTS - CONTRIBUTION
 ```{r}
-
 pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Room' = "#666699")
+
 p1 = selected_df %>%
   filter(Type_SAR %in% c("Contact", "Environment")) %>%
   ggplot( aes(x=couple, y=SAR, col = Type_SAR)) +
