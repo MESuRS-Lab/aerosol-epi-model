@@ -17,9 +17,12 @@ library(visNetwork)
 ```{r}
 wd <- getwd()
 knitr::opts_chunk$set(root.dir = wd)
+
+out_path <- file.path(wd, "..", "..", "out")
 cpp_path <-  file.path(wd,"..", "..", "cpp")
 cpp_model_path <- file.path(cpp_path,"nodscov2")
-sim_nodscov2_path <- file.path(wd, "..", "..", "out", "sim-nodscov2")
+sim_nodscov2_path <- file.path(out_path, "sim-nodscov2")
+loc_path <- file.path(out_path,'loc-nodscov2')
 
 id_sim <- "01"
 id_sim_path <- file.path(sim_nodscov2_path, id_sim)
@@ -34,22 +37,30 @@ if (!dir.exists(fig_sim_path)) {
 
 ## TEST
 ```{r}
-id_sim <- "dev-test-endless-day"
-id_sim_path <- file.path(sim_nodscov2_path, id_sim)
-fig_sim_path <- file.path(id_sim_path, 'UNIQUE', paste0(id_sim,"-fig"))
+# id_sim <- "dev-test-endless-day"
+# id_sim_path <- file.path(sim_nodscov2_path, id_sim)
+# fig_sim_path <- file.path(id_sim_path, 'UNIQUE', paste0(id_sim,"-fig"))
+# 
+# if (!dir.exists(fig_sim_path)) {
+#   dir.create(fig_sim_path, recursive = TRUE)
+# }
+# 
+# load(file.path(id_sim_path, paste0(id_sim, "-", "unique-simulation-nodscov2.RData")))
 
-if (!dir.exists(fig_sim_path)) {
-  dir.create(fig_sim_path, recursive = TRUE)
-}
 
-
-load(file.path(id_sim_path, paste0(id_sim, "-", "unique-simulation-nodscov2.RData")))
+## intervention analysis
+intervention_path <- file.path(out_path, 'intervention-analysis')
+load(file.path(loc_path, 'dev-localization-nodscov2.RData'))
+load(file.path(intervention_path, "parameters-admission-nodscov2.RData"))
+load(file.path(intervention_path, "scenario-3-unique-simulation-nodscov2.RData"))
+## TEMP
+admission <- admission %>% filter(id %in% admission_sim$id)
 
 # global_interaction <- rep(truncated_interaction, n_days)
 # global_localization <- rep(truncated_localization, n_days)
-n_subdivisions <- new_n_subdivisions
-begin_date <- new_begin_date
-end_date <- new_end_date + days(n_days)
+new_begin_date <- begin_date + t_begin*30 ## OFFSET TO START THE DAY AT 12AM
+new_end_date <- new_begin_date + new_n_subdivisions*30
+print(new_end_date - new_begin_date)
 ```
 
 ## REMOVE INDIVUDUALS NOT INTERACTING DURING THE SIMULATION
@@ -146,26 +157,30 @@ viral_load_over_time <- do.call(rbind, lapply(1:(length(data_sim[["global_enviro
              viral_load = data_sim[["global_environment"]][[t*10]]$env)
 }))
 
-VL_all <- ggplot(viral_load_over_time, aes(x = time, y = viral_load, color = factor(room))) +
+
+viral_load_over_time <-  viral_load_over_time %>% left_join(rooms %>% select(room, volume) %>% distinct(room, .keep_all = T), by = join_by('room'))
+
+VL_all <- ggplot(viral_load_over_time, aes(x = time, y = viral_load/volume, color = factor(room))) +
   geom_line() +
-  labs(title = "Viral Load in Rooms Over Time",
+  labs(title = "",
        x = "Time",
        y = "Viral Load",
        color = "Room") +
-  theme_bw() +
-  theme(axis.text.x=element_text(angle=45, hjust=1))
+  # theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  theme_bw() 
 print(VL_all)
 ggsave(file = file.path(fig_sim_path, 'Viral-Load', paste0(id_sim, "-Viral-Load-ALL.png")), plot = VL_all, height = 4, width = 20)
 
 
-VL_no_room <- ggplot(viral_load_over_time %>% filter(!room %in% 1:17), aes(x = time, y = viral_load, color = factor(room))) +
+VL_no_room <- ggplot(viral_load_over_time %>% filter(!room %in% 1:17), aes(x = time, y = viral_load/volume, color = factor(room))) +
   geom_line() +
-  labs(title = "Viral Load in Rooms Over Time",
+  labs(title = "",
        x = "Time",
        y = "Viral Load",
        color = "Room") +
-  theme_bw() +
-  theme(axis.text.x=element_text(angle=45, hjust=1))
+  # theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  theme_bw() 
+
 print(VL_no_room)
 ggsave(file = file.path(fig_sim_path, 'Viral-Load', paste0(id_sim, "-Viral-Load-NO-ROOMS.png")), plot = VL_no_room, height = 4, width = 20)
 ```
@@ -182,8 +197,8 @@ for (id_room in distinct_rooms){
          x = "Time",
          y = "Viral Load",
          color = "Room") +
-    theme_bw() +
-    theme(axis.text.x=element_text(angle=45, hjust=1))
+    # theme(axis.text.x=element_text(angle=45, hjust=1)) +
+    theme_bw() 
   print(VL_room)
   ggsave(file = file.path(fig_sim_path, "Viral-Load", paste0(id_sim, "-Viral-Load-Room-", id_room, ".png")), plot = VL_room, height = 4, width = 20)
 
@@ -208,8 +223,8 @@ for (id_room in distinct_rooms){
          x = "Time",
          y = "Viral Load",
          color = "Room") +
-    theme_bw() +
-    theme(axis.text.x=element_text(angle=45, hjust=1))
+    # theme(axis.text.x=element_text(angle=45, hjust=1)) +
+    theme_bw() 
   print(VL_room)
   ggsave(file = file.path(fig_sim_path, 'Viral-Load-Day', paste0(id_sim, "-Viral-Load-Day-Room-", id_room, ".png")), plot = VL_room, height = 4, width = 20)
 

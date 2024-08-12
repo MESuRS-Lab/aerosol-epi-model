@@ -15,6 +15,7 @@ library(data.table)
 ## PLOTS
 library(ggplot2)
 library(ggpubr)
+library(ggborderline)
 ## 3D PLOTS 
 library(reshape2)
 library(plotly)
@@ -131,7 +132,6 @@ all_epidemic_duration_metrics <- get_all_epidemic_duration_metrics(list_epidemic
 
 
 
-
 ## ALL METRICS IN ONE DF
 ```{r}
 all_metrics <- left_join(all_SAR_metrics, all_epidemic_duration_metrics, by="couple", suffix=c("",".y")) %>%
@@ -147,7 +147,7 @@ write.csv2(all_metrics, file = file.path(intervention_path, 'intervention-all_me
 #### WHEN COUPLES ARE SELECTED
 ```{r}
 all_metrics <- read.csv2(file = file.path(intervention_path, 'intervention-all_metrics.csv'))
-couple_same_SAR <- all_metrics %>% filter(dplyr::between(SAR_median, 0.20, 0.30)) %>% pull(couple)
+couple_same_SAR <- all_metrics %>% filter(dplyr::between(Global_median, 0.20, 0.30)) %>% pull(couple)
 
 
 ### READ ONLY RDATA FOR SELECTED BETA/NU COUPLES
@@ -402,7 +402,7 @@ ggsave(filename = file.path(intervention_path, 'fig', 'seir-cat.png'), plot = p_
 
 ```{r}
 ### x = beta < 4
-ggplot(all_metrics %>% filter(beta < 4), aes(x = beta, y = SAR_median, color = as.factor(nu), group = nu)) +
+ggplot(all_metrics %>% filter(beta < 4), aes(x = beta, y = Global_median, color = as.factor(nu), group = nu)) +
   geom_line() +
   geom_point() +
   geom_hline(yintercept = 0.2, linetype = "dashed", color = "darkgrey") +
@@ -416,7 +416,7 @@ ggplot(all_metrics %>% filter(beta < 4), aes(x = beta, y = SAR_median, color = a
 
 
 ### x = nu
-ggplot(all_metrics, aes(x = nu, y = SAR_median, color = as.factor(beta), group = beta)) +
+ggplot(all_metrics, aes(x = nu, y = Global_median, color = as.factor(beta), group = beta)) +
   geom_line() +
   geom_point() +
   geom_hline(yintercept = 0.2, linetype = "dashed", color = "darkgrey") +
@@ -430,7 +430,7 @@ ggplot(all_metrics, aes(x = nu, y = SAR_median, color = as.factor(beta), group =
 
 ### x = beta < 4 AND GREY ZONE FOR SAR
 beta <- all_metrics$beta
-p_grid <- ggplot(all_metrics , aes(x = beta, y = SAR_median, color = as.factor(nu), group = nu)) +
+p_grid <- ggplot(all_metrics , aes(x = beta, y = Global_median, color = as.factor(nu), group = nu)) +
   geom_line() +
   geom_point() +
   geom_hline(yintercept = 0.2, linetype = "dashed", color = "darkgrey") +
@@ -448,7 +448,7 @@ print(p_grid)
 ggsave(filename = file.path(intervention_path, 'fig', 'grid-search.png'), plot = p_grid, width = 21, height = 7)
 
 ##### HEATMAP
-ggplot(all_metrics, aes(x = beta, y = nu, fill = SAR_median)) +
+ggplot(all_metrics, aes(x = beta, y = nu, fill = Global_median)) +
   geom_tile() +
   scale_fill_gradientn(colors = c("red", "yellow", "green", "blue")) +
   labs(title = "2D Surface Plot of Grid Search Results",
@@ -464,10 +464,10 @@ ggplot(all_metrics, aes(x = beta, y = nu, fill = SAR_median)) +
 couple = 'sim_3-4_12'
 list_SEIR <- get_all_SEIR(list_sim, n_subdivisions = new_n_subdivisions)
 
-seir_metrics <- get_all_SEIR_metrics(list_SEIR = list_SEIR)
+all_SEIR_metrics <- get_all_SEIR_metrics(list_SEIR = list_SEIR)
 
 
-plot_SEIR_n(couple = couple, list_SEIR = list_SEIR, all_SEIR_metrics = seir_metrics)
+plot_SEIR_n(couple = couple, list_SEIR = list_SEIR, all_SEIR_metrics = all_SEIR_metrics)
 ```
 
 

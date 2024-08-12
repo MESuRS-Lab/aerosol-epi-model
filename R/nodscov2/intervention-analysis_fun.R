@@ -341,10 +341,10 @@ plot_SEIR_n <- function(couple, list_SEIR, all_SEIR_metrics) {
          color = "Status") +
     scale_color_manual(values = SEIR_colors) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          plot.title = element_text(size = 16, hjust = 0.5),
+    theme(plot.title = element_text(size = 16, hjust = 0.5),
           axis.text = element_text(size = 12),
           axis.title = element_text(size = 14),
+          # axis.text.x = element_text(angle = 45, hjust = 1),
           legend.text = element_text(size = 12),
           legend.title = element_text(size = 14))
   
@@ -356,8 +356,8 @@ plot_SEIR_n <- function(couple, list_SEIR, all_SEIR_metrics) {
                 linewidth = 0.3,
                 linetype = "solid")
   }
-  print(SEIR_n)
-  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-n.png')), plot = SEIR_n, height = 30, width = 40)
+  # print(SEIR_n)
+  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-n.png')), plot = SEIR_n, height = 7, width = 14)
   
   ## SEIR: NUMBER WITH MEDIAN AND MIN/MAX
   SEIR_n_t <- SEIR_n +
@@ -378,8 +378,8 @@ plot_SEIR_n <- function(couple, list_SEIR, all_SEIR_metrics) {
               aes(x = time * 30 + begin_date, y = count_max, color = status),
               linewidth = 0.5,
               linetype = "solid")
-  print(SEIR_n_t)
-  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-n-total.png')), plot = SEIR_n_t, height = 30, width = 40)
+  # print(SEIR_n_t)
+  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-n-total.png')), plot = SEIR_n_t, height = 7, width = 14)
 }
 
 
@@ -391,7 +391,8 @@ plot_SEIR_p <- function(couple, list_SEIR) {
   n_sim <- length(list_SEIR[[couple]])
   title <- paste0('SEIR - ', couple)
   counts_list <- list_SEIR[[couple]]
-  metrics_df <- all_SEIR_metrics %>% filter(couple == couple)
+  couple_id <- couple
+  metrics_df <- all_SEIR_metrics %>% filter(couple == couple_id)
   
   ## SEIR: PROPORTION OF INDIVIDUAL
   SEIR_p <- ggplot() + 
@@ -401,10 +402,10 @@ plot_SEIR_p <- function(couple, list_SEIR) {
          color = "Status") +
     scale_color_manual(values = SEIR_colors) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          plot.title = element_text(size = 16, hjust = 0.5),
+    theme(plot.title = element_text(size = 16, hjust = 0.5),
           axis.text = element_text(size = 12),
           axis.title = element_text(size = 14),
+          # axis.text.x = element_text(angle = 45, hjust = 1),
           legend.text = element_text(size = 12),
           legend.title = element_text(size = 14))
   
@@ -416,8 +417,8 @@ plot_SEIR_p <- function(couple, list_SEIR) {
                 linewidth = 0.3,
                 linetype = "solid")
   }
-  print(SEIR_p)
-  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-p.png')), plot = SEIR_p, height = 30, width = 40)
+  # print(SEIR_p)
+  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-p.png')), plot = SEIR_p, height = 7, width = 14)
   
   ## SEIR : PROPORTION WITH MEDIAN AND MIN/MAX
   SEIR_p_t <- SEIR_p +
@@ -438,7 +439,7 @@ plot_SEIR_p <- function(couple, list_SEIR) {
               aes(x = time * 30 + begin_date, y = proportion_max, color = status),
               linewidth = 0.5,
               linetype = "solid")
-  print(SEIR_p_t)
-  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-p-total.png')), plot = SEIR_p_t, height = 30, width = 40)
+  # print(SEIR_p_t)
+  ggsave(file = file.path(fig_path, paste0(couple, '-SEIR-p-total.png')), plot = SEIR_p_t, height = 7, width = 14)
 }
 

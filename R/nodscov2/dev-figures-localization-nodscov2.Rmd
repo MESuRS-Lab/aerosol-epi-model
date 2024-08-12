@@ -16,6 +16,9 @@ library(tidyr)
 library(viridis)
 library(purrr)
 library(stringr)
+library(extrafont)
+library(extrafontdb)
+library(cowplot)
 ```
 
 ```{r Paths setup}
@@ -383,6 +386,77 @@ save_individual_path <- function(ind) {
 
 #map -> apply function for each individual
 invisible(map(id_interacting, save_individual_path))
+```
+
+
+```{r}
+selected_individuals <- c('001-0023-L-L', '001-0042-B-S', '001-0035-F-S')
+categories_individuals <- c('nurse', 'physician', 'patient')
+type_individual <- c('Paramedical', 'Medical', 'Patient')
+```
+
+
+```{r}
+title <- paste0(selected_individuals, ' - ', type_individual, ' - ', categories_individuals) 
+p1 <- ggplot(paths %>% filter(id == selected_individuals[1]), aes(x = time * 30 + begin_date, y = room, colour = type_individual[1])) +
+    geom_path(aes(group = id)) +  # geom_path -> connected lines
+    geom_point(aes(shape = id)) +  # geom_point -> points
+    labs(title = title[1], x = "Time", y = "") +
+    theme_bw() +
+    scale_colour_manual(values = pal) +
+    scale_x_continuous(breaks = time_breaks, labels = time_labels) +
+    theme(
+      plot.title = element_text(size = 25, hjust = 0.5, family = "Arial monospaced for SAP"), #use extrafont package if the font is not installed locally
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(), 
+      axis.text = element_text(size = 15, family = "Arial monospaced for SAP"),
+      axis.title = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.text = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.title = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.position="none") 
+
+
+
+
+
+p2 <- ggplot(paths %>% filter(id == selected_individuals[2]), aes(x = time * 30 + begin_date, y = room, colour = type_individual[2])) +
+    geom_path(aes(group = id)) +  # geom_path -> connected lines
+    geom_point(aes(shape = id)) +  # geom_point -> points
+    labs(title = title[2], x = "Time", y = "") +
+    theme_bw() +
+    scale_colour_manual(values = pal) +
+    scale_x_continuous(breaks = time_breaks, labels = time_labels) +
+     theme(
+      plot.title = element_text(size = 25, hjust = 0.5, family = "Arial monospaced for SAP"), #use extrafont package if the font is not installed locally
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(), 
+      axis.text = element_text(size = 15, family = "Arial monospaced for SAP"),
+      axis.title = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.text = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.title = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.position="none") 
+
+
+p3 <- ggplot(paths %>% filter(id == selected_individuals[3]), aes(x = time * 30 + begin_date, y = room, colour = type_individual[3])) +
+    geom_path(aes(group = id)) +  # geom_path -> connected lines
+    geom_point(aes(shape = id)) +  # geom_point -> points
+    labs(title = title[3], x = "Time", y = "") +
+    theme_bw() +
+    scale_colour_manual(values = pal) +
+    scale_x_continuous(breaks = time_breaks, labels = time_labels) +
+    theme(
+      plot.title = element_text(size = 25, hjust = 0.5, family = "Arial monospaced for SAP"), #use extrafont package if the font is not installed locally
+      axis.text = element_text(size = 15, family = "Arial monospaced for SAP"),
+      axis.title = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.text = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.title = element_text(size = 20, family = "Arial monospaced for SAP"),
+      legend.position="none") 
+
+set_null_device(cairo_pdf)
+p_trajectores <- cowplot::plot_grid(p1,p2,p3, labels = c("A ", "B ", "C "), nrow = 3, ncol = 1)
+
+
+ggsave(filename = file.path(fig_path, 'fig-ind-trajectories.png'), plot = p_trajectores, height = 14, width = 28)
 
 ```
 
