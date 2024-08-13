@@ -21,3 +21,5 @@ sim-nodscov2
 *.zip
 *.gz
 *.tar.gz
+infection-network_files
+*.7z
