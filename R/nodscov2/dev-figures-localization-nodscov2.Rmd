@@ -446,7 +446,7 @@ p3 <- ggplot(paths %>% filter(id == selected_individuals[3]), aes(x = time * 30 
     scale_x_continuous(breaks = time_breaks, labels = time_labels) +
     theme(
       plot.title = element_text(size = 25, hjust = 0.5, family = "Arial monospaced for SAP"), #use extrafont package if the font is not installed locally
-      axis.text = element_text(size = 15, family = "Arial monospaced for SAP"),
+      axis.text = element_text(size = 20, family = "Arial monospaced for SAP"),
       axis.title = element_text(size = 20, family = "Arial monospaced for SAP"),
       legend.text = element_text(size = 20, family = "Arial monospaced for SAP"),
       legend.title = element_text(size = 20, family = "Arial monospaced for SAP"),
