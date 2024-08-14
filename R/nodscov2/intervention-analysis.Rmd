@@ -14,11 +14,16 @@ library(purrr)
 library(data.table)
 ## PLOTS
 library(ggplot2)
+library(cowplot)
+library(viridis)
 library(ggpubr)
 library(ggborderline)
 ## 3D PLOTS 
 library(reshape2)
 library(plotly)
+## change to english (uncomment English if using Windows)
+# Sys.setlocale("LC_ALL", "English")
+Sys.setlocale("LC_ALL", "en_US.UTF-8")
 ```
 
 
@@ -137,7 +142,7 @@ all_epidemic_duration_metrics <- get_all_epidemic_duration_metrics(list_epidemic
 all_metrics <- left_join(all_SAR_metrics, all_epidemic_duration_metrics, by="couple", suffix=c("",".y")) %>%
   select(-ends_with(".y"))
 
-write.csv2(all_metrics, file = file.path(intervention_path, 'intervention-all_metrics.csv'), row.names = F)
+# write.csv2(all_metrics, file = file.path(intervention_path, 'intervention-all_metrics.csv'), row.names = F)
 
 ```
 
@@ -383,7 +388,7 @@ test_mean = test %>%
   group_by(scenario, date, type_ind) %>%
   summarise(n = mean(n), .groups = "drop") %>%
   mutate(id_sim = NA)
-Sys.setlocale("LC_ALL", "English")
+
 p_seir <- test %>%
   ggplot(., aes(x = date, y = n, group = id_sim)) +
   geom_line(linewidth = 0.5, col = "gray80") +
@@ -442,7 +447,13 @@ p_grid <- ggplot(all_metrics , aes(x = beta, y = Global_median, color = as.facto
        y = 'SAR Median',
        # title = 'SAR Median vs Beta for Different Nu Values',
        color = 'Nu') +
-  theme_bw()
+  theme_bw() + 
+  theme(plot.title = element_text(size = 20, hjust = 0.5),
+          axis.text = element_text(size = 16),
+          axis.title = element_text(size = 20),
+          # axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.text = element_text(size = 18),
+          legend.title = element_text(size = 20))
 
 print(p_grid)
 ggsave(filename = file.path(intervention_path, 'fig', 'grid-search.png'), plot = p_grid, width = 21, height = 7)
@@ -470,7 +481,130 @@ all_SEIR_metrics <- get_all_SEIR_metrics(list_SEIR = list_SEIR)
 plot_SEIR_n(couple = couple, list_SEIR = list_SEIR, all_SEIR_metrics = all_SEIR_metrics)
 ```
 
+## VARIABILITY BETWEEN SIMULATION - DATA PREPARATION
+```{r}
+# Rajouter une figure qui montre la distribution du SAR et de la durée épidémique, voire faire une figure à 3 panneaux avec la dynamique, le SAR et la durée épidémique.
+scenario <- 'sim_3-4_12'
+sar_scenario <- df_SAR_long %>% filter(couple == scenario) %>% filter(Type_SAR == 'Global')
+epidemic_duration <- list_epidemic_duration[[scenario]] %>% rbindlist()
+list_sim_scenario <- list()
+list_sim_scenario[[scenario]] <-  list_sim[[scenario]]
+list_SEIR_scenario <- get_all_SEIR(list_sim_scenario, new_n_subdivisions)
+seir_metrics_scenario <- get_all_SEIR_metrics(list_SEIR_scenario)
+```
 
+## VARIABILITY BETWEEN SIMULATION - PLOTS (2 jittered boxplots)
+```{r}
+SEIR_colors <- c("Susceptible" = "green", "Exposed" = "pink", "Infectious" = "red", "Recovered" = "blue")
+  n_sim <- length(list_SEIR_scenario[[scenario]])
+  title <- paste0('SEIR - ', couple)
+  counts_list <- list_SEIR_scenario[[scenario]]
+  couple_id <- couple
+  metrics_df <- seir_metrics_scenario %>% filter(couple == couple_id)
+  ## SEIR: NUMBER OF INDIVIDUAL
+  SEIR_n <- ggplot() + 
+    labs(x = "Time",
+         y = "Number of individuals",
+         # title = title,
+         color = "Status") +
+    scale_color_manual(values = SEIR_colors) +
+    theme_bw() +
+    theme(plot.title = element_text(size = 20, hjust = 0.5),
+          axis.text = element_text(size = 16),
+          axis.title = element_text(size = 18),
+          # axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.text = element_text(size = 16),
+          legend.title = element_text(size = 18))
+  
+  for (i in 1:n_sim){
+    SEIR_n <- SEIR_n + 
+      geom_line(data = counts_list[[i]],
+                aes(x = time * 30 + begin_date, y = count, color = status),
+                alpha = 0.5,
+                linewidth = 0.3,
+                linetype = "solid")
+  }
+  
+# SEIR
+p1 <- SEIR_n +
+  geom_borderline(data = metrics_df,
+                  aes(x = time * 30 + begin_date, y = count_median , color = status),
+                  linewidth = 2,
+                  linetype = "solid",
+                  bordercolour = "white") +
+  geom_line(data = metrics_df,
+            aes(x = time * 30 + begin_date, y = count_min, color = status),
+            linewidth = 0.5,
+            linetype = "solid") +
+  geom_line(data = metrics_df,
+            aes(x = time * 30 + begin_date, y = count_max, color = status),
+            linewidth = 0.5,
+            linetype = "solid")
+
+# SAR
+p2 <- ggplot(sar_scenario, aes(x = "", y = SAR, fill = "SAR")) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +  # Boxplot
+  geom_jitter(color = "black", size = 0.4, alpha = 0.7) +  # Jittered points
+  geom_hline(yintercept = median(sar_scenario$SAR), linetype = "dashed", linewidth = 1, color = "red3") +
+  scale_fill_manual(values = c("SAR" = "#1f77b4")) +  
+  theme_bw() +
+  labs(x = "", y = "SAR (Secondary Attack Rate)") +
+  theme(
+    legend.position = "none",
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    plot.title = element_text(hjust = 0.5, size = 14)
+  )
+
+# Epidemic duration
+p3 <- ggplot(epidemic_duration, aes(x = "", y = duration, fill = "Epidemic Duration")) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +  # Boxplot
+  geom_jitter(color = "black", size = 0.4, alpha = 0.7) +  # Jittered points
+  geom_hline(yintercept = median(epidemic_duration$duration), linetype = "dashed", linewidth = 1, color = "red3") +
+  scale_fill_manual(values = c("Epidemic Duration" = "#ff7f0e")) +  
+  theme_bw() +
+  labs(x = "", y = "Epidemic Duration (days)") +
+  theme(
+    legend.position = "none",
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    plot.title = element_text(hjust = 0.5, size = 14)
+  )
+
+# p_scenario <- plot_grid(p1, p2, p3, labels = c("A", "B", "C"), ncol = 3, rel_widths = c(3, 0.5, 0.5))
+p_scenario <- plot_grid(p2, p3, p1, labels = c("A", "B", "C"), ncol = 3, rel_widths = c(0.5, 0.5, 3))
+ggsave(filename = file.path(intervention_path, 'fig', 'seir-sar-ed-scenario-3.png'), plot = p_scenario, height = 7, width = 21)
+```
+
+
+## VARIABILITY BETWEEN SIMULATION - PLOTS (2 hstograms)
+```{r}
+# SAR plot
+p2bis <- ggplot(sar_scenario, aes(x = SAR)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 0.01, color = "grey", fill = "lightblue") +
+  geom_vline(xintercept = median(sar_scenario$SAR), linetype = "dashed", linewidth = 1, color = "red3") +
+  theme_bw() +
+  labs(x = "SAR (Secondary Attack Rate)", y = "Density") +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 14))
+
+# Epidemic Duration plot
+p3bis <- ggplot(epidemic_duration, aes(x = duration)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 1, color = "grey", fill = "lightblue") +
+  geom_vline(xintercept = median(epidemic_duration$duration), linetype = "dashed", linewidth = 1, color = "red3") +
+  theme_bw() +
+  labs(x = "Epidemic Duration (days)", y = "Density") +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 14))
+
+final_plot <- plot_grid(p2bis, p3bis, p1, labels = c("A", "B", "C"), ncol = 3, rel_widths = c(0.5, 0.5, 3))
+ggsave(filename = file.path(intervention_path, 'fig', 'final_plot.png'), plot = final_plot, height = 7, width = 21)
+
+print(final_plot)
+
+```
 
 
 
