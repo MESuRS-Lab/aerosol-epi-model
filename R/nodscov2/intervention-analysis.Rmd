@@ -12,6 +12,7 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 library(data.table)
+library(lubridate)
 ## PLOTS
 library(ggplot2)
 library(cowplot)
@@ -400,6 +401,53 @@ p_seir <- test %>%
 print(p_seir)
 ggsave(filename = file.path(intervention_path, 'fig', 'seir-cat.png'), plot = p_seir, width = 14, height = 7)
 
+## without cat facetting
+
+test_global = df_status %>%
+  filter(t_inf > 0) %>%
+  mutate(
+    source = gsub("-.*$", "", inf_by),
+    type_ind = case_when(
+      id %in% id_patient ~ "Patient",
+      id %in% id_paramedical ~ "Paramedical",
+      id %in% id_medical ~ "Medical"
+    ),
+    # start_exposed = as.Date(new_begin_date + t_inf * 30), 
+    # end_exposed = as.Date(new_begin_date + (t_inf + t_incub) * 30)#,
+    start_infected = as.Date(new_begin_date + seconds((t_inf + t_incub) * 30)),
+    end_infected = as.Date(new_begin_date + seconds((t_inf + t_incub + t_recover) * 30))
+  ) %>%
+  dplyr::select(couple, id_sim, id, type_ind, matches("start_|end_")) %>%
+  group_by(couple, id_sim, id) %>% 
+  reframe(date = seq(start_infected, end_infected, by="1 day")) %>%
+  group_by(couple, id_sim, date) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  complete(couple, id_sim, date, fill = list(n = 0))
+test_global <- test_global%>%
+  mutate(scenario = case_when(
+    couple == 'sim_1-4_20'~ 'Scenario 1',
+    couple == 'sim_1-2_16'~ 'Scenario 2',
+    couple == 'sim_3-4_12'~ 'Scenario 3',
+    couple == 'sim_1_8'~ 'Scenario 4',
+    couple == 'sim_3-2_5'~ 'Scenario 5'))
+test_global$scenario <- factor(test_global$scenario, levels = c(paste0(rep('Scenario ',5), 1:5)))
+
+
+test_mean_global = test_global %>% 
+  group_by(scenario, date) %>%
+  summarise(n = mean(n), .groups = "drop") %>%
+  mutate(id_sim = NA)
+
+p_seir_global <- test_global %>%
+  ggplot(., aes(x = date, y = n, group = id_sim)) +
+  geom_line(linewidth = 0.5, col = "gray80") +
+  geom_line(data = test_mean_global, col = "red") +
+  facet_grid(cols = vars(scenario)) +
+  scale_x_date(date_labels = "%b/%d") +
+  theme_bw()
+
+print(p_seir_global)
+ggsave(filename = file.path(intervention_path, 'fig', 'seir-global-scenario.png'), plot = p_seir_global, width = 9, height = 3)
 ```
 
 
