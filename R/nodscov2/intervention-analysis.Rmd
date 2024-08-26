@@ -396,6 +396,9 @@ p_seir <- test %>%
   geom_line(data = test_mean, col = "red") +
   facet_grid(cols = vars(scenario), rows = vars(type_ind)) +
   scale_x_date(date_labels = "%b/%d") +
+  labs(
+       x = 'Time',
+       y = 'Infectious individuals') +
   theme_bw()
 
 print(p_seir)
@@ -444,6 +447,9 @@ p_seir_global <- test_global %>%
   geom_line(data = test_mean_global, col = "red") +
   facet_grid(cols = vars(scenario)) +
   scale_x_date(date_labels = "%b/%d") +
+  labs(
+       x = 'Time',
+       y = 'Infectious individuals') +
   theme_bw()
 
 print(p_seir_global)
