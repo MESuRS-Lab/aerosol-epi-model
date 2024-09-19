@@ -6,7 +6,7 @@
 ## WARNING BETA = 1/3 WILL BE WRITTEN AS 1-3
 ## IN THE RDATA FILE, THERE WILL BE A DATAFRAME NAMED: sim_<beta>_<nu>_<sim_id>
 load_rdata_to_list <- function(file, list_sim, dir) {
-  load(file.path(intervention_path, 'out', dir, 'results', file))
+  load(file.path(scenarios_path, 'out', dir, 'results', file))
   file_name <- basename(file)
   parts <- strsplit(file_name, "_")[[1]]
   sim_id <- parts[length(parts)] ## last number is the sim id
@@ -326,7 +326,7 @@ get_all_SEIR_metrics <- function(list_SEIR) {
 ################
 plot_SEIR_n <- function(couple, list_SEIR, all_SEIR_metrics) {
   SEIR_colors <- c("Susceptible" = "green", "Exposed" = "pink", "Infectious" = "red", "Recovered" = "blue")
-  fig_path <- file.path(intervention_path, 'fig', 'SEIR')
+  fig_path <- file.path(scenarios_path, 'fig', 'SEIR')
   dir.create(path = fig_path, showWarnings = F)
   n_sim <- length(list_SEIR[[couple]])
   title <- paste0('SEIR - ', couple)
@@ -387,7 +387,7 @@ plot_SEIR_n <- function(couple, list_SEIR, all_SEIR_metrics) {
 
 plot_SEIR_p <- function(couple, list_SEIR) {
   SEIR_colors <- c("Susceptible" = "green", "Exposed" = "pink", "Infectious" = "red", "Recovered" = "blue")
-  fig_path <- file.path(intervention_path, 'fig', 'SEIR')
+  fig_path <- file.path(scenarios_path, 'fig', 'SEIR')
   n_sim <- length(list_SEIR[[couple]])
   title <- paste0('SEIR - ', couple)
   counts_list <- list_SEIR[[couple]]
