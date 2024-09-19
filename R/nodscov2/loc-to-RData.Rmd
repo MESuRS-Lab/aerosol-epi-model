@@ -21,7 +21,6 @@ out_path <- file.path(wd,'..','..', 'out')
 
 loc_path <- file.path(out_path,'loc-nodscov2','dev-localization-nodscov2.RData')
 sensibility_path <- file.path(out_path, 'sensibility-analysis')
-pathogen_path <- file.path(out_path, 'pathogen-analysis')
 scenarios_path <- file.path(out_path, 'scenarios-analysis')
 ```
 
