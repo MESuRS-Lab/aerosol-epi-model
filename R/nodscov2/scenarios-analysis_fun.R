@@ -6,7 +6,7 @@
 ## WARNING BETA = 1/3 WILL BE WRITTEN AS 1-3
 ## IN THE RDATA FILE, THERE WILL BE A DATAFRAME NAMED: sim_<beta>_<nu>_<sim_id>
 load_rdata_to_list <- function(file, list_sim, dir) {
-  load(file.path(scenarios_path, 'out', dir, 'results', file))
+  load(file.path(scenarios_path, 'scenarios-simulations', dir, 'results', file))
   file_name <- basename(file)
   parts <- strsplit(file_name, "_")[[1]]
   sim_id <- parts[length(parts)] ## last number is the sim id

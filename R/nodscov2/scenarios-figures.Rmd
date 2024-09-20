@@ -35,24 +35,28 @@ scenarios_path <- file.path(out_path, 'scenarios-analysis')
 
 ## LOAD FUNCTIONS
 source(file.path(wd, 'scenarios-analysis_fun.R'))
+# LOAD DATA
+load(file.path(scenarios_path, "parameters-admission-nodscov2.RData"))
+
+## GROUP BY CATEGORIES
+cat_paramedical <- c("nurse", "student nurse", "aux nurse")
+cat_medical <- c("physician", "ext physician", "reeducation staff", "other")
+
+## IDS BY CATEGORY
+id_patient <- admission_sim %>% filter(info == 0) %>% distinct(id) %>% pull()
+id_hcw <- admission_sim %>% filter(info == 1) %>% distinct(id) %>% pull()
+## FOR MEDICAL/PARAMEDICAL WE USE ADMISSION (INDIVIDUALS BEFORE ADDING NEW PATIENTS)
+id_paramedical <- admission %>% filter(cat %in% cat_paramedical) %>% distinct(id) %>% pull()
+id_medical <- admission %>% filter(cat %in% cat_medical) %>% distinct(id) %>% pull()
 ```
 
 
 ## ADJUST THE BEGIN/END DATES OF SIMULATIONS
 ```{r}
-new_begin_date <- begin_date + t_begin*30 ## OFFSET TO START THE DAY AT 12AM
-new_end_date <- new_begin_date + new_n_subdivisions*30
-print(new_end_date - new_begin_date)
+# new_begin_date <- begin_date + t_begin*30 ## OFFSET TO START THE DAY AT 12AM
+# new_end_date <- new_begin_date + new_n_subdivisions*30
+# print(new_end_date - new_begin_date)
 ```
-
-```{r}
-
-##SELECT COUPLES FOR SAR +/- 20%
-all_SAR_g_metrics %>% filter(dplyr::between(SAR_median, 0.10, 0.30))
-all_SAR_g_metrics %>% filter(dplyr::between(SAR_mean, 0.10, 0.30)) %>% select(beta, nu , SAR_mean, SAR_median, SAR_sd)
-
-```
-
 
 
 #### WHEN COUPLES ARE SELECTED
@@ -60,12 +64,16 @@ all_SAR_g_metrics %>% filter(dplyr::between(SAR_mean, 0.10, 0.30)) %>% select(be
 all_metrics <- read.csv2(file = file.path(scenarios_path, 'scenarios-all_metrics.csv'))
 couple_same_SAR <- all_metrics %>% filter(dplyr::between(Global_median, 0.20, 0.30)) %>% pull(couple)
 
+##SELECT COUPLES FOR SAR +/- 20%
+# all_SAR_g_metrics %>% filter(dplyr::between(SAR_median, 0.10, 0.30))
+# all_SAR_g_metrics %>% filter(dplyr::between(SAR_mean, 0.10, 0.30)) %>% select(beta, nu , SAR_mean, SAR_median, SAR_sd)
+
 
 ### READ ONLY RDATA FOR SELECTED BETA/NU COUPLES
 list_sim <- list()
 for (couple in couple_same_SAR){
   list_sim[[couple]] <- list()
-  sim_path <- file.path(scenarios_path, 'out', couple, 'results')
+  sim_path <- file.path(scenarios_path, 'scenarios-simulations', couple, 'results')
   rdata_files <- list.files(sim_path, pattern = "^sim_.*\\.RData$", full.names = F)
   invisible(lapply(rdata_files, function(file) load_rdata_to_list(file, list_sim, couple)))
 }
@@ -116,7 +124,6 @@ for (id_couple in selected_couples){
          paired = T))
   
 }
-
 ```
 
 
@@ -436,13 +443,14 @@ list_SEIR <- get_all_SEIR(list_sim, n_subdivisions = new_n_subdivisions)
 
 all_SEIR_metrics <- get_all_SEIR_metrics(list_SEIR = list_SEIR)
 
-
+#Temp
+begin_date <- new_begin_date
 plot_SEIR_n(couple = couple, list_SEIR = list_SEIR, all_SEIR_metrics = all_SEIR_metrics)
 ```
 
-## VARIABILITY BETWEEN SIMULATION - DATA PREPARATION
+## VARIABILITY BETWEEN SIMULATION - SEIR, ED, SAR FOR BASELINE
 ```{r}
-# Rajouter une figure qui montre la distribution du SAR et de la durée épidémique, voire faire une figure à 3 panneaux avec la dynamique, le SAR et la durée épidémique.
+## Baseline scenario SEIR with epidemic duration and SAR
 scenario <- 'sim_3-4_12'
 sar_scenario <- df_SAR_long %>% filter(couple == scenario) %>% filter(Type_SAR == 'Global')
 epidemic_duration <- list_epidemic_duration[[scenario]] %>% rbindlist()
@@ -478,7 +486,7 @@ SEIR_colors <- c("Susceptible" = "green", "Exposed" = "pink", "Infectious" = "re
   for (i in 1:n_sim){
     SEIR_n <- SEIR_n + 
       geom_line(data = counts_list[[i]],
-                aes(x = time * 30 + begin_date, y = count, color = status),
+                aes(x = time * 30 + new_begin_date, y = count, color = status),
                 alpha = 0.5,
                 linewidth = 0.3,
                 linetype = "solid")
@@ -487,16 +495,16 @@ SEIR_colors <- c("Susceptible" = "green", "Exposed" = "pink", "Infectious" = "re
 # SEIR
 p1 <- SEIR_n +
   geom_borderline(data = metrics_df,
-                  aes(x = time * 30 + begin_date, y = count_median , color = status),
+                  aes(x = time * 30 + new_begin_date, y = count_median , color = status),
                   linewidth = 2,
                   linetype = "solid",
                   bordercolour = "white") +
   geom_line(data = metrics_df,
-            aes(x = time * 30 + begin_date, y = count_min, color = status),
+            aes(x = time * 30 + new_begin_date, y = count_min, color = status),
             linewidth = 0.5,
             linetype = "solid") +
   geom_line(data = metrics_df,
-            aes(x = time * 30 + begin_date, y = count_max, color = status),
+            aes(x = time * 30 + new_begin_date, y = count_max, color = status),
             linewidth = 0.5,
             linetype = "solid")
 
