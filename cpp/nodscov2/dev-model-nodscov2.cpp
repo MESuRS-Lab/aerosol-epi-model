@@ -13,7 +13,8 @@ Rcpp::List simulation(
     Rcpp::List global_environment,
     Rcpp::List global_data,
     Rcpp::DataFrame global_status,
-    double beta,
+    double beta_c,
+    double beta_e,
     double B,
     double nu,
     double mu,
@@ -80,8 +81,8 @@ Rcpp::List simulation(
         // Update Lambda //
         ///////////////////
         Rcpp::DataFrame temp_global_data = clone(global_data_t);
-        temp_global_data["lambda_e"] = Lambda_e(info_ti, localization_ti, environment_ti, B, env_threshold, env_model, deltat);
-        temp_global_data["lambda_c"] = Lambda_c(ids_ti, interaction_ti, status_ti, beta, deltat);
+        temp_global_data["lambda_e"] = Lambda_e(info_ti, localization_ti, environment_ti, beta_e, B, env_threshold, env_model, deltat);
+        temp_global_data["lambda_c"] = Lambda_c(ids_ti, interaction_ti, status_ti, beta_c, deltat);
         global_data[t] = temp_global_data;
         ///////////////////////
         // Update the status //

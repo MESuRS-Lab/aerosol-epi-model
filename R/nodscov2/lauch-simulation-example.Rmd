@@ -5,6 +5,88 @@ date: "2024-09-20"
 ---
 
 
+```{r test}
+# Libraries
+library(Rcpp)
+library(tidyverse)
+rm(list = ls())
+
+load(file.path("..", "..", "out", "scenarios-analysis", "parameters-admission-nodscov2.RData"))
+source("scenarios-analysis-supp.R")
+sourceCpp(file.path("..", "..", "cpp", "nodscov2", "dev-sensibility-analysis.cpp"))
+
+## Transmission parameters 
+beta_c <- 3/4
+beta_e <- 3600*24/30
+nu <- 12
+env_model = "log-linear" # linear exponential log-linear
+env_threshold = 10
+
+## RANDOM INDEX CASE
+id_index <- sample(x= admission_sim %>% filter(id %in% admission$id) %>% distinct(id) %>% pull(), size = 1)
+# Update global status (index is infectious when the simulation starts)
+global_status <- global_status %>%
+  mutate(t_inf = ifelse(id == id_index,
+                        as.integer(1),
+                        t_inf),
+         t_incub = ifelse(id == id_index,
+                          as.integer(1),
+                          t_recover),
+         t_recover = ifelse(id == id_index,
+                            as.integer((t_incub)  + runif(1, min = 2880*3, max = 2880*7)),
+                            t_recover),
+         inf_by = ifelse(id == id_index,
+                         "INDEX",
+                         inf_by))
+
+global_environment
+
+## SIMULATION USING RCPP
+result <- simulation(global_interaction = global_interaction,
+                     global_environment = global_environment,
+                     global_data = global_data,
+                     global_status = global_status,
+                     beta_c = beta_c,
+                     beta_e = beta_e,
+                     B = B,
+                     nu = nu,
+                     mu = mu,
+                     env_threshold = env_threshold,
+                     env_model = env_model,
+                     dt = dt)
+
+i = 1
+while(sum(result$t_inf > 1) < 10) {
+  print(i)
+  result <- simulation(global_interaction = global_interaction,
+                     global_environment = global_environment,
+                     global_data = global_data,
+                     global_status = global_status,
+                     beta_c = beta_c,
+                     beta_e = beta_e,
+                     B = B,
+                     nu = nu,
+                     mu = mu,
+                     env_threshold = env_threshold,
+                     env_model = env_model,
+                     dt = dt)
+  i = i+1
+}
+
+## Plot output
+summary(result)
+sum(result$t_inf>1) / (nrow(result)-1)
+
+compute_SEIR(result, 90*24*60*2) %>%
+  mutate(time = time*30/(3600*24)) %>% # In days
+  ggplot(., aes(x = time, y = count, col = status)) +
+  geom_line() +
+  theme_bw() +
+  labs(x = "Time (in days)", y = "Counts", col =  "")
+```
+
+
+
 <!-- ###### launch_sensibility.R (CLUSTER) ######  -->
 ```{r}
 ###########
@@ -15,14 +97,13 @@ beta <- 'mean'
 beta <- 'median'
 
 ## sensibility analysis
-wd <- getwd()
-loc_path <- file.path(wd,'..','..', 'out','loc-nodscov2','dev-localization-nodscov2.RData')
-sensibility_path <- file.path(wd,'..','..', 'out', 'sensibility-analysis')
+loc_path <- file.path('..','..', 'out','loc-nodscov2','dev-localization-nodscov2.RData')
+sensibility_path <- file.path('..','..', 'out', 'sensibility-analysis')
 RData_path <- file.path(sensibility_path, paste0('sim-beta-', beta), paste0('parameters-model-beta-', beta, '.RData'))
-cpp_path <- file.path(wd, '..', '..', 'cpp', 'nodscov2', 'dev-sensibility-analysis.cpp')
+cpp_path <- file.path('..', '..', 'cpp', 'nodscov2', 'dev-sensibility-analysis.cpp')
 
 ## scenarios analysis
-scenarios_path <- file.path(out_path, 'scenarios-analysis')
+scenarios_path <- file.path("..","..","out", 'scenarios-analysis')
 RData_path <-  file.path(scenarios_path, "parameters-admission-nodscov2.RData")
 
 
@@ -71,7 +152,7 @@ global_status <- global_status %>%
 <!-- ################################# SIMULATION (LOCAL) #################################  -->
 ## SINGLE SIMULATION (dev-model)
 ```{r}
-cpp_path <- file.path(wd, '..', '..', 'cpp', 'nodscov2')
+cpp_path <- file.path('..', '..', 'cpp', 'nodscov2')
 sourceCpp(file.path(cpp_path, 'dev-model-nodscov2.cpp'))
 
 ## Sensibility analysis (only 17 pqtients)
@@ -98,6 +179,7 @@ data_sim <- simulation(global_interaction = global_interaction,
                      nu = nu,
                      mu = mu,
                      env_threshold = env_threshold,
+                     env_model = "linear",
                      dt = dt)
 ```
 

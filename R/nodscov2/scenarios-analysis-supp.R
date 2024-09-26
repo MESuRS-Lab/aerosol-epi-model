@@ -265,7 +265,7 @@ compute_SEIR <- function(global_status, n_subdivisions) {
   )
   ## Pivot for easier plot
   counts_df <- counts_df %>%
-    pivot_longer(cols = c("Susceptible", "Exposed", "Infectious", "Recovered"), names_to = "status", values_to = "count") %>%
+    pivot_longer(cols = c(Susceptible, Exposed, Infectious, Recovered), names_to = "status", values_to = "count") %>%
     mutate(proportion = count * 100 / n_individual)
   ## ## S E I R as factor 
   counts_df$status <- factor(counts_df$status, levels = c("Susceptible", "Exposed", "Infectious", "Recovered"))

@@ -72,7 +72,7 @@ RcppExport Rcpp::NumericVector Lambda_c (
     const Rcpp::CharacterVector& ids_ti, 
     const Rcpp::DataFrame& interaction_ti,
     const Rcpp::IntegerVector& status_ti,
-    const double& beta,
+    const double& beta_c,
     const double& deltat
 );
 
@@ -80,6 +80,7 @@ RcppExport Rcpp::NumericVector Lambda_e (
     const Rcpp::IntegerVector& info_ti,
     const Rcpp::IntegerVector& localization_ti,
     const Rcpp::DataFrame& environment_ti,
+    const double& beta_e,
     const double& B,
     const double& env_threshold,
     const String& env_model,

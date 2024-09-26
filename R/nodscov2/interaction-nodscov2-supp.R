@@ -9,8 +9,7 @@ dict_cat = c("aux nurse" = "paramedical staff",
              "student nurse" = "paramedical staff",
              "ext physician" = "medical staff",
              "physician" = "medical staff",
-             "reeducation staff" = "medical staff",
-             "other" = "medical staff")
+             "reeducation staff" = "medical staff")
 
 # Variables---------------------------------------------------------------------
 noon_day1 = as.POSIXct(x = "2020-05-06 12:00:00")

@@ -352,7 +352,7 @@ Rcpp::NumericVector Lambda_c (
     const Rcpp::CharacterVector& ids_ti, 
     const Rcpp::DataFrame& interaction_ti,
     const Rcpp::IntegerVector& status_ti,
-    const double& beta,
+    const double& beta_c,
     const double& deltat
 ) {
     Rcpp::NumericVector lambda_c_ti (ids_ti.size(), 0);
@@ -379,7 +379,7 @@ Rcpp::NumericVector Lambda_c (
                     nb_inf_r += 1;
                 }
             }
-            lambda_c_ti[j] = beta * deltat * nb_inf_r;
+            lambda_c_ti[j] = beta_c * deltat * nb_inf_r;
         }
     }
 
@@ -393,6 +393,7 @@ Rcpp::NumericVector Lambda_e (
     const Rcpp::IntegerVector& info_ti,
     const Rcpp::IntegerVector& localization_ti,
     const Rcpp::DataFrame& environment_ti,
+    const double& beta_e,
     const double& B,
     const double& env_threshold,
     const String& env_model,
@@ -427,15 +428,15 @@ Rcpp::NumericVector Lambda_e (
             // VIRAL LOAD threshold
             Rcpp::NumericVector env_contrib {0,0};
             if (env_model == "linear") {
-              env_contrib[1] = individual_weight * (B/rooms_volume[index_room]) * deltat * (environment[index_room] - env_threshold);
+              env_contrib[1] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * (environment[index_room] - env_threshold);
             }
             
             if (env_model == "exponential") {
-              env_contrib[1] = individual_weight * (B/rooms_volume[index_room]) * deltat * expm1(environment[index_room] - env_threshold);
+              env_contrib[1] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * expm1(environment[index_room] - env_threshold);
             }
             
-            if (env_model== "log") {
-              env_contrib[1] = individual_weight * (B/rooms_volume[index_room]) * deltat * log10(environment[index_room] / env_threshold);
+            if (env_model== "log-linear") {
+              env_contrib[1] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * log10(environment[index_room] / env_threshold);
             }
             lambda_e_ti[j] = max(env_contrib);
         }  

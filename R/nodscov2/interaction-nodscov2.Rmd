@@ -19,19 +19,16 @@ rm(list = ls())
 
 # Source functions, dictionaries and helpful variables
 source("interaction-nodscov2-supp.R")
-```
 
-## Working directory & paths
-```{r wd and paths}
+# Working directories and paths
 data_path = file.path("..", "..", "data")
+nodscov2_path = file.path("..", "..", "data", "data-nodscov2") 
+synthetic_path = file.path("..", "..", "data", "data-synthetic-graphs")
 # observed_path <- file.path(data_path,"data-observed")
 # synthetic_path <- file.path(data_path, "data-synthetic-graphs")
 # simplified_path <- file.path(data_path, "data-simplified")
 # expanded_path <- file.path(data_path,"data-expanded")
-nodscov2_path = file.path("..", "..", "data", "data-nodscov2") 
-synthetic_path = file.path("..", "..", "data", "data-synthetic-graphs")
 ```
-
 
 ## NodsCov2 data (not shared)
 ```{r, echo=FALSE}
@@ -46,6 +43,23 @@ list_ward = read.csv(file.path(nodscov2_path, "list_ward_complete.csv"))
 sensor = read.csv(file.path(nodscov2_path, "met_timespent_mins_complete.csv"))
 ```
 
+## Initial composition of Raymond Poincaré ICU
+```{r initial composition}
+# Number of participants
+admission %>%
+  filter(hospital == "APHP - RAYMOND POINCARÉ", ward == "Reanimation", !cat %in% "investigation") %>%
+  distinct(id) %>%
+  nrow()
+
+# Number of participants by individual category
+admission %>%
+  filter(hospital == "APHP - RAYMOND POINCARÉ", ward == "Reanimation", !cat %in% "investigation") %>%
+  group_by(status, cat) %>%
+  summarize(n = n(), .groups = "drop")
+
+```
+
+
 ## Create input dataframes for the synthetic network algorithm 
 ```{r synthetic data}
 # Create dataframe with admission dates for the synthetic network algorithm
@@ -53,7 +67,7 @@ admission_nodscov2 = admission %>%
   filter(
     hospital == "APHP - RAYMOND POINCARÉ", 
     ward == "Reanimation",
-    !cat %in% c("administration", "investigation", "logistic", "visitor")
+    !cat %in% c("administration", "investigation", "logistic", "visitor", "other")
     ) %>%
   mutate(cat = recode(cat, !!!dict_cat)) %>%
   select(-hospital)
@@ -99,7 +113,7 @@ sensor_nodscovd2 = sensor %>%
       (DATEREMISEJ1 <= noon_day1 & DATERECJ1 >= noon_day2) |
       (DATEREMISEJ2 <= noon_day1 & DATERECJ2 >= noon_day2)
     )
-selected_individuals = sensor$id  
+length(unique(admission_nodscov2$id)) - length(unique(sensor_nodscovd2$id))
 
 # Compare first date and last date in the admission data, sensor distribution data 
 # and interaction data
@@ -151,7 +165,39 @@ agenda_nodscov2 = sensor_nodscovd2 %>%
     lastDate = case_when(lastDate >= noon_day2 ~ noon_day2, .default = lastDate)
   )
 
+# Number of participants by category retained from the real data
+admission_nodscov2 %>%
+  group_by(status, cat) %>%
+  summarise(n = n(), .groups = "drop")
+
+# Individuals with no interaction when wearing the sensor 
+admission_nodscov2 %>% 
+  filter(!id %in% c(interaction_nodscov2$from, interaction_nodscov2$from)) %>%
+  group_by(status, cat) %>%
+  summarise(n = n(), .groups = "drop")
+
 ```
+
+
+## Frequency of contacts of more than one hour
+```{r}
+# Frequency of contacts that last more than 1hour
+interaction_nodscov2 %>%
+  summarise(
+    n = n(), 
+    n_more_1h = sum(length/3600 >= 1),
+    p = sum(length/3600 >= 1) / n() * 100
+    )
+
+# Distribution of contact duration for contacts lasting more than 1h
+interaction_nodscov2 %>%
+  filter(length >= 3600) %>%
+  mutate(length = length/3600) %>%
+  select(length) %>%
+  summary()
+
+```
+
 
 ## Contact recurrence probability 
 ```{r contact recurrence}
@@ -270,6 +316,12 @@ for (id in admission_nodscov2$id[admission_nodscov2$status == "PA"]) {
     new_lastDate = new_lastDate+stay_length
   }
 }
+
+# Final set of individuals in the database
+admission_nodscov2 %>%
+  group_by(status, cat) %>%
+  summarise(n = n(), .groups = "drop") 
+
 ```
 
 
