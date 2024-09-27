@@ -14,8 +14,8 @@ pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766",
 env_pal = c('Contact' = 'darkorange', 'Environment' =  'orchid')
 
 # Variables---------------------------------------------------------------------
-cat_paramedical <- c("nurse", "student nurse", "aux nurse")
-cat_medical <- c("physician", "ext physician", "reeducation staff", "other")
+cat_paramedical <- c("nurse", "student nurse", "aux nurse", "reeducation staff")
+cat_medical <- c("physician", "ext physician")
 
 # Functions---------------------------------------------------------------------
 # Get summary statistics of a simulated epidemic

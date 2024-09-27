@@ -7,6 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# Librairies
 library(dplyr)
 library(ggplot2)
 library(lubridate)
@@ -15,16 +17,14 @@ library(tidyr)
 library(viridis)
 library(purrr)
 library(stringr)
-```
+rm(list = ls())
 
-```{r Paths setup}
-wd <- getwd()
-knitr::opts_chunk$set(root.dir = wd)
-data_path <- file.path(wd,"..", "..", "data")
-nodscov2_path <- file.path(data_path, "data-nodscov2") 
-loc_nodscov2_path <- file.path(wd, "..", "..", "out", "loc-nodscov2")
-fig_path <- file.path(loc_nodscov2_path,"..","fig")
+# Paths
+nodscov2_path <- file.path("..", "..", "data", "data-nodscov2") 
+loc_nodscov2_path <- file.path("..", "..", "out", "loc-nodscov2")
+fig_path <- file.path("..", "..", "out","fig")
 ind_paths_path <- file.path(fig_path, "individual-paths")
+
 if (!dir.exists(ind_paths_path)) {
   dir.create(ind_paths_path, recursive = TRUE)
 }
@@ -43,22 +43,16 @@ if (!dir.exists(nodscov2_path)) {
 
 ## NodsCov2 data (not shared)
 ```{r Load data}
+# Admission data
 load(file.path(nodscov2_path, "admission_ctc_nodscov2.RData"))
-load(file.path(nodscov2_path, "list_ward.RData"))
-# load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/admission_ctc_nodscov2.RData")
-# load("Y:/ogaufres/pacri-non-sync/data/data-nodscov2/list_ward.RData")
-```
-
-
-## FIXING ENCODING
-```{r Fixing encoding}
 Encoding(admission$hospital) <- 'latin1'
-```
 
+# Interaction data 
+list_ward = read.csv(file.path(nodscov2_path, "list_ward_complete.csv"))
+```
 
 ## Raymond Poincaré reanimation ward
 ```{r Select ward of interest}
-data <- list_ward[["Raymond_Poincare-Reanimation-20200506-20200507"]]
 admission <- admission %>%
   ## Remove visitors/admin/logistics/investigators
   filter(ward == "Reanimation") %>% 
@@ -69,8 +63,9 @@ admission <- admission %>%
                   "visitor")))
 
 ## FILTER INTERACTIONS TO KEEP ONLY HCW AND PATIENTS
-data <- data %>%
-  filter(from %in% admission$id & to %in% admission$id)
+data <- list_ward %>% 
+    filter(from %in% admission$id, to %in% admission$id, newID == "Medical ICU #1") %>%
+    mutate(date_posix_first = strptime(date_posix_first, "%Y-%m-%dT%H:%M:%SZ")) 
   
 ## ADD INFO OF THE STATUS FOR INDIVIDUALS
 data <- left_join(data, admission %>% select(id, status), by = c("from" = "id")) %>%
@@ -93,7 +88,7 @@ n_subdivisions <- floor(as.numeric(time_spent) * 2) ## Time spent * hours * minu
 
 
 ## t = 1 -> [0,30[sec
-global_interaction <- lapply(1:n_subdivisions, function(t){
+global_interaction_working <- lapply(1:n_subdivisions, function(t){
   interactions_t <- data %>%
     filter(date_posix_first <= (begin_date + (t-1)*30) & (date_posix_first + length > begin_date + (t)*30) ) %>%
     mutate(time = t) %>%
@@ -101,6 +96,8 @@ global_interaction <- lapply(1:n_subdivisions, function(t){
   
   return(interactions_t)
 })
+
+
 
 ```
 
@@ -125,15 +122,15 @@ rooms <- rooms %>%
 ### DOUBLE ROOMS
 ## "001-0038-B-S" and = "001-0039-B-F" are in the same room
 ## "001-0127-B-A" and "001-0128-Z-K" are in the same room
+double_rooms <- list(c("001-0038-B-S", "001-0039-B-F"), c("001-0127-B-A", "001-0128-Z-K"))
+
 rooms <- rooms %>% mutate(room = ifelse(id == "001-0038-B-S", rooms[rooms$id == "001-0039-B-F", "room"], room),
-                          volume = ifelse(id == "001-0038-B-S", 30 * 2.2, volume),
+                          volume = ifelse(id %in% double_rooms[[1]], 30 * 2.2, volume),
                           id_room = ifelse(id == "001-0038-B-S", rooms[rooms$id == "001-0039-B-F", "id_room"], id_room))
 
 rooms <- rooms %>% mutate(room = ifelse(id == "001-0128-Z-K", rooms[rooms$id == "001-0127-B-A", "room"], room),
-                          volume = ifelse(id == "001-0128-Z-K", 30 * 2.2, volume),
+                          volume = ifelse(id %in% double_rooms[[2]], 30 * 2.2, volume),
                           id_room = ifelse(id == "001-0128-Z-K", rooms[rooms$id == "001-0127-B-A", "id_room"], id_room))
-
-double_rooms <- list(c("001-0038-B-S", "001-0039-B-F"), c("001-0127-B-A", "001-0128-Z-K"))
 
 id_room_patient <- rooms %>% 
   filter(id %in% (admission %>% filter(status == "PA") %>% pull(id))) %>%
@@ -566,7 +563,25 @@ for (t in 3:n_subdivisions){
 ```
 
 
-#SAVE TO .RData FILES
+## Remove interactions of more than 1h in the global_interaction to account
+## for transmission saturation 
+```{r threshold for interactions}
+## Add localization for each interaction on the trimmed global_interaction !!!!
+
+# global_interaction_bis <- lapply(1:n_subdivisions, function(t){
+#   interactions_t <- data %>%
+#     mutate(length = ifelse(length > 3600, 3600, length)) %>%
+#     filter(date_posix_first <= (begin_date + (t-1)*30) & (date_posix_first + length > begin_date + (t)*30) ) %>%
+#     mutate(time = t) %>%
+#     select(from, to, time, from_status, to_status)
+#   
+#   return(interactions_t)
+# })
+
+```
+
+
+## Save to an .RData file
 ```{r Save to .RData}
 save(clusters,
      global_localization,

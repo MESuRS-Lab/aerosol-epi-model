@@ -5,71 +5,63 @@ date: '2024-07-12'
 output: html_document
 ---
 
+## Librairies 
 ```{r}
-## LIBRARIES
+# Librairies
 library(data.table)
-library(dplyr)
+library(tidyverse)
 library(Rcpp)
-library(tidyr)
-library(purrr)
-```
+rm(list=ls())
 
-```{r}
-##PATHS
-wd <- getwd()
-out_path <- file.path(wd,'..','..', 'out')
+# Paths
+sensitivity_path <- file.path('..','..', "out", 'sensitivity-analysis')
+scenarios_path <- file.path('..','..', "out", 'scenarios-analysis')
 
-loc_path <- file.path(out_path,'loc-nodscov2','dev-localization-nodscov2.RData')
-sensibility_path <- file.path(out_path, 'sensibility-analysis')
-scenarios_path <- file.path(out_path, 'scenarios-analysis')
-```
-
-
-```{r}
-##########################
-## LOAD DATA & CPP CODE ##
-##########################
+# Load data 
+loc_path <- file.path('..','..', "out",'loc-nodscov2','dev-localization-nodscov2.RData')
 load(loc_path)
 ```
 
-
+## Modification of the global objects
 ```{r}
-##################################
-## GLOBAL OBJECTS MODIFICATIONS ## 
-##################################
-admission_sim <- admission %>%
-  mutate(info = ifelse(status == 'PE', 1,0)) %>%
+# Create admission_sim dataframe 
+admission_sim = admission %>%
+  mutate(info = ifelse(status == 'PE', 1, 0)) %>%
   select(id,info) %>%
-  mutate(id_ind = id) %>% 
-  left_join(rooms, by = c('id_ind' = 'id')) %>%
+  left_join(., rooms, by = 'id') %>%
   mutate(room = ifelse(info == 1, as.integer(rooms[rooms$id == 'M-PM', 'id_room']), as.integer(room)),
          info = as.integer(info)) %>%
   select(id,info,room)
 
+# Create global status dataframe that will be used to store the epidemic dynamics
+global_status = data.frame(
+  id = admission$id, 
+  t_inf = as.integer(-1), 
+  t_incub = as.integer(-1), 
+  t_recover = as.integer(-1), 
+  inf_by = '', 
+  inf_room = as.integer(-1)
+  )
 
-env_t <- rooms %>%
-  distinct(room) %>%
-  mutate(env = 0) %>%
-  mutate(id_room = rooms %>% distinct(id_room) %>% pull() ) %>%
-  left_join(rooms %>% select(id_room, volume), by = 'id_room') %>%
+# Create global_environment list to store aerosol quantities at each time step
+env_t = rooms %>%
+  group_by(room, id_room) %>%
+  summarise(volume = max(volume), .groups = "drop") %>%
+  mutate(env = 0, id_room = as.integer(id_room)) %>%
   select(room, id_room, env, volume)
-env_t$id_room <- as.integer(env_t$id_room)
 
 global_environment <- lapply(1:n_subdivisions, function(t){
   return (env_t)
 })
 rm(env_t)
 
-global_status = data.frame(id = admission$id, t_inf = as.integer(-1), t_incub = as.integer(-1), t_recover = as.integer(-1), inf_by = '', inf_room = as.integer(-1))
 ```
 
 
+## Truncation of the interaction objects
+## This chunk has to be removed after implementing the synthetic network algorithm
 ```{r}
-#######################
-## TRUNCATED OBJECTS ## 
-#######################
-
-## TRUNCATE TO KEEP ONLY 24H (24/05/06 12:00 TO 24/05/07 12:00)
+# Truncate interaction data to keep only 24h (24/05/06 12:00 TO 24/05/07 12:00)
 end_date - begin_date ##end of last interaction
 new_begin_date <- begin_date + (5*60*60) ## OFFSET TO START THE DAY AT 12AM
 new_end_date <- new_begin_date + (24*60*60)
@@ -89,12 +81,11 @@ id_interacting <- do.call(rbind,truncated_interaction) %>%
   distinct(individual) %>%
   pull()
 
-
-    
-## FILTER THE DFS TO RE:OVE USELESS ROWS (INDIVIDUALS NOT INTERACTING)
+## FILTER THE DFS TO REMOVE USELESS ROWS (INDIVIDUALS NOT INTERACTING)
 filter_interacting <- function(list_df, id_interacting) {
   lapply(list_df, function(df) {
-    df %>% filter(id %in% id_interacting)
+    df %>% 
+      filter(id %in% id_interacting)
   })
 }
 
@@ -117,7 +108,8 @@ truncated_data <- lapply(1:length(truncated_localization), function(t){
 })
 ```
 
-
+## Create endless day
+## This chunk has to be removed after implementing the synthetic network algorithm
 ```{r}
 #########################
 ## ENDLESS DAY OBJECTS ##
@@ -132,6 +124,8 @@ global_status <- truncated_status
 ```
 
 
+## Simulate new patients
+## This chunk has to be removed after implementing the synthetic network algorithm
 ```{r}
 ###############################
 ## ADMISSIONS AND DISCHARGES ##
@@ -186,11 +180,9 @@ global_interaction <- split(df_interaction_long, df_interaction_long$time)
 rm(df_data_long, df_interaction_long)
 ```
 
+## List of model parameters
 ```{r}
-################
-## PARAMETERS ##
-################
-
+# Fixed parameters 
 B <- 0.48 * 24 # Breathing rate (0.48 m3/h)
 mu_air <- 1 # Natural ventilation, Quanta removal (1 changes/day)
 mu_ventilation <-  4 * 24 # Mechanical ventilation, Quanta removal (4-6 Air changes/h)
@@ -199,16 +191,19 @@ mu <- mu_air + mu_inac #+ (mu_ventilation - mu_air)
 dt <- 30 # Time step
 tau <- 60 * 60 *24 # Seconds in 1 day
 deltat <- dt/tau
-env_threshold <- 0 # Quanta threshold above which the environment is infectious
-
-## BETA AND NU COUPLES (tested to give the same 20% SAR)
-beta <- 3/2 * 24# Transmission rate for close contact interaction /h
+env_threshold <- 10 # Quanta threshold above which the environment is infectious
+env_model = "linear"
 nu <- 12 * 24 # (12 quanta/h)
+
+# Parameters explored in the simulation study (tested to give the same 20% SAR)
+beta_c <- 3/2 * 24 # Transmission rate for close contact interaction /h
+beta_e <- 20
 ```
 
-
+## Save the final object used as input of the epidemic simulation algorithm 
 ```{r}
-## MIGHT TAKE A WHILE SAVING GLOBAL OBJECT FOR HIGH n_days 
+# Pay attention: it might take a while to save the 
+# the global objects when the number of days is high
 save_path <- file.path(scenarios_path, "parameters-admission-nodscov2.RData")
 
 save(global_interaction,
@@ -217,11 +212,13 @@ save(global_interaction,
      global_environment,
      admission_sim,
      admission,
-     beta,
+     beta_c,
+     beta_e,
      nu,
      mu,
      B,
      env_threshold,
+     env_model,
      dt,
      new_n_subdivisions,
      n_days,
@@ -229,8 +226,7 @@ save(global_interaction,
      t_end,
      new_begin_date,
      new_end_date,
-     file = save_path)
+     file = save_path
+     )
 ```
-
-## CP THE $ANALYSIS/FOLDER TO CLUSTER/OUT
 
