@@ -395,7 +395,6 @@ Rcpp::NumericVector Lambda_e (
     const Rcpp::DataFrame& environment_ti,
     const double& beta_e,
     const double& B,
-    const double& env_threshold,
     const String& env_model,
     const double& deltat
 ) {
@@ -426,19 +425,18 @@ Rcpp::NumericVector Lambda_e (
                 }
             }
             // VIRAL LOAD threshold
-            Rcpp::NumericVector env_contrib {0,0};
             if (env_model == "linear") {
-              env_contrib[1] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * (environment[index_room] - env_threshold);
+              lambda_e_ti[j] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * environment[index_room];
             }
             
             if (env_model == "exponential") {
-              env_contrib[1] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * expm1(environment[index_room] - env_threshold);
+              lambda_e_ti[j] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * expm1(environment[index_room]);
             }
             
-            if (env_model== "log-linear") {
-              env_contrib[1] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * log10(environment[index_room] / env_threshold);
+            if (env_model == "log-linear") {
+              lambda_e_ti[j] = beta_e*deltat * individual_weight * (B*deltat/rooms_volume[index_room]) * log10(environment[index_room]);
             }
-            lambda_e_ti[j] = max(env_contrib);
+
         }  
         return lambda_e_ti;  
     };

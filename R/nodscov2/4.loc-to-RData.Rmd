@@ -191,7 +191,6 @@ mu <- mu_air + mu_inac #+ (mu_ventilation - mu_air)
 dt <- 30 # Time step
 tau <- 60 * 60 *24 # Seconds in 1 day
 deltat <- dt/tau
-env_threshold <- 10 # Quanta threshold above which the environment is infectious
 env_model = "linear"
 nu <- 12 * 24 # (12 quanta/h)
 
@@ -217,7 +216,6 @@ save(global_interaction,
      nu,
      mu,
      B,
-     env_threshold,
      env_model,
      dt,
      new_n_subdivisions,

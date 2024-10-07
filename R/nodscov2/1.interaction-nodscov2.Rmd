@@ -43,6 +43,8 @@ sensor = read.csv(file.path(nodscov2_path, "met_timespent_mins_complete.csv"))
 ## Initial composition of Raymond Poincaré ICU
 ```{r initial composition}
 # Number of participants
+# Investigation staff are excluded as they were part of the staff deployin gthe sensors
+# and do not belong to the medical wards per se
 admission %>%
   filter(hospital == "APHP - RAYMOND POINCARÉ", ward == "Reanimation", !cat %in% "investigation") %>%
   distinct(id) %>%
@@ -280,9 +282,32 @@ admission_nodscov2 %>%
 
 ## Patient augmentation
 ```{r patient augmentation}
+# Double rooms - Cumulative time
+patients_ids = unique(admission_nodscov2$id[admission_nodscov2$status == "PA"])
+interaction_nodscov2 %>% 
+  filter(from %in% patients_ids, to %in% patients_ids) %>%
+  mutate(pair = paste0(from, "_", to)) %>%
+  group_by(pair) %>%
+  summarise(length = sum(length)/3600, .groups = "drop")
+
+# List of ids in double rooms
+double_rooms = interaction_nodscov2 %>%
+  filter(from %in% patients_ids, to %in% patients_ids) %>%
+  distinct(from, to)
+double_rooms = as.list(as.data.frame(t(double_rooms)))
+
+# Patient rooms
+patient_rooms = data.frame(
+  id = admission_nodscov2$id[admission_nodscov2$status == "PA"],
+  room = 1:sum(admission_nodscov2$status == "PA")
+)
+patient_rooms$room[patient_rooms$id %in% double_rooms[[1]]] = min(patient_rooms$room[patient_rooms$id %in% double_rooms[[1]]])
+
+# Patient augmentation
 set.seed(20240924)
 last_day = as.Date("2020-05-07") + 90
-for (id in admission_nodscov2$id[admission_nodscov2$status == "PA"]) {
+
+for (id in patients_ids) {
   
   # Stay length of original individual
   if (admission_nodscov2$lastDate[admission_nodscov2$id == id] == as.Date("2020-05-07")) {
@@ -295,6 +320,7 @@ for (id in admission_nodscov2$id[admission_nodscov2$status == "PA"]) {
   
   # Augment patients by keeping the incrementing the original id
   i = 1
+  new_room = data.frame()
   while(new_lastDate < last_day) {
     stay_length = sample(6:13, 1)
     to_rbind = data.frame(
@@ -307,6 +333,15 @@ for (id in admission_nodscov2$id[admission_nodscov2$status == "PA"]) {
       hospitalization = "patient",
       cat = "Patient"
     )  
+    
+    patient_rooms = rbind(
+      patient_rooms, 
+      data.frame(
+        id = paste0(id, "-", i),
+        room = patient_rooms$room[patient_rooms$id == id]
+      )
+    )
+    
     admission_nodscov2 = rbind(admission_nodscov2, to_rbind)
     new_lastDate = new_lastDate+stay_length
   }
@@ -351,6 +386,38 @@ admission_nodscov2 = admission_nodscov2 %>%
 
 ```
 
+## Change IDs of individuals to integrate PA or PE at the start of each ID 
+```{r change ids}
+# This is a necessary step for the synthetic contact algorithm
+
+# Interaction data
+interaction_nodscov2 = interaction_nodscov2 %>%
+  mutate(
+    from = case_when(
+      from %in% admission_nodscov2$id[admission_nodscov2$status == "PA"] ~ paste0("PA-", from),
+      from %in% admission_nodscov2$id[admission_nodscov2$status == "PE"] ~ paste0("PE-", from)
+    ),
+    to = case_when(
+      to %in% admission_nodscov2$id[admission_nodscov2$status == "PA"] ~ paste0("PA-", to),
+      to %in% admission_nodscov2$id[admission_nodscov2$status == "PE"] ~ paste0("PE-", to)
+    ),
+  )
+
+# Admission data
+admission_nodscov2 = admission_nodscov2 %>%
+  mutate(id = paste0(status, "-", id))
+
+# Patient rooms
+patient_rooms = patient_rooms %>%
+  mutate(id = paste0("PA-", id))
+
+# HCW schedule
+new_agenda = new_agenda %>%
+  mutate(id = paste0(status, "-", id))
+
+```
+
+
 ## Save data for synthetic algorithm
 ```{r save synthetic}
 # Interaction data
@@ -361,6 +428,9 @@ write.csv2(admission_nodscov2, file.path(synthetic_path, "admission.csv"), quote
 
 # HCW schedule
 write.csv2(new_agenda, file.path(synthetic_path, "agenda.csv"),  quote = F, row.names = F)
+
+# Patient rooms
+write.csv2(patient_rooms, file.path(synthetic_path, "patient_rooms.csv"), quote = F, row.names = F)
 ```
 
 ## Plot raw data for supplementary materials
