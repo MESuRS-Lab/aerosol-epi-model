@@ -111,7 +111,12 @@ interaction_nodscov2 = list_ward %>%
     from %in% sensor_nodscov2$id, to %in% sensor_nodscov2$id,
     # Interactions that occur before or after the 24 hour period
     !(date_posix_first+length <= noon_day1 | date_posix_first >= noon_day2)
-    )
+    ) %>%
+  group_by(from, to, date_posix_first, ward_id, wardType, newID) %>%
+  summarise(length = max(length), .groups = "drop") %>%
+  distinct() %>%
+  # Remove one weird interaction
+  filter(!(from == "001-0026-N-S" & to == "001-0027-P-A"& date_posix_first == as_datetime("2020-05-06 11:45:00") & length == 1510))
 
 interaction_first_last = interaction_nodscov2 %>%
   mutate(date_day = as.Date(floor_date(date_posix_first, "day")),
@@ -406,20 +411,75 @@ interaction_nodscov2 = interaction_nodscov2 %>%
     to = case_when(
       to %in% admission_nodscov2$id[admission_nodscov2$status == "PA"] ~ paste0("PA-", to),
       to %in% admission_nodscov2$id[admission_nodscov2$status == "PE"] ~ paste0("PE-", to)
-    ),
-  )
+    )
+  ) %>%
+  arrange(date_posix_first)
 
 # Admission data
 admission_nodscov2 = admission_nodscov2 %>%
-  mutate(id = paste0(status, "-", id))
+  mutate(id = paste0(status, "-", id)) %>%
+  mutate(firstDate = floor_date(firstDate, "day"), lastDate = floor_date(lastDate, "day")) %>%
+  arrange(firstDate)
 
 # Patient rooms
 patient_rooms = patient_rooms %>%
-  mutate(id = paste0("PA-", id))
+  mutate(id = paste0("PA-", id)) 
 
 # HCW schedule
 new_agenda = new_agenda %>%
-  mutate(id = paste0(status, "-", id))
+  mutate(id = paste0(status, "-", id)) %>% 
+  arrange(firstDate)
+
+```
+
+
+```{r}
+# Schedule of healthcare workers 
+ids_pe = admission$id[admission$status == "PE"]
+interactions_in_schedule = data.frame()
+
+for (i in ids_pe) {
+  # Schedule of the HCW
+  schedule_id = schedule_real %>%
+    filter(id == i, lastDate <= as_datetime("2020-05-07 12:00:00")) %>%
+    select(firstDate, lastDate)
+  
+  # Get all interactions
+  if (sum(interaction_real$to == i | interaction_real$from == i) > 0) {
+    interactions_id = interaction_real %>%
+      filter(from == i| to == i) %>%
+      select(date_posix_first, length) %>%
+      mutate(n = 1:n())
+  
+    # Are all interactions within the schedule ?
+    out_vec = expand.grid.df(
+      schedule_id, 
+      interactions_id
+    ) %>%
+      group_by(n) %>%
+      summarise(out = any(date_posix_first >= firstDate & date_posix_first+length <= lastDate), .groups = "drop") %>%
+      pull(out)
+    
+    interactions_in_schedule = bind_rows(
+      interactions_in_schedule, 
+      data.frame(
+        id = i, 
+        coherent_interactions = all(out_vec)
+      )
+    )
+  
+  } else {
+    interactions_in_schedule = bind_rows(
+      interactions_in_schedule, 
+      data.frame(
+        id = i, 
+        coherent_interactions = NA
+      )
+    )
+  }
+}
+
+summary(interactions_in_schedule)
 
 ```
 
@@ -490,8 +550,7 @@ admission_nodscov2 %>%
   filter(status == "PA", !grepl("PA.*-[0-9]+$", id), firstDate != as_datetime("2020-05-06 12:00:00"))
 
 admission_pooled = admission_nodscov2 %>%
-  arrange(id, status) %>%
-  mutate(firstDate = floor_date(firstDate, "day"), lastDate = floor_date(lastDate, "day"))
+  arrange(id, status)
 
 for (i in admission_pooled$id[admission_pooled$status == "PE"]) {
   admission_pooled$firstDate[admission_pooled$id == i] = min(floor_date(agenda_pooled$firstDate[agenda_pooled$id == i], "day"))
