@@ -47,37 +47,38 @@ conditions = c("sim_1-4_1-12000", "sim_3-4_1-18000", "sim_9-10_1-20000", "sim_5-
 dict_scenarios = paste("Scenario", 1:length(conditions))
 names(dict_scenarios) = gsub("sim_", "", conditions)
 
-list_dirs = list.dirs(path = simulations_path, recursive = T, full.names = T)
-list_dirs = list_dirs[sapply(list_dirs, function(y) {any(sapply(paste0(conditions, "$"), grepl, x = y))})]
-
-## READ ALL SIMULATION FOR ALL AVAILABLE COUPLES
-list_sim <- list()
-for (dir in list_dirs){
-  dir_name = gsub(".*simulations/", "", dir)
-  dir_name = gsub("/", "_", dir_name)
-  list_sim[[dir_name]] <- list()
-  rdata_files <- list.files(path = dir, pattern = "^sim_.*\\.rda$", full.names = F)
-  invisible(lapply(rdata_files, function(file) load_rdata_to_list(file, list_sim, dir)))
-}
-
-# Get SAR
-list_SAR <- get_all_SAR(list_sim = list_sim, 
-                        id_patient = id_patient, 
-                        id_hcw = id_hcw, 
-                        id_paramedical = id_paramedical, 
-                        id_medical = id_medical)
-
-all_SAR = do.call("rbind", lapply(list_SAR, function(x) do.call("rbind", x)))
-rownames(all_SAR) = NULL
-write.csv2(all_SAR, file.path(simulations_path, "all_SAR.csv"), quote = F, row.names = F)
-
-## Get epidemic duration 
-list_epidemic_duration <- get_all_epidemic_duration(list_sim = list_sim)
-all_durations = do.call("rbind", lapply(list_epidemic_duration, function(x) do.call("rbind", x))) %>%
-  mutate(model = gsub("_.*$", "", couple), scenario = recode(gsub(".*sim_", "", couple), !!!dict_scenarios)) %>%
-  select(-couple)
-rownames(all_durations) = NULL
-write.csv2(all_durations, file.path(simulations_path, "all_durations.csv"), quote = F, row.names = F)
+# list_dirs = list.dirs(path = simulations_path, recursive = T, full.names = T)
+# list_dirs = list_dirs[sapply(list_dirs, function(y) {any(sapply(paste0(conditions, "$"), grepl, x = y))})]
+# 
+# ## READ ALL SIMULATION FOR ALL AVAILABLE COUPLES
+# list_sim <- list()
+# for (dir in list_dirs){
+#   dir_name = gsub(".*simulations/", "", dir)
+#   dir_name = gsub("/", "_", dir_name)
+#   list_sim[[dir_name]] <- list()
+#   rdata_files <- list.files(path = dir, pattern = "^sim_.*\\.rda$", full.names = F)
+#   invisible(lapply(rdata_files, function(file) load_rdata_to_list(file, list_sim, dir)))
+# }
+# save(list_sim, file = file.path(simulations_path, "list_sim.rda"))
+# 
+# # Get SAR
+# list_SAR <- get_all_SAR(list_sim = list_sim, 
+#                         id_patient = id_patient, 
+#                         id_hcw = id_hcw, 
+#                         id_paramedical = id_paramedical, 
+#                         id_medical = id_medical)
+# 
+# all_SAR = do.call("rbind", lapply(list_SAR, function(x) do.call("rbind", x)))
+# rownames(all_SAR) = NULL
+# write.csv2(all_SAR, file.path(simulations_path, "all_SAR.csv"), quote = F, row.names = F)
+# 
+# ## Get epidemic duration 
+# list_epidemic_duration <- get_all_epidemic_duration(list_sim = list_sim)
+# all_durations = do.call("rbind", lapply(list_epidemic_duration, function(x) do.call("rbind", x))) %>%
+#   mutate(model = gsub("_.*$", "", couple), scenario = recode(gsub(".*sim_", "", couple), !!!dict_scenarios)) %>%
+#   select(-couple)
+# rownames(all_durations) = NULL
+# write.csv2(all_durations, file.path(simulations_path, "all_durations.csv"), quote = F, row.names = F)
 ```
 
 ## Plot probability of infection for the short-range transmission route 
@@ -209,6 +210,7 @@ all_SAR %>%
 ```
 
 ### Plots for linear model
+#### SAR 
 ```{r}
 comparisons = c("Scenario 1_Scenario 2", "Scenario 2_Scenario 3", "Scenario 3_Scenario 4", "Scenario 4_Scenario 5")
 
@@ -263,7 +265,7 @@ ggsave(file.path(fig_path, "sar.png"), p, height = 5, width = 6)
 
 ```
 
-### SAR stratified by individual category and source 
+#### SAR stratified by individual category and source 
 ```{r}
 # SAR for patients
 # patient_test = linear_SAR %>% 
@@ -376,33 +378,82 @@ p = ggarrange(p, get_legend(p2), nrow = 2, heights = c(1,0.1))
 ggsave(file.path(fig_path, "sar_stratified.png"), height = 8, width = 8)
 ```
 
-### Plot cluster size 
+#### Epidemic duration, epidemic curves, and time to peak
 ```{r}
+# Plot of epidemic curves
+all_curves = get_all_SEIR(list_sim, t_end)
+all_curves = do.call("rbind", lapply(all_curves, function(x) do.call("rbind", x))) %>%
+  mutate(model = gsub("_.*", "", couple), scenario = recode(gsub(".*sim_", "", couple), !!!dict_scenarios)) %>%
+  filter(model == "linear") 
+
+dict_time = seq(new_begin_date, new_end_date, by = 3000)
+names(dict_time) = seq(1, t_end, 100)
+
+p1 = all_curves %>%
+  filter(status == "Infectious") %>%
+  mutate(time = recode(time, !!!dict_time)) %>%
+  ggplot(., aes(x = time, y = count, group = id_sim)) +
+  geom_line(col = "grey80", linewidth = 0.1) +
+  facet_grid(cols = vars(scenario)) +
+  theme_bw() +
+  theme(axis.title.x = element_blank()) +
+  labs(y = "Number of infectious")
+
+# Wilcoxon test to compare the distribution across scenarios (p-values adjusted for multiple testing)
 p_duration = all_durations %>%
   filter(model == "linear") %>%
   wilcox_test(duration ~ scenario) %>%
   add_xy_position(x = "scenario") %>%
   filter(p.adj <= 0.05)
 
-all_durations %>%
+# Plot of epidemic duration
+p2 = all_durations %>%
   filter(model == "linear") %>%
   ggboxplot(., x = "scenario", y = "duration", fill = "scenario") +
   stat_pvalue_manual(p_duration, label = "p.adj.signif") +
-  geom_jitter() +
+  geom_jitter(size = 0.8) +
   scale_fill_manual(values = brewer.pal(n = 5, name = "Set2")) +
   theme_bw() +
   theme(axis.title.x = element_blank(), legend.position = "none") +
   labs(y = "Epidemic duration (in days)")
 
+# Plot of time to peak
+get_time_to_peak = function(df, dict_time) {
+  df = df %>%
+    filter(status == "Infectious") %>%
+    arrange(time)
+  times = df$time[df$count == max(df$count)]
+  out = min(floor_date(dict_time[as.character(times)], "day"))
+  out = difftime(out, floor_date(new_begin_date, "day"), units = "day")
+  out = as.numeric(out)
+  return(out)
+}
+
+p_time_to_peak = data.frame(
+  p = format(signif(JonckheereTerpstraTest(split(test$time_to_peak, test$scenario), alternative = "decreasing", exact = F)$p.value, 2), scientific = T),
+  scenario = "Scenario 3",
+  time_to_peak = 90
+)
+
+p3 = all_curves %>%
+  nest(.by = c(scenario, id_sim)) %>%
+  mutate(time_to_peak = map(data, get_time_to_peak, dict_time)) %>%
+  unnest(time_to_peak) %>%
+  ggplot(., aes(x = scenario, y = time_to_peak, fill = scenario)) +
+  geom_boxplot(outliers = F) +
+  geom_jitter(size = 0.8) +
+  geom_text(data = p_time_to_peak, aes(label = paste0("Decreasing trend p = ", p))) +
+  scale_fill_manual(values = brewer.pal(n = 5, name = "Set2")) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(), legend.position = "none") +
+  labs(y = "Time to peak (in days)")
+
+# Combine plots
+p = ggarrange(p1, p2, p3, nrow = 3)
+ggsave(file.path(fig_path, "epidemic_timing.png"), p, height = 6, width = 6)
 ```
 
-### Plot epidemic duration
-```{r}
-
-
-```
-
-### Plot dynamics of aerosol concentration
+#### Example of aerosol concentration dynamics 
 ```{r}
 # Simulations to load
 load("../../out/final-simulations/linear/sim_1-4_1-12000/sim_1-4_1-12000_1.rda")
@@ -508,46 +559,4 @@ p2 = all_simulations %>%
 # Combine plots
 p = ggarrange(p1, p2, nrow = 2)
 ggsave(file.path(fig_path, "dynamics_aerosols.png"), p, height = 6, width = 12)
-```
-
-### Plot epidemic metrics 
-#### Secondary attack rates
-```{r}
-# Compute SAR
-list_SAR <- get_all_SAR(list_sim = list_sim, 
-                        id_patient = id_patient, 
-                        id_hcw = id_hcw, 
-                        id_paramedical = id_paramedical, 
-                        id_medical = id_medical)
-
-all_SAR = do.call("rbind", lapply(list_SAR, function(x) do.call("rbind", x)))
-
-# Plot SAR 
-
-```
-
-
-#### Epidemic duration 
-```{r}
-# Compute Epidemic duration
-list_epidemic_duration <- get_all_epidemic_duration(list_sim = list_sim)
-all_epidemic_duration_metrics <- get_all_epidemic_duration_metrics(list_epidemic_duration = list_epidemic_duration)
-
-# Plot SAR 
-
-```
-
-#### Epidemic peak
-```{r}
-# Compute SAR
-list_SAR <- get_all_SAR(list_sim = list_sim, 
-                        id_patient = id_patient, 
-                        id_hcw = id_hcw, 
-                        id_paramedical = id_paramedical, 
-                        id_medical = id_medical)
-
-all_SAR = do.call("rbind", lapply(list_SAR, function(x) do.call("rbind", x)))
-
-# Plot SAR 
-
 ```

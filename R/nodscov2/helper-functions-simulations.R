@@ -314,8 +314,11 @@ compute_SEIR <- function(global_status, n_subdivisions) {
 
 ##################### GET ALL SEIR FOR ONE COUPLE (N SIMULATIONS)
 get_SEIR_couple <- function(couple, list_sim, n_subdivisions){
-  lapply(list_sim[[couple]], function(global_status) {
-    compute_SEIR(global_status = global_status, n_subdivisions = n_subdivisions)
+  lapply(seq_along(list_sim[[couple]]), function(x) {
+    out = compute_SEIR(global_status = list_sim[[couple]][[x]], n_subdivisions = n_subdivisions)
+    out$couple = couple
+    out$id_sim = x
+    return(out)
   })
 }
 
