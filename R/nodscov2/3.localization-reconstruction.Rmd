@@ -129,8 +129,8 @@ rooms = patient_rooms %>%
     room = as.character(room)
     ) %>% 
   bind_rows(.,
-            data.frame(room = "Medical resting room", id = "R-M-PE", volume = 30 * 2.2, id_room = as.character(n_patient_rooms+1)),
-            data.frame(room = "Paramedical resting room", id = "R-PM-PE", volume =  40 * 2.2, id_room = as.character(n_patient_rooms+2)),
+            data.frame(room = "Medical Staff Room", id = "R-M-PE", volume = 30 * 2.2, id_room = as.character(n_patient_rooms+1)),
+            data.frame(room = "Paramedical Staff Room", id = "R-PM-PE", volume =  40 * 2.2, id_room = as.character(n_patient_rooms+2)),
             data.frame(room = "Nursing station", id = "PM-PE", volume = 20 * 2.2, id_room = as.character(n_patient_rooms+3)),
             data.frame(room = "Office", id = "M-PE", volume = 20 * 2.2, id_room = as.character(n_patient_rooms+4)),
             data.frame(room = "Corridor", id = "ALL", volume = 200 * 2.2, id_room = as.character(n_patient_rooms+5))

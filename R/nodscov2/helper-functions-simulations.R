@@ -1,82 +1,120 @@
-######################
-## READ RDATA FILES ##
-######################
+################################################################################
+##          Support functions to analyze simulations
+################################################################################
+
+# Functions to read .rda files--------------------------------------------------
 
 ## READ RData FILES -> STRUCTURE OF FILE: sim_<beta>_<nu>_<sim_id>.RData 
 ## WARNING BETA = 1/3 WILL BE WRITTEN AS 1-3
 ## IN THE RDATA FILE, THERE WILL BE A DATAFRAME NAMED: sim_<beta>_<nu>_<sim_id>
 load_rdata_to_list <- function(file, list_sim, dir) {
-  load(file.path(scenarios_path, 'scenarios-simulations', dir, 'results', file))
+  load(file.path(dir, file))
   file_name <- basename(file)
+  dir_name = gsub(".*grid-search/|.*final-simulations/", "", dir)
+  dir_name = gsub("/", "_", dir_name)
+  
   parts <- strsplit(file_name, "_")[[1]]
   sim_id <- parts[length(parts)] ## last number is the sim id
-  sim_id <- as.integer(sub("\\.RData$", "", sim_id))  # Remove file extension
+  sim_id <- as.integer(sub("\\.rda$", "", sim_id))  # Remove file extension
   # beta <- eval(parse(text = gsub(pattern = '-', replacement = '/', x = parts[2])))
   # nu <- eval(parse(text = gsub(pattern = '-', replacement = '/', x = parts[3])))
-  sim_object <- get(sub("\\.RData$", "", file_name))
-  list_sim[[dir]][[sim_id]] <<- sim_object
+  sim_object <- get(sub("\\.rda$", "", file_name))
+  
+  if (class(sim_object) == "list" & length(sim_object) == 2) {
+    list_sim[[dir_name]][[sim_id]] <<- sim_object[["global_status"]]
+  } else {
+    list_sim[[dir_name]][[sim_id]] <<- sim_object 
+  }
 }
 
 
-#####################
-## SAR COMPUTATION ##
-#####################
+# Get only the environment data
+load_envdata_to_list <- function(file, list_sim, dir) {
+  load(file.path(dir, file))
+  file_name <- basename(file)
+  dir_name = gsub(".*grid-search/", "", dir)
+  dir_name = gsub("/", "_", dir_name)
+  
+  parts <- strsplit(file_name, "_")[[1]]
+  sim_id <- parts[length(parts)] ## last number is the sim id
+  sim_id <- as.integer(sub("\\.rda$", "", sim_id))  # Remove file extension
+  # beta <- eval(parse(text = gsub(pattern = '-', replacement = '/', x = parts[2])))
+  # nu <- eval(parse(text = gsub(pattern = '-', replacement = '/', x = parts[3])))
+  sim_object <- get(sub("\\.rda$", "", file_name))
+  if (class(sim_object) == "list" & length(sim_object) == 3) {
+    list_sim[[dir_name]][[sim_id]] <<- sim_object[["global_status"]]
+  } else {
+    list_sim[[dir_name]][[sim_id]] <<- sim_object 
+  }
+}
+
+
+# Functions to compute secondary attack rates-----------------------------------
 
 ##################### SAR FOR ONE SIMULATION
-compute_SAR <- function(global_status) {
-  ## WE NEED INDEX TYPE FOR THE SAR BY TYPE COMPUTATION 
-  index_id <- global_status %>% filter(inf_by == 'INDEX') %>% pull(id)
-  index_type <- case_when(
-    index_id %in% id_paramedical ~ 'PARAMEDICAL',
-    index_id %in% id_medical ~ 'MEDICAL',
-    index_id %in% id_patient ~ 'PATIENT'
-  )
-  ## SUSCEPTIBLE INDIVIDUALS DURING THE STUDY
-  n_individual <- length(global_status %>% distinct(id) %>% pull()) -1
-  n_medical <- ifelse(index_type == 'MEDICAL', length(id_medical) - 1, length(id_medical))
-  n_paramedical <- ifelse(index_type == 'PARAMEDICAL', length(id_paramedical) - 1, length(id_paramedical))
-  n_patient <- ifelse(index_type == 'PATIENT', length(id_patient) - 1, length(id_patient))
-  n_hcw <- ifelse(index_type == 'PATIENT', length(id_hcw) - 1, length(id_hcw) - 1)
-  
-  ## SAR BY TYPE
-  SAR_global <- (length(global_status %>% filter(t_inf != -1) %>% pull(id)) -1 )/(n_individual)
-  SAR_patient <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / (n_patient)
-  SAR_medical <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_medical
-  SAR_paramedical <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_paramedical
-  SAR_hcw <- length(global_status %>% filter(id %in% id_hcw & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_hcw
-  ## CLOSE CONTACT / ENVIRONMENT (SUM EQUALS TO GLOBAL)
-  SAR_environment <- length(global_status %>% filter(grepl('ENVIRONMENT', inf_by)) %>% pull(id)) / n_individual
-  SAR_contact <- length(global_status %>% filter(grepl('CONTACT', inf_by)) %>% pull(id)) / n_individual
-  
-  SAR_patient_e <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / (n_patient)
-  SAR_patient_c <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / (n_patient)
-  SAR_medical_e <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / n_medical
-  SAR_medical_c <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / n_medical
-  SAR_paramedical_e <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / n_paramedical
-  SAR_paramedical_c <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / n_paramedical
-  ##DF
-  SAR_df <- data.frame(
-    Global = SAR_global,
-    HCW = SAR_hcw,
-    Patient = SAR_patient,
-    Paramedical = SAR_paramedical,
-    Medical = SAR_medical,
-    Environment = SAR_environment,
-    Contact = SAR_contact,
-    Patient_Contact = SAR_patient_c,
-    Patient_Environment = SAR_patient_e,
-    Paramedical_Contact = SAR_paramedical_c,
-    Paramedical_Environment = SAR_paramedical_e,
-    Medical_Contact = SAR_medical_c,
-    Medical_Environment = SAR_medical_e)
-  
-  return(SAR_df)
+compute_SAR <- function(global_status, couple = "") {
+  if (!is.null(global_status)) {
+    ## WE NEED INDEX TYPE FOR THE SAR BY TYPE COMPUTATION 
+    index_id <- global_status %>% filter(inf_by == 'INDEX') %>% pull(id)
+    index_type <- case_when(
+      index_id %in% id_paramedical ~ 'PARAMEDICAL',
+      index_id %in% id_medical ~ 'MEDICAL',
+      index_id %in% id_patient ~ 'PATIENT'
+    )
+    ## SUSCEPTIBLE INDIVIDUALS DURING THE STUDY
+    n_individual <- length(global_status %>% distinct(id) %>% pull()) -1
+    n_medical <- ifelse(index_type == 'MEDICAL', length(id_medical) - 1, length(id_medical))
+    n_paramedical <- ifelse(index_type == 'PARAMEDICAL', length(id_paramedical) - 1, length(id_paramedical))
+    n_patient <- ifelse(index_type == 'PATIENT', length(id_patient) - 1, length(id_patient))
+    n_hcw <- ifelse(index_type == 'PATIENT', length(id_hcw) - 1, length(id_hcw) - 1)
+    
+    ## SAR BY TYPE
+    SAR_global <- (length(global_status %>% filter(t_inf != -1) %>% pull(id)) -1 )/(n_individual)
+    SAR_patient <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / (n_patient)
+    SAR_medical <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_medical
+    SAR_paramedical <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_paramedical
+    SAR_hcw <- length(global_status %>% filter(id %in% id_hcw & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_hcw
+    ## CLOSE CONTACT / ENVIRONMENT (SUM EQUALS TO GLOBAL)
+    SAR_environment <- length(global_status %>% filter(grepl('ENVIRONMENT', inf_by)) %>% pull(id)) / n_individual
+    SAR_contact <- length(global_status %>% filter(grepl('CONTACT', inf_by)) %>% pull(id)) / n_individual
+    
+    SAR_patient_e <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / (n_patient)
+    SAR_patient_c <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / (n_patient)
+    SAR_medical_e <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / n_medical
+    SAR_medical_c <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / n_medical
+    SAR_paramedical_e <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id)) / n_paramedical
+    SAR_paramedical_c <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) / n_paramedical
+    
+    ##DF
+    SAR_df <- data.frame(
+      Global = SAR_global,
+      HCW = SAR_hcw,
+      Patient = SAR_patient,
+      Paramedical = SAR_paramedical,
+      Medical = SAR_medical,
+      Environment = SAR_environment,
+      Contact = SAR_contact,
+      Patient_Contact = SAR_patient_c,
+      Patient_Environment = SAR_patient_e,
+      Paramedical_Contact = SAR_paramedical_c,
+      Paramedical_Environment = SAR_paramedical_e,
+      Medical_Contact = SAR_medical_c,
+      Medical_Environment = SAR_medical_e)
+    
+    if (couple != "") {
+      SAR_df$model = strsplit(couple, "_")[[1]][1]
+      SAR_df$beta_c = strsplit(couple, "_")[[1]][3]
+      SAR_df$beta_e = strsplit(couple, "_")[[1]][4]
+    }
+    
+    return(SAR_df) 
+  }
 }
 
 ##################### GET ALL SAR FOR ONE COUPLE (N SIMULATIONS)
 get_SAR_couple <- function(couple, list_sim){
   lapply(list_sim[[couple]], function(global_status) {
-    compute_SAR(global_status = global_status)
+    compute_SAR(global_status = global_status, couple = couple)
   })
 }
 

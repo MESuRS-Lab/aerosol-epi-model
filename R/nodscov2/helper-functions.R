@@ -18,6 +18,30 @@ dict_scenarios = c("sim_1-4_20" = "Scenario 1",
                    "sim_3-2_5" = "Scenario 5"
 )
 
+dict_rooms = c(
+  "1" = "Patient Room 1",
+  "2" = "Patient Room 2",
+  "3" = "Patient Room 3",
+  "4" = "Patient Room 4",
+  "5" = "Patient Room 5",
+  "6" = "Patient Room 6",
+  "8" = "Patient Room 8",
+  "9" = "Patient Room 9",
+  "10" = "Patient Room 10",
+  "11" = "Patient Room 11",
+  "12" = "Patient Room 12",
+  "13" = "Patient Room 13",
+  "14" = "Patient Room 14",
+  "15" = "Patient Room 15",
+  "16" = "Patient Room 16",
+  "17" = "Patient Room 17",
+  "18" = "Medical Staff Room",
+  "19" = "Paramedical Staff Room",
+  "20" = "Nursing Station",
+  "21" = "Office",
+  "22" = "Corridor"
+)
+
 # Plots-------------------------------------------------------------------------
 pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Room' = "#666699")
 env_pal = c('Contact' = 'darkorange', 'Environment' =  'orchid')
@@ -204,6 +228,21 @@ outside_schedule = function(df, sensor_nodscov2) {
   return(df)
 }
 
+# Get location during schedule 
+get_location_during_schedule = function(df, start_cut, end_cut) {
+  day_to_select = start_cut:end_cut
+  locations = lapply(seq_along(day_to_select), function(x) {
+    out = global_data[day_to_select][[x]]
+    out$time = day_to_select[x]
+    return(out)
+  })
+  locations = do.call("rbind", locations) %>%
+    filter(id == df$id) %>%
+    select(id, location_ti, time) %>%
+    rename(room = location_ti)
+  return(locations)
+}
+
 # Functions to analyze networks-------------------------------------------------
 # Function to trim synthetic networks when contacts occur when an individual is not 
 # present in the ward
@@ -383,4 +422,20 @@ get_ss = function(df, n1, n2) {
   )
   
   return(out)
+}
+# Functions for animated gif----------------------------------------------------
+distribute_points <- function(n) {
+  theta <- seq(0, 2 * pi, length.out = n + 1)[-1]
+  radius <- 0.2  # Radius of the circle where the points will be plotted
+  x <- radius * cos(theta)
+  y <- radius * sin(theta)
+  return(data.frame(offset_x = x, offset_y = y))
+}
+
+apply_offsets <- function(group_by_data) {
+  n <- nrow(group_by_data)
+  offsets <- distribute_points(n)
+  group_by_data <- group_by_data %>%
+    mutate(offset_x = offsets$offset_x, offset_y = offsets$offset_y)
+  return(group_by_data)
 }

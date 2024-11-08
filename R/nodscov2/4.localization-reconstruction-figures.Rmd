@@ -32,7 +32,7 @@ data_to_load = "simulated"
 if (data_to_load == "observed") data_path <- file.path("..", "..", "data", "data-nodscov2") 
 if (data_to_load == "simulated") data_path <- file.path("..", "..", "data", "data-synthetic-graphs") 
 
-# Fgrue paths
+# Figure paths
 fig_loc_path <- file.path("..","..", "fig", "loc-reconstruction")
 ind_paths_path <- file.path("..","..", "fig", "individual-paths")
 if (!dir.exists(fig_loc_path)) dir.create(fig_loc_path, recursive = TRUE)
@@ -50,8 +50,8 @@ if (exists("global_localization")) global_location = global_localization
 ### Dictionaries
 ```{r}
 ## Dictionaries
-dict_rooms = setNames(as.character(rooms %>% mutate(room = ifelse(room == id_room, "Patient rooms", room)) %>% distinct(room, id_room) %>% pull(room)), 
-                      rooms %>% mutate(room = ifelse(room == id_room, "Patient rooms", room)) %>% distinct(room, id_room) %>% pull(id_room))
+dict_rooms_simplified = dict_rooms
+dict_rooms_simplified[grepl("Patient Room", dict_rooms_simplified)] = "Patient Rooms"
 
 dict_times = setNames(as.character(seq(begin_date, end_date-30, 30)),
                       as.character(1:length(global_location)))
@@ -75,7 +75,7 @@ cumulative_time = do.call("rbind", mapply(
        loc = x
        ) %>%
        filter(loc != "-1") %>%
-       mutate(loc = recode(loc, !!!dict_rooms), time = as_date(floor_date(time, "day"))) %>%
+       mutate(loc = recode(loc, !!!dict_rooms_simplified), time = as_date(floor_date(time, "day"))) %>%
        group_by(time, loc) %>%
        # Convert time spent in each room into hours 
        summarise(time_spent = n()*30/3600, .groups = "drop") #%>%
@@ -132,7 +132,6 @@ p = cumulative_time %>%
   geom_jitter(size = 0.1) +
   expand_limits(y = c(0,1)) +
   facet_grid(cols = vars(loc)) +
-  # ggh4x::facet_grid2(cols = vars(loc), scales = "free_y", independent  ="y") +
   scale_fill_manual(values = pal) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
@@ -153,8 +152,6 @@ p = cumulative_time %>%
   geom_jitter(size = 0.1) +
   expand_limits(y = c(0,1)) +
   facet_grid(cols = vars(cat)) +
-  # ggh4x::facet_grid2(cols = vars(cat), scales = "free_y", independent  ="y") +
-  # scale_fill_manual(values = pal) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         axis.title.x = element_blank(), 
@@ -167,7 +164,8 @@ ggsave(file.path(fig_loc_path, paste0("cumulative_time_", data_to_load, "_v2.png
 ```{r individual trajectories}
 # Example of individual trajectories 
 set.seed(123)
-agenda = read.csv2(file.path(nodscov2_synthetic_path, "agenda.csv"))
+if (data_to_load == "observed") agenda = read.csv2(file.path(data_path, "clean", "agenda_cleaned.csv"))
+if (data_to_load == "simulated") agenda = read.csv2(file.path(data_path, "input", "agenda.csv"))
 individuals_to_show = c(
   sample(admission$id[admission$cat == "Paramedical"], 5),
   sample(admission$id[admission$cat == "Medical"], 5),
@@ -203,7 +201,7 @@ for (y in individuals_to_show) {
     geom_path(col = pal[individual_cat]) +
     theme_bw() +
     labs(x = "", y = paste("Location of", y))
-  ggsave(file.path(ind_paths_path, paste0(gsub("\\.", "-", y), ".png")), p, height = 4, width = 10)
+  ggsave(file.path(ind_paths_path, data_to_load, paste0(gsub("\\.", "-", y), ".png")), p, height = 4, width = 10)
 }
 
 # Plot one week for the same individual

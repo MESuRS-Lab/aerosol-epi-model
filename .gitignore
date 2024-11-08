@@ -25,18 +25,15 @@ infection-network_files
 *.7z
 *.DS_Store
 
-# Raw data
+# Raw and processed data
 data/data-nodscov2/
 data/data-synthetic-graphs/
 
-# Processed data
-out/input-synthetic-nodscov2/
-out/loc-nodscov2/
-
 # Simulated data
-out/scenarios-analysis/
+out/final-simulations/
+out/grid-search/
 
 # Codes with paths used on the cluster
-cluster/codes/
+cluster/
 
 

@@ -86,10 +86,23 @@ Rcpp::List simulation(
         ///////////////////////
         // Update the status //
         ///////////////////////
-        Rcpp::DataFrame temp = Update_status_bis(global_status, status_tim1, temp_global_data["lambda_c"], temp_global_data["lambda_e"], info_ti, ids_ti, interaction_ti, location_ti, t);
+        Rcpp::DataFrame temp = Update_status_bis(
+          global_status, 
+          status_tim1, 
+          temp_global_data["lambda_c"], 
+          temp_global_data["lambda_e"], 
+          info_ti, 
+          ids_ti, 
+          interaction_ti, 
+          location_ti, 
+          t);
         global_status = clone(temp);
     }
 
-    Rcpp::List res = Rcpp::List::create(_["global_status"] = global_status, _["global_data"] = global_data, _["global_environment"] = global_environment);
+    Rcpp::List res = Rcpp::List::create(
+      _["global_status"] = global_status, 
+      _["global_data"] = global_data, 
+      _["global_environment"] = global_environment
+    );
     return res;    
 }

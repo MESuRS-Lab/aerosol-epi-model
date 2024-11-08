@@ -13,7 +13,8 @@ library(ggpubr)
 rm(list = ls())
 
 # Load functions and model
-source("scenarios-analysis-supp.R")
+source("helper-functions-simulations.R")
+sourceCpp(file.path("..", "..", "cpp", "dev-model-nodscov2_fun.cpp"))
 sourceCpp(file.path("..", "..", "cpp", "dev-sensibility-analysis.cpp"))
 ```
 
