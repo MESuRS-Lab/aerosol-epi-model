@@ -250,6 +250,19 @@ get_all_epidemic_duration <- function(list_sim){
   return(list_epidemic_duration)
 }
 
+###############################
+## TIME TO PEAK ##
+###############################
+get_time_to_peak = function(df, dict_time) {
+  df = df %>%
+    filter(status == "Infectious") %>%
+    arrange(time)
+  times = df$time[df$count == max(df$count)]
+  out = min(floor_date(dict_time[as.character(times)], "day"))
+  out = difftime(out, floor_date(new_begin_date, "day"), units = "day")
+  out = as.numeric(out)
+  return(out)
+}
 
 ###############################
 ## EPIDEMIC DURATIONS METRICS##

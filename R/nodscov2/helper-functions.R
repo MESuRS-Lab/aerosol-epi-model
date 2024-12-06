@@ -146,7 +146,7 @@ fusion_overlapping_contacts = function(df) {
         
         # End of interaction
         new_end = max(df$date_posix[c(i,j)] + df$length[c(i,j)])
-        new_length = as.numeric(difftime(new_end, new_date_posix, units = "sec"))
+        new_length = as.numeric(difftime(new_end, new_date_posix, units = "secs"))
         
         # Replace date_posix and length
         df$date_posix[c(i,j)] = new_date_posix
@@ -208,7 +208,7 @@ outside_schedule = function(df, sensor_nodscov2) {
       one_slot = one_slot + 1
       if (df_in$firstDate_in[df_in$date_in == 1] == 1) {
         new_firstDate = df$date_posix
-        new_length = as.numeric(difftime(df_in$lastDate_sensor[df_in$date_in == 1], new_firstDate, units = "sec"))
+        new_length = as.numeric(difftime(df_in$lastDate_sensor[df_in$date_in == 1], new_firstDate, units = "secs"))
       } else {
         new_firstDate = df_in$firstDate_sensor[df_in$date_in==1]
         new_length = as.numeric(difftime(df$date_posix+df$length, new_firstDate, units = "secs"))
@@ -224,7 +224,7 @@ outside_schedule = function(df, sensor_nodscov2) {
     }
   }
   
-  if (one_slot > 1) warning(paste("Following interaction with both participants not present in the ward:", df$from, df$to, d))
+  if (one_slot > 1) message(paste("Following interaction with both participants not present in the ward:", df$from, df$to, d))
   return(df)
 }
 
@@ -247,7 +247,6 @@ get_location_during_schedule = function(df, start_cut, end_cut) {
 # Function to trim synthetic networks when contacts occur when an individual is not 
 # present in the ward
 trim_interactions_agenda = function(df, admission, agenda) {
-  endDate = df$date_posix + df$length
   pa = c(df$from, df$to)[grepl("^PA-", c(df$from, df$to))]
   pe = c(df$from, df$to)[grepl("^PE-", c(df$from, df$to))]
   allLastDates = c()
@@ -261,25 +260,38 @@ trim_interactions_agenda = function(df, admission, agenda) {
   } 
   
   if (length(pe)>0) {
-    pe_lastDates = agenda %>% 
-      filter(id %in% pe, floor_date(lastDate, "day") == floor_date(endDate, "day")) %>% 
-      pull(lastDate)
     pe_firstDates = agenda %>%
       filter(id %in% pe, floor_date(firstDate, "day") == floor_date(df$date_posix, "day")) %>% 
       pull(firstDate)
+    
+    pe_lastDates = agenda %>% 
+      filter(id %in% pe, floor_date(firstDate, "day") == floor_date(df$date_posix, "day")) %>% 
+      pull(lastDate)
+
     allLastDates = c(allLastDates, pe_lastDates)
     allFirstDates = c(allFirstDates, pe_firstDates)
   }
   
-  if (any(allLastDates < endDate)) df$length = as.numeric(difftime(min(allLastDates), df$date_posix, units = "secs"))
-  if (any(allFirstDates > df$date_posix)) df$before_schedule = T
+  allLastDates = as_datetime(allLastDates)
+  allFirstDates = as_datetime(allFirstDates)
+  
+  if (any(allLastDates < df$date_posix + df$length)) df$length = as.numeric(difftime(min(allLastDates), df$date_posix, units = "secs"))
+  if (any(allFirstDates > df$date_posix)) {
+    if (any(allFirstDates > df$date_posix & allFirstDates > df$date_posix+df$length)) {
+      df$before_schedule = T
+    } else {
+      newStart = max(allFirstDates)
+      df$length = as.numeric(difftime(df$date_posix+df$length, newStart, units = "secs"))
+      df$date_posix = newStart
+    }
+  }
   
   return(df)
 }
 
 # Function to return a set of network metrics (from Leclerc et al., 2024)
 # https://gitlab.pasteur.fr/qleclerc/network_algorithm/-/tree/main?ref_type=heads
-get_net_metrics = function(graph_data, adm_data, iter = 0, network = "Observed"){
+get_net_metrics = function(graph_data, adm_data, iter = 0, db_type = "Observed", network = "Hospital"){
   
   days = unique(graph_data$date_posix)
   
@@ -290,6 +302,7 @@ get_net_metrics = function(graph_data, adm_data, iter = 0, network = "Observed")
                     efficiencies = rep(0, length(days)),
                     temp_corr = rep(0, length(days)),
                     iter = iter,
+                    data = db_type,
                     network = network,
                     day = days)
   
@@ -391,6 +404,140 @@ temporal_correlation = function(graph_data){
   return(temp_cor)
 }
 
+# Function to get the number of contacts by hour for the different pairs of participants
+contact_numbers = function(db, db_type, network) {
+  out = data.frame()
+  dict_pair = c("PA-PA" = "Patient-patient", "PA-PE" = "Patient-staff", "PE-PE" = "Staff-staff")
+  
+  # Input data
+  db = db %>% 
+    select(from, to, date_posix, length) %>%
+    mutate(
+      type = case_when(
+      substr(from, 1, 2) != substr(to, 1, 2) ~ "PA-PE",
+      .default = paste0(substr(from, 1, 2), "-", substr(to, 1, 2))
+      )
+    )
+  
+  for (p in c("PA-PA", "PA-PE", "PE-PE")) {
+    out_temp = db %>%
+      filter(type == p) %>%
+      mutate(date_posix = floor_date(as_datetime(date_posix), "hour")) %>%
+      select(-length) %>%
+      distinct() %>%
+      count(date_posix) %>%
+      mutate(day = wday(date_posix, week_start = 1)) %>%
+      mutate(day = as.character(day)) %>%
+      mutate(day = replace(day, day %in% c("6", "7"), "Weekend")) %>%
+      mutate(day = replace(day, day != "Weekend", "Weekday")) %>%
+      mutate(date_posix = hour(date_posix)) %>%
+      group_by(date_posix, day) %>%
+      summarise(med = median(n),
+                q25 = quantile(n, 0.25),
+                q75 = quantile(n, 0.75), .groups = "drop") %>%
+      mutate(type = dict_pair[p])
+    
+    out = bind_rows(out, out_temp)
+  }
+  
+  out = out %>%
+    mutate(date_posix = paste0(date_posix, ":00")) %>%
+    mutate(
+      data = db_type, 
+      network = network
+      )
+  
+  return(out)
+}
+
+
+# Functions to reconstruct individual locations---------------------------------
+# Function to reconstruct patient location when not interacting
+patient_locations = function(patient_id, patient_loc, 
+                             admission = admission, 
+                             begin_date = begin_date,
+                             end_date = end_date,
+                             patient_rooms = patient_rooms
+                             ) {
+  # Assign "NOT HERE" when not present in the ward
+  firstDate = as_datetime(paste(admission$firstDate[admission$id==patient_id], "00:00:00"))
+  firstDate = case_when(begin_date>firstDate ~ begin_date, .default = firstDate)
+  lastDate = as_datetime(paste(admission$lastDate[admission$id==patient_id], "23:59:30"))
+  lastDate = case_when(end_date<lastDate ~ end_date, .default = lastDate)
+  allDates = seq(begin_date, end_date-30, 30)
+  present = seq(firstDate, lastDate-30, 30)
+  not_present = which(!allDates %in% present)
+  if (length(not_present) != sum(is.na(patient_loc[not_present]))) stop(paste(patient_id, "has assigned location when individual not in the ward"))
+  patient_loc[not_present] = -1
+  
+  # Assign patient room when present in the ward and not interacting
+  patient_loc[is.na(patient_loc)] = patient_rooms$room[patient_rooms$id==patient_id]
+  return(patient_loc)
+}
+
+# Function to reconstruct HCW location when not interacting
+hcw_locations = function(hcw_id, hcw_loc,
+                         threshold = 90*2,
+                         agenda,
+                         admission, 
+                         begin_date,
+                         end_date,
+                         patient_rooms_ids,
+                         id_medical
+                         ) {
+  
+  # Assign "NOT HERE" when not present in the ward
+  allDates = seq(begin_date, end_date-30, 30)
+  present = agenda %>% 
+    filter(id == hcw_id) %>%
+    select(firstDate, lastDate) %>%
+    mutate(n = 1:n()) %>%
+    nest(.by = n) %>%
+    mutate(data=map(data, unroll_30s)) %>%
+    unnest(data) %>%
+    pull(data)
+  not_present = which(!allDates %in% present)
+  if (!all(is.na(hcw_loc[not_present]))) message(paste(hcw_id, "has location assigned when not present in the ward"))
+  # hcw_loc[not_present] = -1
+  # 
+  # # Split vector into elements of consecutive identical values  
+  # loc_split = split(hcw_loc, data.table::rleid(hcw_loc))
+  # 
+  # # Assign locations to elements
+  # for (k in seq_along(loc_split)) {
+  #   
+  #   current = loc_split[[k]]
+  #   if (!is.na(unique(current))) next()
+  #   
+  #   before = ifelse(k == 1, "-1", unique(loc_split[[k-1]]))
+  #   after = ifelse(k == length(loc_split), "-1", unique(loc_split[[k+1]]))
+  #   
+  #   # If between patient room and less than 5 mins
+  #   if (before == after & length(current) <= 10 & before %in% patient_rooms_ids) {
+  #     loc_split[[k]] = rep(before, length(current))
+  #     
+  #   } else if (length(current) == 1) {
+  #     # If between two different rooms and only 30 seconds --> corridor
+  #     loc_split[[k]] = c("22")
+  #     
+  #   } else if (length(current) > threshold) {
+  #     # If more than a threshold (default = 90 min)
+  #     loc_split[[k]] = rep("-1", length(current))
+  #     
+  #     if (length(unique(before)) == 1 & all(before == patient_rooms_ids)) loc_split[[k]][1] = "22"
+  #     if (length(unique(after)) == 1 & all(after == patient_rooms_ids)) loc_split[[k]][length(current)] = "22"
+  #     
+  #   } else {
+  #     # If between two different rooms and/or more than 5 mins
+  #     resting_room = ifelse(hcw_id %in% id_medical, "18", "19")
+  #     loc_split[[k]] = c("22", rep(resting_room, length(current)-2), "22")
+  #   }
+  # }
+  # 
+  # # Return 
+  # out = unlist(loc_split)
+  # return(out)
+}
 
 # Functions for plots-----------------------------------------------------------
 # Get summary statistics of a simulated epidemic

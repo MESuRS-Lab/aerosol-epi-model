@@ -60,7 +60,8 @@ names(dict_scenarios) = gsub("sim_", "", conditions)
 #   invisible(lapply(rdata_files, function(file) load_rdata_to_list(file, list_sim, dir)))
 # }
 # save(list_sim, file = file.path(simulations_path, "list_sim.rda"))
-# 
+load(file.path(simulations_path, "list_sim.rda"))
+
 # # Get SAR
 # list_SAR <- get_all_SAR(list_sim = list_sim, 
 #                         id_patient = id_patient, 
@@ -71,7 +72,8 @@ names(dict_scenarios) = gsub("sim_", "", conditions)
 # all_SAR = do.call("rbind", lapply(list_SAR, function(x) do.call("rbind", x)))
 # rownames(all_SAR) = NULL
 # write.csv2(all_SAR, file.path(simulations_path, "all_SAR.csv"), quote = F, row.names = F)
-# 
+all_SAR = read.csv2(file.path(simulations_path, "all_SAR.csv"))
+
 # ## Get epidemic duration 
 # list_epidemic_duration <- get_all_epidemic_duration(list_sim = list_sim)
 # all_durations = do.call("rbind", lapply(list_epidemic_duration, function(x) do.call("rbind", x))) %>%
@@ -79,6 +81,7 @@ names(dict_scenarios) = gsub("sim_", "", conditions)
 #   select(-couple)
 # rownames(all_durations) = NULL
 # write.csv2(all_durations, file.path(simulations_path, "all_durations.csv"), quote = F, row.names = F)
+all_durations = read.csv2(file.path(simulations_path, "all_durations.csv"))
 ```
 
 ## Plot probability of infection for the short-range transmission route 
@@ -409,6 +412,7 @@ p_duration = all_durations %>%
 # Plot of epidemic duration
 p2 = all_durations %>%
   filter(model == "linear") %>%
+  arrange(scenario) %>%
   ggboxplot(., x = "scenario", y = "duration", fill = "scenario") +
   stat_pvalue_manual(p_duration, label = "p.adj.signif") +
   geom_jitter(size = 0.8) +
@@ -418,27 +422,18 @@ p2 = all_durations %>%
   labs(y = "Epidemic duration (in days)")
 
 # Plot of time to peak
-get_time_to_peak = function(df, dict_time) {
-  df = df %>%
-    filter(status == "Infectious") %>%
-    arrange(time)
-  times = df$time[df$count == max(df$count)]
-  out = min(floor_date(dict_time[as.character(times)], "day"))
-  out = difftime(out, floor_date(new_begin_date, "day"), units = "day")
-  out = as.numeric(out)
-  return(out)
-}
+time_to_peak = all_curves %>%
+  nest(.by = c(scenario, id_sim)) %>%
+  mutate(time_to_peak = map(data, get_time_to_peak, dict_time)) %>%
+  unnest(time_to_peak) 
 
 p_time_to_peak = data.frame(
-  p = format(signif(JonckheereTerpstraTest(split(test$time_to_peak, test$scenario), alternative = "decreasing", exact = F)$p.value, 2), scientific = T),
+  p = format(signif(JonckheereTerpstraTest(split(time_to_peak$time_to_peak, time_to_peak$scenario), alternative = "decreasing", exact = F)$p.value, 2), scientific = T),
   scenario = "Scenario 3",
   time_to_peak = 90
 )
 
-p3 = all_curves %>%
-  nest(.by = c(scenario, id_sim)) %>%
-  mutate(time_to_peak = map(data, get_time_to_peak, dict_time)) %>%
-  unnest(time_to_peak) %>%
+p3 = time_to_peak %>%
   ggplot(., aes(x = scenario, y = time_to_peak, fill = scenario)) +
   geom_boxplot(outliers = F) +
   geom_jitter(size = 0.8) +
