@@ -21,7 +21,7 @@ conditions = expand.grid(network = c("poincare", "herriot"), sim = 1:10, full = 
 
 registerDoParallel(4)
 verif = foreach (r=1:nrow(conditions)) %dopar% {
-  r = 2
+  
     n = as.character(conditions[r,"network"])
     s = as.character(conditions[r,"sim"])
     full_network = as.logical(conditions[r, "full"])

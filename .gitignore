@@ -4,9 +4,7 @@
 .Ruserdata 
 not-relevant
 misc
-figures
 *.jpg
-*.png
 *.csv
 .vscode
 .Rpackages
@@ -26,13 +24,19 @@ infection-network_files
 *.DS_Store
 
 # Raw and processed data
-data/data-nodscov2/
-data/data-synthetic-graphs/
+data/data-i-bird/
+data/data-nodscov2/loc/
+data/data-nodscov2/raw/
+data/data-nodscov2/symmetrisation/
+data/data-synthetic-graphs/full_0-1/
+data/data-synthetic-graphs/full_0-5/
+data/data-synthetic-graphs/full_0-5agenda/
 
 # Simulated data
 out/final-simulations/
 out/grid-search/
 out/parameters-synthetic*.rda
+out/old/
 
 # Old codes
 R/nodscov2/deprecated/
@@ -43,4 +47,8 @@ nextflow/
 # Codes with paths used on the cluster
 cluster/
 exemple_suzel/
+
+# Figures preprocessed data
+fig/symmetrization/
+fig/loc-reconstruction/individual-paths/
 

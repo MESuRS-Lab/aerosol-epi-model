@@ -532,7 +532,7 @@ if (nrow(long_pa_pa_contacts) > 0) {
     filter(from %in% patients_ids, to %in% patients_ids) %>%
     distinct(from, to)
   double_rooms = as.list(as.data.frame(t(double_rooms)))
-  save(double_rooms, file = paste("data/data-nodscov2/clean/double_rooms_", net, ".rda")) 
+  save(double_rooms, file = paste0("data/data-nodscov2/clean/double_rooms_", net, ".rda")) 
 }
 
 # Patient rooms

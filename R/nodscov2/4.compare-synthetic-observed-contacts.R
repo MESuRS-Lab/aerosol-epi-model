@@ -22,7 +22,7 @@ if (!dir.exists("fig/network_comparison")) dir.create("fig/network_comparison")
 
 ## Load real and synthetic contact data-----------------------------------------
 networks = c("poincare", "herriot")
-full_network = F
+full_network = T
 admission = list()
 schedule = list()
 schedule_original = list()
