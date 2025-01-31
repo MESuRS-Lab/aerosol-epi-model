@@ -5,11 +5,9 @@
 not-relevant
 misc
 *.jpg
-*.csv
 .vscode
 .Rpackages
 *.o
-data-nodscov2
 R_libs_4.3.1
 *.html
 sim-nodscov2
@@ -28,9 +26,13 @@ data/data-i-bird/
 data/data-nodscov2/loc/
 data/data-nodscov2/raw/
 data/data-nodscov2/symmetrisation/
+data/data-synthetic-graphs/full/
+data/data-synthetic-graphs/biased/
+data/data-synthetic-graphs/loc/*.csv
 data/data-synthetic-graphs/full_0-1/
 data/data-synthetic-graphs/full_0-5/
 data/data-synthetic-graphs/full_0-5agenda/
+data/data-synthetic-graphs/input/example
 
 # Simulated data
 out/final-simulations/
