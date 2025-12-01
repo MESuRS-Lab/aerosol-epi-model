@@ -49,10 +49,44 @@ load_envdata_to_list <- function(file, list_sim, dir) {
 }
 
 
+
+# Functions to perform statistical comparisons----------------------------------
+# r_statix like function to calculate pairwise chisq comparisons with Bonferroni correction
+chisq_test_df = function(df) {
+  varname1 = colnames(df)[colnames(df)!="n"][1] 
+  varname2 = colnames(df)[colnames(df)!="n"][2]
+  
+  df_p = df %>%
+    pivot_wider(names_from = Extinction, values_from = n) %>%
+    rename(group1= Pathway) %>%
+    mutate(y1 = Yes/(Yes+No), y2 = Yes/(Yes+No), group2 = group1) %>%
+    expand(nesting(group1, y1), nesting(group2, y2)) %>%
+    filter(group1 != group2) %>%
+    mutate(y = ifelse(y1>y2, y1, y2)) %>%
+    select(group1, group2, y)
+  
+  df_tab = df %>%
+    pivot_wider(names_from = !!sym(varname1), values_from = n) %>%
+    column_to_rownames(var = varname2)
+  out = pairwise_prop_test(df_tab, p.adjust.method = "bonferroni") %>%
+    left_join(., df_p, by = c("group1", "group2"))
+  return(out)
+}
+
+# Jonckheere Terpsta test for trend
+jonckheere_test = function(df) {
+  out = data.frame(
+    p = JonckheereTerpstraTest(split(df$SAR, df$Pathway), alternative = "two.sided", exact = F)$p.value
+  )
+  return(out)
+}
+
 # Functions to compute secondary attack rates-----------------------------------
 
 ##################### SAR FOR ONE SIMULATION
-compute_SAR <- function(global_status, couple = "") {
+compute_SAR <- function(global_status, id_paramedical, id_medical, id_patient, couple = "") {
+  id_hcw = c(id_medical, id_paramedical)
+  
   if (!is.null(global_status)) {
     ## WE NEED INDEX TYPE FOR THE SAR BY TYPE COMPUTATION 
     index_id <- global_status %>% filter(inf_by == 'INDEX') %>% pull(id)
@@ -68,11 +102,24 @@ compute_SAR <- function(global_status, couple = "") {
     n_patient <- ifelse(index_type == 'PATIENT', length(id_patient) - 1, length(id_patient))
     n_hcw <- ifelse(index_type == 'PATIENT', length(id_hcw) - 1, length(id_hcw) - 1)
     
+    # N INFECTED BY TYPE
+    I <- length(global_status %>% filter(inf_by != "INDEX", t_inf != -1) %>% pull(id))
+    I_patient <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & inf_by != 'INDEX') %>% pull(id))
+    I_medical <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id))
+    I_paramedical <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id))
+    I_environment <- length(global_status %>% filter(grepl(pattern = 'ENVIRONMENT', inf_by)) %>% pull(id))
+    I_contact <- length(global_status %>% filter(grepl(pattern = 'CONTACT', inf_by)) %>% pull(id)) 
+    
+    I_patient_to_patient <- length(global_status %>% mutate(inf_by_contact = gsub("CONTACT-", "", inf_by)) %>% filter(inf_by_contact %in% id_patient, id %in% id_patient) %>% pull(id)) 
+    I_patient_to_hcw <- length(global_status %>% mutate(inf_by_contact = gsub("CONTACT-", "", inf_by)) %>% filter(inf_by_contact %in% id_patient, id %in% id_hcw) %>% pull(id)) 
+    I_hcw_to_patient <- length(global_status %>% mutate(inf_by_contact = gsub("CONTACT-", "", inf_by)) %>% filter(inf_by_contact %in% id_hcw, id %in% id_patient) %>% pull(id)) 
+    I_hcw_to_hcw <- length(global_status %>% mutate(inf_by_contact = gsub("CONTACT-", "", inf_by)) %>% filter(inf_by_contact %in% id_hcw, id %in% id_hcw) %>% pull(id)) 
+    
     ## SAR BY TYPE
-    SAR_global <- (length(global_status %>% filter(t_inf != -1) %>% pull(id)) -1 )/(n_individual)
-    SAR_patient <- length(global_status %>% filter(id %in% id_patient & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / (n_patient)
-    SAR_medical <- length(global_status %>% filter(id %in% id_medical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_medical
-    SAR_paramedical <- length(global_status %>% filter(id %in% id_paramedical & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_paramedical
+    SAR_global <- I / n_individual
+    SAR_patient <- I_patient / n_patient
+    SAR_medical <- I_medical / n_medical
+    SAR_paramedical <- I_paramedical / n_paramedical
     SAR_hcw <- length(global_status %>% filter(id %in% id_hcw & t_inf != -1 & inf_by != 'INDEX') %>% pull(id)) / n_hcw
     ## CLOSE CONTACT / ENVIRONMENT (SUM EQUALS TO GLOBAL)
     SAR_environment <- length(global_status %>% filter(grepl('ENVIRONMENT', inf_by)) %>% pull(id)) / n_individual
@@ -99,7 +146,18 @@ compute_SAR <- function(global_status, couple = "") {
       Paramedical_Contact = SAR_paramedical_c,
       Paramedical_Environment = SAR_paramedical_e,
       Medical_Contact = SAR_medical_c,
-      Medical_Environment = SAR_medical_e)
+      Medical_Environment = SAR_medical_e,
+      I_global = I,
+      I_patient = I_patient,
+      I_medical = I_medical,
+      I_paramedical = I_paramedical,
+      I_environment = I_environment,
+      I_contact = I_contact,
+      I_patient_to_patient = I_patient_to_patient,
+      I_patient_to_hcw = I_patient_to_hcw,
+      I_hcw_to_patient = I_hcw_to_patient,
+      I_hcw_to_hcw = I_hcw_to_hcw
+    )
     
     if (couple != "") {
       SAR_df$model = strsplit(couple, "_")[[1]][1]
@@ -226,9 +284,12 @@ compute_all_SAR_metrics <- function(list_SAR) {
 ######################## FOR ONE SIMULATION
 compute_epidemic_duration <- function(global_status) {
   ##LAST INFECTIOUS INDIVIDUAL TRANSITION TO RECOVERED
-  n_time_step <- max(global_status$t_recover)
-  ## DURATION IN DAYS
-  epidemic_duration <- (n_time_step *30)/(3600*24)
+  epidemic_duration = NA
+  if (sum(grepl("CONTACT|ENV", global_status$inf_by)) > 0) {
+    n_time_step <- max(global_status$t_recover[grepl("CONTACT|ENV", global_status$inf_by)])
+    ## DURATION IN DAYS
+    epidemic_duration <- (n_time_step *30)/(3600*24) 
+  }
   return(epidemic_duration)
 }
 
@@ -261,6 +322,23 @@ get_time_to_peak = function(df, dict_time) {
   out = min(floor_date(dict_time[as.character(times)], "day"))
   out = difftime(out, floor_date(new_begin_date, "day"), units = "day")
   out = as.numeric(out)
+  return(out)
+}
+
+get_time_to_peak_raw = function(df) {
+  df_out = df %>%
+    filter(inf_by != "") %>%
+    nest(.by = id) %>%
+    mutate(data = map(data, ~{data.frame(time = seq(.$t_incub, .$t_recover-1))})) %>%
+    unnest(data) %>%
+    group_by(time) %>%
+    summarise(count = n(), .groups = "drop") 
+  
+  out = NA
+  if (sum(grepl("ENV|CONTACT", df$inf_by)) > 0) {
+    out = min(df_out$time[df_out$count == max(df_out$count)])
+    out = (out *30)/(3600*24)
+  }
   return(out)
 }
 

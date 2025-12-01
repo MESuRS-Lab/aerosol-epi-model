@@ -3,101 +3,6 @@
 ##                   to analyze interaction data
 ################################################################################
 
-# Dictionaries------------------------------------------------------------------
-dict_cat = c("aux nurse" = "Paramedical", 
-             "nurse" = "Paramedical",
-             "student nurse" = "Paramedical",
-             "reeducation staff" = "Paramedical",
-             "ext physician" = "Medical",
-             "physician" = "Medical",
-             "patient" = "Patient")
-
-dict_cat_initial = c("administration" = "Other",
-                     "aux nurse" = "HCW", 
-                     "ext physician" = "HCW",
-                     "investigation" = "Other",
-                     "logistic" = "Other",
-                     "nurse" = "HCW",
-                     "other" = "Other",
-                     "physician" = "HCW",
-                     "reeducation staff" = "HCW",
-                     "student nurse" = "HCW",
-                     "visitor" = "Visitor"
-                    )
-
-dict_cat_num = c(
-  "1" = "nurse",
-  "2" = "aux nurse",
-  "3" = "reeducation staff",
-  "4" = "physician",
-  "5" = "ext physician",
-  "6" = "administration",
-  "7" = "logistic",
-  "8" = "investigation",
-  "9" = "patient",
-  "10" = "visitor",
-  "11" = "other",
-  "12" = "student nurse"
-)
-
-dict_ward = c(
-  "AURÉLIEN DINH" = "Maladies infectieuses",
-  "DENIS MALVY" = "Maladies infectieuses",
-  "DJILLALI ANNANE" = "Reanimation",
-  "ELSA KERMORVANT" = "Reanimation pediatrique", 
-  "GÉRALDINE MARTIN-GAUJARD" = "Geriatrie",
-  "GÉRARD CHERON" = "Urgence pediatrique",
-  "JULIE TOUBIANA" = "Pediatrie",
-  "KARIM TAZAROURTE" = "Urgences",
-  "LAURENT ARGAUD" = "Reanimation",
-  "MAGALI GUICHARDON" = "Geriatrie",
-  "MARION DOUPLAT" = "Urgences", 
-  "OLIVIER BOUCHAUD" = "Maladies infectieuses", 
-  "OLIVIER LAMBOTTE" = "Medecine interne", 
-  "OLIVIER SITBON" = "Pneumologie", 
-  "SÉBASTIEN BEAUNE" = "Urgences", 
-  "THOMAS RIMMELE" = "Reanimation chir" 
-)
-
-dict_hosp = c(
-  "AURÉLIEN DINH" = "APHP - RAYMOND POINCARÉ",
-  "DENIS MALVY" = "CHU DE BORDEAUX - PELLEGRIN",
-  "DJILLALI ANNANE" = "APHP - RAYMOND POINCARÉ",
-  "ELSA KERMORVANT" = "APHP - NECKER ENFANTS MALADES", 
-  "GÉRALDINE MARTIN-GAUJARD" = "HC DE LYON - EDOUARD HERRIOT",
-  "GÉRARD CHERON" = "APHP - NECKER ENFANTS MALADES",
-  "JULIE TOUBIANA" = "APHP - NECKER ENFANTS MALADES",
-  "KARIM TAZAROURTE" = "HC DE LYON - EDOUARD HERRIOT",
-  "LAURENT ARGAUD" = "HC DE LYON - EDOUARD HERRIOT",
-  "MAGALI GUICHARDON" = "APHP - PAUL BROUSSE",
-  "MARION DOUPLAT" = "HC DE LYON - SUD", 
-  "OLIVIER BOUCHAUD" = "APHP - AVICENNE", 
-  "OLIVIER LAMBOTTE" = "APHP - BICÊTRE", 
-  "OLIVIER SITBON" = "APHP - BICÊTRE", 
-  "SÉBASTIEN BEAUNE" = "APHP - AMBROISE PARÉ", 
-  "THOMAS RIMMELE" = "HC DE LYON - EDOUARD HERRIOT" 
-)
-
-dict_scenarios = c("sim_1-4_20" = "Scenario 1",
-                   "sim_1-2_16" = "Scenario 2",
-                   "sim_3-4_12" = "Scenario 3",
-                   "sim_1_8" = "Scenario 4",
-                   "sim_3-2_5" = "Scenario 5"
-)
-
-# Plots-------------------------------------------------------------------------
-pal = c('Medical' = "#5CD6D6", 'Paramedical' = "#A9B9E8", 'Patient' = "#FFA766", 'Room' = "#666699")
-env_pal = c('Contact' = 'darkorange', 'Environment' =  'orchid')
-algo_syn_pal = c("Observed" = "darkorchid", "Reconstructed"= "darkorange")
-
-# Variables---------------------------------------------------------------------
-noon_day1 = as_datetime("2020-05-06 12:00:00")
-midnight_day1 = as_datetime("2020-05-06 00:00:00")
-noon_day2 = as_datetime("2020-05-07 12:00:00")
-midnight_day2 = as_datetime("2020-05-07 00:00:00")
-noon_last_day = noon_day1 + 90*3600*24
-midnight_last_day = midnight_day1 + 90*3600*24
-
 # Functions to analyze data-----------------------------------------------------
 # Get vector of hours between two POSIXct dates 
 unroll_dates = function(df) {
@@ -644,8 +549,8 @@ hcw_locations = function(hcw_id, hcw_loc,
     before = ifelse(k == 1, "-1", unique(loc_split[[k-1]]))
     after = ifelse(k == length(loc_split), "-1", unique(loc_split[[k+1]]))
 
-    # If between patient room and less than 5 mins
-    if (before == after & length(current) <= 10 & before %in% patient_rooms_ids) {
+    # If between same room and less than 5 mins
+    if (before == after & length(current) <= 10 & before != rooms$id_room[rooms$room == "Corridor"]) {
       loc_split[[k]] = rep(before, length(current))
 
     } else if (length(current) == 1) {
@@ -654,13 +559,13 @@ hcw_locations = function(hcw_id, hcw_loc,
 
     } else if (length(current) > threshold) {
       # If more than a threshold (default = 90 min)
-      loc_split[[k]] = rep("-2", length(current))
-
-      if (length(unique(before)) == 1 & all(before %in% patient_rooms_ids)) loc_split[[k]][1] = rooms$id_room[rooms$room == "Corridor"]
-      if (length(unique(after)) == 1 & all(after %in% patient_rooms_ids)) loc_split[[k]][length(current)] = rooms$id_room[rooms$room == "Corridor"]
+      loc_split[[k]] = c(rooms$id_room[rooms$room == "Corridor"], rep(-1, length(current)-2), rooms$id_room[rooms$room == "Corridor"])
+      # loc_split[[k]] = rep("-1", length(current))
+      # if (!before %in% -1) loc_split[[k]][1] = rooms$id_room[rooms$room == "Corridor"]
+      # if (!after %in% -1) loc_split[[k]][length(current)] = rooms$id_room[rooms$room == "Corridor"]
 
     } else {
-      # If between two different rooms and/or more than 5 mins
+      # If between two different rooms and/or between 5min-threshold without interactions
       resting_room = ifelse(hcw_id %in% id_medical, rooms$id_room[rooms$room == "Medical Staff Room"], rooms$id_room[rooms$room == "Paramedical Staff Room"])
       loc_split[[k]] = c(rooms$id_room[rooms$room == "Corridor"], rep(resting_room, length(current)-2), rooms$id_room[rooms$room == "Corridor"])
     }
@@ -717,4 +622,10 @@ apply_offsets <- function(group_by_data) {
   group_by_data <- group_by_data %>%
     mutate(offset_x = offsets$offset_x, offset_y = offsets$offset_y)
   return(group_by_data)
+}
+# Functions to analyze simulations----------------------------------------------
+rank_interventions = function(df) {
+  df %>% 
+    dplyr::arrange(estimate) %>%
+    mutate(rank = 1:n())
 }

@@ -17,7 +17,7 @@ source("R/nodscov2/helper-functions.R")
 sourceCpp("cpp/helper-functions.cpp")
 
 ## Load real and synthetic contact data-----------------------------------------
-conditions = expand.grid(network = c("poincare", "herriot"), sim = 1:10, full = c(T,F))
+conditions = expand.grid(network = c("ICU1", "ICU2"), sim = 1:10, full = c(T,F))
 
 registerDoParallel(4)
 verif = foreach (r=1:nrow(conditions)) %dopar% {
@@ -27,22 +27,22 @@ verif = foreach (r=1:nrow(conditions)) %dopar% {
     full_network = as.logical(conditions[r, "full"])
     
     # List of individuals 
-    admission = read.csv2(paste0("data/data-synthetic-graphs/input/admission_", n, ".csv")) %>%
+    admission = read.csv2(paste0("data/data-synthetic-graphs/input/admission_", tolower(n), ".csv")) %>%
       mutate(
         firstDate = as_datetime(firstDate, tz = "CET"),
         lastDate = as_datetime(lastDate, tz = "CET")
       )
     
     # Schedule of all individuals from the original dta 
-    agenda = read.csv2(paste0("data/data-synthetic-graphs/input/agenda_", n, ".csv")) %>%
+    agenda = read.csv2(paste0("data/data-synthetic-graphs/input/agenda_", tolower(n), ".csv")) %>%
       mutate(
         firstDate = as_datetime(firstDate, tz = "CET"),
         lastDate = as_datetime(lastDate, tz = "CET")
       )
     
     # Synthetic data
-    reconstructed_path = paste0("data/data-synthetic-graphs/biased/", n, "/")
-    if (full_network) reconstructed_path = paste0("data/data-synthetic-graphs/full/", n, "/")
+    reconstructed_path = paste0("data/data-synthetic-graphs/biased/", tolower(n), "/")
+    if (full_network) reconstructed_path = paste0("data/data-synthetic-graphs/full/", tolower(n), "/")
     
     all_f = list.files(reconstructed_path, pattern = "^matContact.*csv", full.names = T)
     f = all_f[grepl(paste0(s, "_oneday"), all_f)]

@@ -21,8 +21,8 @@ source("R/nodscov2/helper-functions.R")
 if (!dir.exists("fig/network_comparison")) dir.create("fig/network_comparison")
 
 ## Load real and synthetic contact data-----------------------------------------
-networks = c("poincare", "herriot")
-full_network = F
+networks = c("ICU1", "ICU2")
+full_network = T
 admission = list()
 schedule = list()
 schedule_original = list()
@@ -31,34 +31,34 @@ interaction_synthetic = list()
 
 for (net in networks) {
   # List of individuals 
-  admission[[net]] = read.csv2(paste0("data/data-synthetic-graphs/input/admission_", net, ".csv")) %>%
+  admission[[net]] = read.csv2(paste0("data/data-synthetic-graphs/input/admission_", tolower(net), ".csv")) %>%
     mutate(
       firstDate = as_date(firstDate),
       lastDate = as_date(lastDate)
     )
   
   # Schedule of healthcare workers
-  schedule[[net]] = read.csv2(paste0("data/data-synthetic-graphs/input/agenda_", net, ".csv")) %>%
+  schedule[[net]] = read.csv2(paste0("data/data-synthetic-graphs/input/agenda_", tolower(net), ".csv")) %>%
     mutate(
       firstDate = as_datetime(firstDate),
       lastDate = as_datetime(lastDate)
     )
   
   # Schedule of all individuals from the original dta 
-  schedule_original[[net]] = read.csv2(paste0("data/data-nodscov2/clean/sensor_cleaned_", net, ".csv")) %>%
+  schedule_original[[net]] = read.csv2(paste0("data/data-nodscov2/clean/sensor_cleaned_", tolower(net), ".csv")) %>%
     mutate(
       DATEREMISE = as_datetime(DATEREMISE),
       DATEREC = as_datetime(DATEREC)
     )
   
   # Real interaction data
-  interaction_real[[net]] = read.csv2(paste0("data/data-synthetic-graphs/input/interactions_", net, ".csv")) %>%
+  interaction_real[[net]] = read.csv2(paste0("data/data-synthetic-graphs/input/interactions_", tolower(net), ".csv")) %>%
     mutate(date_posix = as_datetime(date_posix))
   
   # Synthetic data
   interaction_synthetic[[net]] = data.frame()
-  reconstructed_path = paste0("data/data-synthetic-graphs/biased/", net)
-  if (full_network) reconstructed_path = paste0("data/data-synthetic-graphs/full/", net)
+  reconstructed_path = paste0("data/data-synthetic-graphs/biased/", tolower(net))
+  if (full_network) reconstructed_path = paste0("data/data-synthetic-graphs/full/", tolower(net))
   
   for (f in list.files(reconstructed_path, pattern = "^matContact.*csv", full.names = T)) {
     
@@ -83,13 +83,14 @@ for (net in networks) {
 if (full_network) {
   study_period = 90 # days
   
-  # Herriot
-  c(min(admission$herriot$firstDate), max(admission$herriot$lastDate))
-  c(floor_date(min(as_datetime(interaction_synthetic$herriot$date_posix)), "day"), floor_date(max(as_datetime(interaction_synthetic$herriot$date_posix)+interaction_synthetic$herriot$length), "day")) 
+  # ICU1
+  c(min(admission$ICU1$firstDate), max(admission$ICU1$lastDate))
+  c(floor_date(min(as_datetime(interaction_synthetic$ICU1$date_posix), na.rm = T), "day"), floor_date(max(as_datetime(interaction_synthetic$ICU1$date_posix), na.rm = T), "day"))  
   
-  # Poincaré
-  c(min(admission$poincare$firstDate), max(admission$poincare$lastDate))
-  c(floor_date(min(as_datetime(interaction_synthetic$poincare$date_posix), na.rm = T), "day"), floor_date(max(as_datetime(interaction_synthetic$poincare$date_posix), na.rm = T), "day"))  
+  # ICU2
+  c(min(admission$ICU2$firstDate), max(admission$ICU2$lastDate))
+  c(floor_date(min(as_datetime(interaction_synthetic$ICU2$date_posix)), "day"), floor_date(max(as_datetime(interaction_synthetic$ICU2$date_posix)+interaction_synthetic$ICU2$length), "day")) 
+  
 }
 
 ## Compare network characteristics----------------------------------------------
@@ -145,7 +146,6 @@ for (net in networks) {
 # Change level order
 numbers = numbers %>%
   mutate(
-    network = ifelse(network == "poincare", "Poincaré", "Herriot"),
     db_type = factor(db_type, c("Observed", paste("Synthetic", 1:10))),
     type = factor(type, levels = unique(type)),
     date_posix = factor(date_posix, levels = c("0:00","1:00","2:00","3:00","4:00",
@@ -179,7 +179,7 @@ pa = numbers %>%
 
 # Plot contact duration 
 pb = durations %>%
-  mutate(network = ifelse(network == "poincare", "Poincaré", "Herriot"),
+  mutate(network = network,
          data = factor(data, c("Observed", paste("Synthetic", 1:10)))) %>%
   ggplot(., aes(y=length, x = network, colour = data)) +
   geom_boxplot(outlier.shape = NA) +
@@ -250,7 +250,7 @@ summary_data = summary_data %>%
   filter(iter == 1) %>%
   mutate(
     data = factor(data, levels = c("Observed", "Synthetic")),
-    network = ifelse(network == "herriot", "Herriot", "Poincaré")
+    network = network
   ) %>%
   group_by(day, data, network) %>%
   summarise(across(everything(), median), .groups = "drop") 

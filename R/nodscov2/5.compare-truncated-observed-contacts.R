@@ -21,7 +21,7 @@ source("R/nodscov2/helper-functions.R")
 if (!dir.exists("fig/network_comparison")) dir.create("fig/network_comparison")
 
 ## Load real and synthetic contact data-----------------------------------------
-networks = c("poincare", "herriot")
+networks = c("ICU1", "ICU2")
 full_network = T
 admission = list()
 schedule = list()
@@ -89,13 +89,14 @@ for (net in networks) {
 if (full_network) {
   study_period = 90 # days
   
-  # Herriot
-  c(min(admission$herriot$firstDate), max(admission$herriot$lastDate))
-  c(floor_date(min(as_datetime(interaction_synthetic$herriot$date_posix)), "day"), floor_date(max(as_datetime(interaction_synthetic$herriot$date_posix)+interaction_synthetic$herriot$length), "day")) 
+  # ICU1
+  c(min(admission$ICU1$firstDate), max(admission$ICU1$lastDate))
+  c(floor_date(min(as_datetime(interaction_synthetic$ICU1$date_posix), na.rm = T), "day"), floor_date(max(as_datetime(interaction_synthetic$ICU1$date_posix), na.rm = T), "day"))  
   
-  # Poincaré
-  c(min(admission$poincare$firstDate), max(admission$poincare$lastDate))
-  c(floor_date(min(as_datetime(interaction_synthetic$poincare$date_posix), na.rm = T), "day"), floor_date(max(as_datetime(interaction_synthetic$poincare$date_posix), na.rm = T), "day"))  
+  # ICU2
+  c(min(admission$ICU2$firstDate), max(admission$ICU2$lastDate))
+  c(floor_date(min(as_datetime(interaction_synthetic$ICU2$date_posix)), "day"), floor_date(max(as_datetime(interaction_synthetic$ICU2$date_posix)+interaction_synthetic$ICU2$length), "day")) 
+  
 }
 
 ## Compare network characteristics----------------------------------------------
@@ -151,7 +152,6 @@ for (net in networks) {
 # Change level order
 numbers = numbers %>%
   mutate(
-    network = ifelse(network == "poincare", "Poincaré", "Herriot"),
     db_type = factor(db_type, c("Observed", paste("Synthetic", 1:10))),
     type = factor(type, levels = unique(type)),
     date_posix = factor(date_posix, levels = c("0:00","1:00","2:00","3:00","4:00",
@@ -173,29 +173,34 @@ pa = numbers %>%
   scale_y_continuous(breaks = seq(0,300,75)) +
   scale_x_discrete(breaks = c("0:00", "4:00", "8:00", "12:00",
                               "16:00","20:00")) +
-  theme_bw() +
+  theme_classic() +
   theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
         legend.text = element_text(size = 14),
         legend.title = element_text(size = 14),
         axis.text.y = element_text(size = 14),
         axis.title = element_text(size = 14),
-        strip.text = element_text(size = 14))  +
-  guides(fill = FALSE, color = guide_legend(override.aes = list(fill = NA))) +
+        strip.text = element_text(size = 14),
+        panel.grid.major = element_line(linewidth = 11/22, color = "grey90"),
+        panel.border = element_rect(linewidth = 1),
+        axis.line = element_blank())  +
+  guides(fill = "none", color = guide_legend(override.aes = list(fill = NA))) +
   labs(x = "Hour", y = "Number of unique contacts", colour = "")
 
 # Plot contact duration 
 pb = durations %>%
-  mutate(network = ifelse(network == "poincare", "Poincaré", "Herriot"),
-         data = factor(data, c("Observed", paste("Synthetic", 1:10)))) %>%
+  mutate(data = factor(data, c("Observed", paste("Synthetic", 1:10)))) %>%
   ggplot(., aes(y=length, x = network, colour = data)) +
   geom_boxplot(outlier.shape = NA) +
   scale_colour_discrete(type = c("orange", colorRampPalette(c("dodgerblue4", "lightskyblue"))(10))) +
   coord_cartesian(ylim = c(0,35)) +
   # guides(colour="none") +
-  theme_bw() +
+  theme_classic() +
   theme(axis.text.x = element_text(size = 14),
         axis.text.y = element_text(size = 14),
-        axis.title = element_text(size = 14)) +
+        axis.title = element_text(size = 14),
+        panel.grid.major = element_line(linewidth = 11/22, color = "grey90"),
+        panel.border = element_rect(linewidth = 1),
+        axis.line = element_blank()) +
   labs(y = "Contact duration (minutes)", x = "Network", col = "") 
 
 # Combine plots
@@ -254,10 +259,7 @@ for (net in networks) {
 # Get median
 summary_data = summary_data %>%
   filter(iter == 1) %>%
-  mutate(
-    data = factor(data, levels = c("Observed", "Synthetic")),
-    network = ifelse(network == "herriot", "Herriot", "Poincaré")
-  ) %>%
+  mutate(data = factor(data, levels = c("Observed", "Synthetic"))) %>%
   group_by(day, data, network) %>%
   summarise(across(everything(), median), .groups = "drop") 
 
@@ -275,11 +277,15 @@ p = summary_data %>%
   mutate(metric = recode(metric, !!!dict_metric)) %>%
   ggplot(., aes(x = network, y = Value, col = data)) +
   geom_boxplot(width = 0.5, position = position_dodge(width = 0.8)) +
-  geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.5)) + 
+  geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.5, jitter.height = 0)) + 
   facet_wrap(facets = vars(metric), ncol = 3, scales = "free_y") +
-  theme_bw() +
+  theme_classic() +
+  theme(panel.grid.major = element_line(linewidth = 11/22, color = "grey90"),
+        panel.border = element_rect(linewidth = 1),
+        axis.line = element_blank()) +
+  scale_color_manual(values = c("Observed" = "orange", "Synthetic" = "dodgerblue4")) +
   expand_limits(y = 0) +
-  labs(col = "Data", x = "")
+  labs(col = "Network", x = "")
 p
 if (full_network) ggsave("fig/network_comparison/metrics_full.png", p, height = 5, width = 10)
 if (!full_network) ggsave("fig/network_comparison/metrics_biased.png", p, height = 5, width = 10)
@@ -331,12 +337,13 @@ all_recurrence_prob %>%
   mutate(db_type = factor(db_type, c("Observed", paste("Synthetic", 1:10)))) %>%
   ggplot(., aes(x = db_type, fill = net, y = pind)) +
   geom_boxplot(position = position_dodge()) +
-  geom_jitter(position = position_jitterdodge()) +
+  geom_jitter(position = position_jitterdodge(jitter.height = 0)) +
   facet_grid(rows = vars(cat)) +
-  theme_bw() +
+  theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         axis.title.x = element_blank(),
-        legend.title = element_blank()) +
+        legend.title = element_blank(),
+        panel.grid.major = element_line(linewidth = 11/22, color = "grey90")) +
   labs(y = "Probability of recurring contacts (by hour)")
 if (!full_network) ggsave("fig/network_comparison/recurring_contacts_biased.png", height = 6, width = 12)
 if (full_network) ggsave("fig/network_comparison/recurring_contacts_full.png", height = 6, width = 12)

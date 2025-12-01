@@ -31,6 +31,9 @@ extern const double scale_inf_g;
 
 RcppExport int Incub_period_gamma();
 
+RcppExport int Incub_period_gamma_discretized(Rcpp::List params);
+RcppExport Rcpp::List param_gamma_discretized();
+
 RcppExport int Incub_period_lognormal();
 
 RcppExport int Inf_period_gamma();
@@ -41,6 +44,8 @@ RcppExport int Incub_period_uniform();
 
 RcppExport int Inf_period_uniform();
 
+RcppExport int runif_int(int lower_value, int upper_value);
+
     
 
 RcppExport Rcpp::NumericVector Update_environment(
@@ -49,10 +54,14 @@ RcppExport Rcpp::NumericVector Update_environment(
     const Rcpp::DataFrame& environment_tim1,
     const Rcpp::IntegerVector& location_ti,
     const Rcpp::IntegerVector& status_tim1,
+    const Rcpp::IntegerVector& interaction_with_patient_ti,
     const double& mu,
+    const double& mu_int,
     const double& nu,
+    const double& nu_int,
     const double& deltat,
-    const int& t
+    const std::string& intervention,
+    const std::string& index_patient
 );
 
 
@@ -73,7 +82,10 @@ RcppExport Rcpp::NumericVector Lambda_c (
     const Rcpp::DataFrame& interaction_ti,
     const Rcpp::IntegerVector& status_ti,
     const double& beta_c,
-    const double& deltat
+    const double& deltat,
+    const std::string& intervention,
+    const double& rel_trans_risk,
+    const std::string& index_patient
 );
 
 RcppExport Rcpp::NumericVector Lambda_e (
@@ -121,6 +133,7 @@ RcppExport Rcpp::DataFrame Update_status_bis(
     const Rcpp::CharacterVector& ids_ti,
     const Rcpp::DataFrame& interactions_ti,
     const Rcpp::IntegerVector& location_ti,
+    const Rcpp::List& params,
     const int& t
 );
 

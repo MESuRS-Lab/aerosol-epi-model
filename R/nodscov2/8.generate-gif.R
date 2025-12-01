@@ -16,9 +16,10 @@ library(tidyr)
 
 # Helper functions
 source("R/nodscov2/helper-functions.R")
+source("R/nodscov2/dictionaries.R")
 
 # Load data 
-loc_path <- "data/data-synthetic-graphs/loc/herriot-observed-reconstructed-locations-60.rda"
+loc_path <- "data/data-synthetic-graphs/loc/icu1-observed-reconstructed-locations-60.rda"
 load(loc_path)
 
 # Create room coordinates
@@ -93,7 +94,7 @@ rooms_coords <- rooms %>%
 # new_end_date <- new_begin_date + (24*60*60)
 # print(new_end_date - new_begin_date)
 t_begin <- 1 #5*60*2 ## OFFSET t
-t_end <- (t_begin + 48*60*2) - 1 #as.numeric(difftime(end_date, begin_date, units = "secs"))/30
+t_end <- (t_begin + 24*60*2) - 1 #as.numeric(difftime(end_date, begin_date, units = "secs"))/30
 
 # Get location data
 data <- #do.call(rbind, global_location) %>%
@@ -106,7 +107,7 @@ data <- #do.call(rbind, global_location) %>%
   filter(location != -1) %>%
   mutate(id = gsub("\\.", "-", id)) %>%
   left_join(admission, by = c("id")) %>%
-  filter(cat != "Patient") %>%
+  # filter(cat != "Patient") %>%
   mutate(location = as.integer(location)) %>%
   left_join(rooms_coords, by = c("location")) %>%
   rename(type=cat)
@@ -159,7 +160,8 @@ animation <- p +
 nframes <- nrow(data%>%distinct(time))
 fps <- 50
 duration <- nframes / fps
-animate(animation, renderer = gifski_renderer("fig/loc-reconstruction/trajectories-gif.gif"), width = 3000, height = 1333, fps = 50, nframes = nframes, duration = duration)
+animate(animation, renderer = gifski_renderer("fig/loc-reconstruction/trajectories-gif.gif"), 
+        width = 3000, height = 1333, fps = 50, nframes = nframes, duration = duration)
 
 ## .mp4 conversion with ffmpeg
 ## ffmpeg -i trajectories-gif.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" trajectories.mp4

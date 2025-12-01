@@ -3,7 +3,7 @@
 ##
 ################################################################################
 
-# Librairies
+# Libraries
 library(tidyverse)
 library(foreach)
 library(doParallel)
@@ -19,9 +19,9 @@ nodscov2_synthetic_path <- file.path("data", "data-synthetic-graphs")
 nodscov2_path <- file.path("data", "data-nodscov2") 
 
 # Network to study
-networks = c("herriot-simulated", "poincare-simulated", "herriot-observed", "poincare-observed")
+networks = c("icu1-simulated", "icu2-simulated", "icu1-observed", "icu2-observed")
 
-registerDoParallel(4)
+registerDoParallel(2)
 verif = foreach (network=networks, .combine=c) %dopar% {
   ## Process verification---------------------------------------------------------
   checkpoints = paste0(network, "\n\n")
@@ -128,18 +128,22 @@ verif = foreach (network=networks, .combine=c) %dopar% {
   }
 
   # Dataframe with all rooms
+  paramed_vol = ifelse(grepl("icu1", network), 156.25, 40 * 2.5)
+  corridor_vol = ifelse(grepl("icu1", network), 757.5, 200 * 2.5)
+  nursing_vol = ifelse(grepl("icu1", network), 96.02, 20 * 2.5)
+  
   rooms = patient_rooms %>%
     mutate(
-      volume = ifelse(room %in% double_rooms_id, 30*2.2, 20*2.2), #18 square meters * 2.2 height except for double room
+      volume = ifelse(room %in% double_rooms_id, 30*2.5, 20*2.5), #18 square meters * 2.5 height except for double room
       id_room = as.character(room),
       room = as.character(room)
     ) %>%
     bind_rows(.,
-              data.frame(room = "Medical Staff Room", id = "M-R", volume = 30 * 2.2, id_room = "50"),
-              data.frame(room = "Paramedical Staff Room", id = "PM-R", volume =  40 * 2.2, id_room = "51"),
-              data.frame(room = "Nursing station", id = "NS", volume = 20 * 2.2, id_room = "52"),
-              data.frame(room = "Office", id = "M-O", volume = 20 * 2.2, id_room = "53"),
-              data.frame(room = "Corridor", id = "C", volume = 200 * 2.2, id_room = "54")
+              data.frame(room = "Medical Staff Room", id = "M-R", volume = 30 * 2.5, id_room = "50"),
+              data.frame(room = "Paramedical Staff Room", id = "PM-R", volume =  paramed_vol, id_room = "51"),
+              data.frame(room = "Nursing station", id = "NS", volume = nursing_vol, id_room = "52"),
+              data.frame(room = "Office", id = "M-O", volume = 20 * 2.5, id_room = "53"),
+              data.frame(room = "Corridor", id = "C", volume = corridor_vol, id_room = "54")
     )
 
 

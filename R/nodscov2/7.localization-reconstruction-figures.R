@@ -22,6 +22,7 @@ rm(list=ls())
 
 # Helper functions
 source("R/nodscov2/helper-functions.R")
+source("R/nodscov2/dictionaries.R")
 
 # Figure paths
 fig_loc_path <- "fig/loc-reconstruction"
@@ -29,8 +30,12 @@ ind_paths_path <- "fig/loc-reconstruction/individual-paths"
 if (!dir.exists(fig_loc_path)) dir.create(fig_loc_path, recursive = TRUE)
 if (!dir.exists(ind_paths_path)) dir.create(ind_paths_path, recursive = TRUE)
 
+# Strore plots of time spent within each type of room
+cum_time_all = data.frame()
+mean_cum_time_all = data.frame()
+
 # Input data paths
-for (network in c("herriot", "poincare")) {
+for (network in c("icu1", "icu2")) {
   for (threshold in c(30*2,60*2,90*2)) {
     ## Load data--------------------------------------------------------------------
     all_data = list()
@@ -162,26 +167,33 @@ for (network in c("herriot", "poincare")) {
       summarise(m = mean(time_spent), .groups = "drop")
     
     # Plot
-    n = ifelse(network == "herriot", "Herriot", "Poincaré")
+    n = ifelse(network == "icu1", "ICU1", "ICU2")
     th = setNames(c("30 min", "1h", "1.5h"), c(30*2, 60*2, 90*2))
     
     p = ggplot(cum_time_data, aes(x = loc, y = time_spent, fill = db)) +
       geom_boxplot(position = position_dodge(width = 0.8), outliers = F) +
-      geom_jitter(col = "grey50", position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), size = 0.1) +
+      geom_jitter(position = position_jitterdodge(jitter.width = 0.2, jitter.height = 0, dodge.width = 0.8), size = 0.1) +
       geom_point(data = mean_cum_time, aes(y = m), position = position_dodge(width = 0.8), shape = 4) +
       expand_limits(y = c(0,1)) +
       facet_grid(cols = vars(cat), scales = "free_x") +
       scale_fill_manual(values = c("Observed network" = "orange", "Synthetic network" = "darkorchid")) +
-      theme_bw() +
+      scale_color_manual(values = c("Observed network" = "orange", "Synthetic network" = "darkorchid")) +
+      theme_classic() +
       theme(axis.text.x = element_text(angle = 30, hjust = 1),
             axis.title.x = element_blank(),
             plot.title = element_text(hjust = 0.5),
             legend.title = element_blank(),
-            legend.position = "bottom") +
+            legend.position = "bottom",
+            panel.grid.major = element_line(linewidth = 11/22, color = "grey90")) +
       labs(y = "Average proportion of daily time spent in room", 
            title = paste0(n, " - ", th[as.character(threshold)]))
     ggsave(paste0(fig_loc_path, "/cumulative_time_", network, "_", threshold, ".png"), p, height = 4, width = 11)
     p
+    
+    if (threshold == 30*2) {
+      cum_time_all = bind_rows(cum_time_all, cum_time_data %>% mutate(network = n))
+      mean_cum_time_all = bind_rows(mean_cum_time_all, mean_cum_time %>% mutate(network = n))
+    }
     
     ## Plot individual trajectories for randomly selected individuals and days------
     # Example of individual trajectories 
@@ -225,7 +237,8 @@ for (network in c("herriot", "poincare")) {
         
         p = ggplot(individual_path, aes(x = time, y = loc, group=cat)) +
           geom_path(col = pal[individual_cat]) +
-          theme_bw() +
+          theme_classic() +
+          theme(panel.grid.major = element_line(linewidth = 11/22, color = "grey90")) +
           labs(x = "", y = paste("Location of", y))
         ggsave(paste0(ind_paths_path, "/", network, "/", data_to_load, "/", y, "_", threshold, ".png"), p, height = 4, width = 10)
       }
@@ -258,7 +271,8 @@ for (network in c("herriot", "poincare")) {
       
       p = ggplot(individual_path, aes(x = time, y = loc, group=cat)) +
         geom_path(col = pal[individual_cat]) +
-        theme_bw() +
+        theme_classic() +
+        theme(panel.grid.major = element_line(linewidth = 11/22, color = "grey90")) +
         labs(x = "", y = paste("Location of", y))
       ggsave(paste0(ind_paths_path, "/", network, "/", data_to_load, "/", y, "_", threshold, "_week.png"), p, height = 4, width = 20)
     }
@@ -297,8 +311,9 @@ for (network in c("herriot", "poincare")) {
       ggplot(., aes(x = data, y = n)) +
       ggh4x::facet_grid2(cols = vars(interaction_type), scales = "free_y", independent  ="y") +
       geom_boxplot(outliers = F) +
-      geom_jitter(size = 0.5) +
-      theme_bw() +
+      geom_jitter(size = 0.5, height = 0) +
+      theme_classic() +
+      theme(panel.grid.major = element_line(linewidth = 11/22, color = "grey90")) +
       labs(x = "Contact dataset", y = "Distribution of the number of interactions per hour")
     
     # # Load cluster data 
@@ -339,4 +354,24 @@ for (network in c("herriot", "poincare")) {
     
   }
 }
+
+# Plot time spent in each room for the two networks
+ggplot(cum_time_all, aes(x = loc, y = time_spent, col = db)) +
+  geom_boxplot(position = position_dodge(width = 0.7), width = 0.6, outliers = F) +
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, jitter.height = 0, dodge.width = 0.7), size = 0.1) +
+  expand_limits(y = c(0,1)) +
+  facet_grid(cols = vars(cat), rows = vars(network), scales = "free_x") +
+  scale_color_manual(values = c("Observed network" = "orange", "Synthetic network" = "dodgerblue4")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1),
+        axis.title.x = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.major = element_line(linewidth = 11/22, color = "grey90"),
+        panel.border = element_rect(linewidth = 1),
+        axis.line = element_blank()) +
+  labs(y = "Average proportion of daily time spent in room")
+ggsave(paste0(fig_loc_path, "/cumulative_time_60.png"), height = 5, width = 8)
+
 

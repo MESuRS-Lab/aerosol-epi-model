@@ -21,17 +21,24 @@ infection-network_files
 *.7z
 *.DS_Store
 
-# Raw and processed data
-data/data-nodscov2/loc/
-data/data-nodscov2/raw/
-data/data-nodscov2/symmetrisation/
-data/data-synthetic-graphs/full/
+# Old cpp files and binaries
+cpp/deprecated/
+cpp/i-bird/
+cpp/old/
+cpp/*.o
+
+# Data from other studies
+data/data-i-bird/
+data/data-nodscov2/
+data/data-synthetic-graphs/old/
 data/data-synthetic-graphs/biased/
-data/data-synthetic-graphs/loc/*.csv
-data/data-synthetic-graphs/full_0-1/
-data/data-synthetic-graphs/full_0-5/
-data/data-synthetic-graphs/full_0-5agenda/
-data/data-synthetic-graphs/input/example
+data/data-synthetic-graphs/full/
+data/data-synthetic-graphs/input/
+
+# Figures
+fig/loc-reconstruction/trajectories-gif.gif
+fig/loc-reconstruction/individual-paths/
+fig/symmetrization/
 
 # Simulated data
 out/final-simulations/
@@ -39,21 +46,30 @@ out/grid-search/
 out/parameters-synthetic*.rda
 out/old/
 
-# Old codes
-R/nodscov2/deprecated/
-
 # Nextflow for cluster calculation
-nextflow/
+grid_search/
+nextflow_grid_search/
+nextflow_interventions/merge.sh
+nextflow_interventions/results/simu/
+nextflow_interventions/clean.sh
+nextflow_sensitivity/clean.sh
+nextflow_sensitivity/results/simu/
 
 # Codes with paths used on the cluster
 cluster/
-exemple_suzel/
 
-# Figures preprocessed data
-fig/symmetrization/
-fig/loc-reconstruction/individual-paths/
+# Results
+out/
 
-# I-Bird
-data/data-i-bird/
+# Old codes or on another dtaset
 R/i-bird/
+R/fig-qleclerc/
+R/nodscov2/deprecated/
+R/nodscov2/dictionaris_hospitals.R
+R/nodscov2/1.compare_processed_data.R
+R/nodscov2/2.generate-data.R
+R/nodscov2/launch-simulation-example.R
+R/nodscov2/scenarios-analysis.R
+R/nodscov2/scenarios-figures.R
+R/nodscov2/verif.R
 

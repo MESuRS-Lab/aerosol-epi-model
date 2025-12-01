@@ -10,7 +10,7 @@ library(Rcpp)
 rm(list=ls())
 
 # Conditions
-networks = c("herriot", "poincare")
+networks = c("icu1", "icu2")
 thresholds = c(30*2, 60*2, 90*2)
 
 conditions = expand.grid(networks, thresholds)
@@ -40,6 +40,8 @@ for (r in 1:nrow(conditions)) {
     id = admission$id, 
     t_inf = as.integer(-1), 
     t_incub = as.integer(-1), 
+    t_infectious_start = as.integer(-1),
+    presymp_trans = FALSE,
     t_recover = as.integer(-1), 
     inf_by = '', 
     inf_room = as.integer(-1)
@@ -85,40 +87,57 @@ for (r in 1:nrow(conditions)) {
   # })
   
   if (identical(colnames(paths), admission$id)) {
+    
     global_data <- lapply(1:length(global_environment), function(t){
+      
+      # HCWs in interaction with patients
+      int_with_pat = as.numeric(grepl("PA-", colnames(paths)))
+      pe_with_pat = global_interaction[[t]] %>% 
+        filter(
+          (grepl("PA", from) & grepl("PE", to)) |
+            (grepl("PE", from) & grepl("PA", to))
+            ) %>%
+        pivot_longer(c(from, to), names_to = "from_to", values_to = 'ids') %>%
+        filter(grepl("PE", ids)) %>%
+        distinct(ids) %>%
+        pull(ids)
+      int_with_pat[colnames(paths) %in% pe_with_pat] = 1
+      
       df <- data.frame(id = colnames(paths),
                        info = case_when(grepl("^PE-", colnames(paths)) ~ 1, .default = 0),
                        #room = admission_sim$room,
                        #interacting = ifelse(id %in% truncated_interaction$from | id %in% truncated_interaction$to, T, F)
                        location_ti = as.integer(paths[t, ]),
+                       interaction_with_patient = int_with_pat,
                        lambda_c = 0,
                        lambda_e = 0
       )
       df <- df %>% filter(location_ti > 0)
       return(df)
     }) 
+    
   } else {
     warning("Ids are not ordered correctly")
   }
   
   ## List of model parameters-----------------------------------------------------
   # Fixed parameters 
-  B <- 0.023 * 60 * 24 # Breathing rate (0.023 m3/min)
+  B <- 0.006 * 60 * 24 # Breathing rate (0.006 m3/min)
+  intervention <- "None"
   # mu_air <- 1 # Mechanical ventilation in ISO 8 rooms (>10 ACH) but a bit high considering that there is no ventilation in Raymond Poincaré
   # Mechanical ventilation is not perfect either 
   #mu_ventilation <-  4 * 24 # Mechanical ventilation, Quanta removal (4-6 Air changes/h)
   mu_inac <- (log(2)/1.1) * 24 # Quanta inactivation (computed with viral half life -> 0.63 quanta inactivated/h) 
   mu <- mu_inac #+ (mu_ventilation - mu_air)
-  dt <- 30 # Time step
-  tau <- 60 * 60 *24 # Seconds in 1 day
+  dt <- 30 # Time step (in seconds)
+  tau <- 60 * 60 * 24 # Seconds in 1 day
   deltat <- dt/tau
   env_model = "linear"
-  nu <- 1.8e7 * 2 * 24 # (1.8e7 RNA copies per 30-min) Lai et al., Clinical Infectious Diseases (2024)
+  nu <- 1.8e5 * 2 * 24 # (1.8e5 RNA copies per 30-min) Lai et al., Clinical Infectious Diseases (2024)
   
   # Parameters explored in the simulation study (tested to give the same 20% SAR)
   beta_c <- 1/2 # Transmission rate for close contact interaction /h
   beta_e <- 1e-8
-  
   
   ## Save the final object used as input of the epidemic simulation algorithm-----
   # Pay attention: it might take a while to save the 
@@ -130,6 +149,7 @@ for (r in 1:nrow(conditions)) {
        global_status,
        global_environment,
        admission,
+       intervention,
        beta_c,
        beta_e,
        nu,
