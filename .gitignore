@@ -34,6 +34,7 @@ data/data-synthetic-graphs/old/
 data/data-synthetic-graphs/biased/
 data/data-synthetic-graphs/full/
 data/data-synthetic-graphs/input/
+data/data-synthetic-graphs/loc/*observed*.rda
 
 # Figures
 fig/loc-reconstruction/trajectories-gif.gif

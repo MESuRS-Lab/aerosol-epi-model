@@ -5,19 +5,19 @@
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
-## Modeling the transmission of respiratory diseases in hospital setting
+## Accounting for the long-distance transmission route: an epidemiological model of airborne disease transmission in hospitals 
 
 ### Context 
 
-Respiratory infections are a major public health issue in hospital settings. They can be transmitted from patient to patient, as well as between patients and healthcare workers, resulting in nosocomial or hospital-acquired infections. These infections contribute to the worsening of patients' health and complicate their care.
+Respiratory infections are a major public health issue in hospital settings. They can be transmitted from patient to patient, as well as between patients and healthcare workers, resulting in nosocomial or hospital-acquired infections. These infections contribute to patient aggravation and makre their care more complex.
 
 Pathogens can be transmitted in different ways:
-- Large droplets emitted during speech or coughing, which can lead to short-distance transmission
-- Small aerosols emitted during breathing, which can remain suspended in the air and cause long-distance transmission
+- During close-proximity interactions at short distances;
+- Through Aerosols emitted during breathing, speech, or coughing which can remain suspended in the air and cause long-distance transmission
 
 A thorough understanding of the respective roles of these transmission modes is essential for developing effective strategies to prevent nosocomial respiratory infections. To date, no model simultaneously integrates these two modes of transmission, and the relative importance of each remains to be evaluated.
 
-The aim of this project is to develop a mathematical model of respiratory pathogen transmission in a hospital ward, combining inter-individual transmission (via an epidemiological model) and airborne transmission (via a biophysical model).
+The aim of this project is to develop a mathematical model of respiratory pathogen transmission in a hospital ward, combining inter-individual transmission during close-proximity interactions and long-range transmission due to persistent aerosols.
 
 
 ## Instructions
@@ -48,16 +48,16 @@ The aim of this project is to develop a mathematical model of respiratory pathog
 <details>
   <summary> c++ </summary>
 
-  * c++ 11
+  * C++ 11
 
   </details>
 
 
 ### Nods-Cov-2 scripts (R/nodscov2/)
-The project is divided into 4 dependent R scripts:
+The project is divided into numbered R scripts available in the `R/nodscov2/` directory. Files 1.compare_processed_data.R and 2.generate-data.R contain identifiable information, and thereby, are not made available. The other scripts can be used as follows:
 
 <details>
-  <summary> 1. interaction-nodscov2.Rmd </summary>
+  <summary> 3.compare_synthetic_contacts.R : compare network metrics and structure in the observed Nodscov2 data and in the synthetic temporal networks. </summary>
 
   This script loads Nods-Cov-2 local data (private), filters it to keep only intensive care units, then does an analysis of the distribution of individuals' categories, type of interactions etc.
   this script led us to choose (for now) Raymond Poincaré hospital's intensive care unit (Garches, France).
@@ -67,7 +67,7 @@ The project is divided into 4 dependent R scripts:
 </details>
 
 <details>
-  <summary> 2. localization-nodscov2.Rmd </summary>
+  <summary> 4.trim-synthetic-observed-contacts.R : trim interactions in synthetic networks that do not respect the presence of individuals in the ward </summary>
   
   This script loads Nods-Cov-2 local data (private), filters it to keep only data relating to Raymond Poincaré hospital's reanimation ward and reconstructs the localizations of individuals using interactions, inferred healthcare workers' shifts, individual category and comportemental rules.
   Localizations and other important data are saved as _/out/loc-nodscov2/localization-nodscov2.RData_.
@@ -80,7 +80,7 @@ The project is divided into 4 dependent R scripts:
 
 
 <details>
-  <summary> 3. model-nodscov2.Rmd </summary>
+  <summary> 5.compare-truncated-observed-contacts.R : comparison of observed and synthetic networks after truncation of interactions </summary>
   This script loads Nods-Cov-2 localization data (& other related objects) from _/out/loc-nodscov2/localization-nodscov2.RData_, defines the objects needed for the simulation (parameters etc...) then compiles model-nodscov2.cpp (and its dependency model-nodscov2_fun.cpp) that is used for the epidemic simulation.
   <details>
     <summary> model-nodscov2_fun.cpp breakdown </summary>
@@ -104,7 +104,7 @@ The project is divided into 4 dependent R scripts:
 </details>
 
 <details>
-  <summary> 4. visualization-nodscov2.Rmd </summary>
+  <summary> 6.localization-reconstruction-parallel.R : reconstruct locations in the observed and synthetic temporal networks. </summary>
   
   This script loads Nods-Cov-2 epidemic simulation results (& other related objects such as localizations, simulations, number of days simulated and model parameters used) from _/out/sim-nodscov2/&lt;id_sim&gt;-simulation-nodscov2.RData_ then proceeds to generate multiple plots such as:
 
@@ -117,7 +117,36 @@ The project is divided into 4 dependent R scripts:
 
 </details>
 
+<details>
+  <summary> 7.localization-reconstruction-figures.R : plots of the reconstructed locations. </summary>
+</details>
 
+<details>
+  <summary> 8.generate-gif.R : code to generate a movie of individual movements in the minimal ward for over one day. </summary>
+</details>
+
+<details>
+  <summary> 9.generate-input-data-model.R : create object that contains data and parameters that are used as inputs of the simulation platform. </summary>
+</details>
+
+<details>
+  <summary> 10.grid-search.R : analysis of simulations from the grid search approach. </summary>
+</details>
+<details>
+  <summary> 11.baseline-scenario.R : plot results from the scenario without intervention. </summary>
+</details>
+
+<details>
+  <summary> 12.intervention-analysis.R : plot results from scenarios with control interventions. </summary>
+</details>
+
+<details>
+  <summary> 13.sensitivity-analysis.R : plot results from the univariate sensitivity analysis. </summary>
+</details>
+
+# Generate simulations
+
+Simulations were generated using a Nextflow pipeline. Files to launch the pipelines are in the `nextflow/grid_search`, `nextflow/interventions`, and `nextflow_sensitivity` directories and R scripts that generate unique simulations are available in the `bin` subfolders. 
 
 ## License
 
