@@ -39,6 +39,13 @@ data/data-synthetic-graphs/input/
 fig/loc-reconstruction/trajectories-gif.gif
 fig/loc-reconstruction/individual-paths/
 fig/symmetrization/
+fig/network_comparison/metrics_biased.png
+fig/network_comparison/metrics_biased_notruncation.png
+fig/network_comparison/metrics_full_notruncation.png
+fig/network_comparison/recurring_contacts_biased.png
+fig/network_comparison/unique_contacts_biased.png
+fig/network_comparison/unique_contacts_biased_notruncation.png
+fig/network_comparison/unique_contacts_full_notruncation.png
 
 # Simulated data
 out/final-simulations/
@@ -65,7 +72,7 @@ out/
 R/i-bird/
 R/fig-qleclerc/
 R/nodscov2/deprecated/
-R/nodscov2/dictionaris_hospitals.R
+R/nodscov2/dictionaries_hospitals.R
 R/nodscov2/1.compare_processed_data.R
 R/nodscov2/2.generate-data.R
 R/nodscov2/launch-simulation-example.R
