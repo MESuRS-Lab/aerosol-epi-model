@@ -155,7 +155,7 @@ Distributed under the GNU General Public License. See `COPYING` for more informa
 
 ## Contact
 
-Project Link: [https://github.com/nollive/projet-pacri](https://github.com/nollive/projet-pacri)
+Project Link: [https://github.com/MESuRS-Lab/aerosol-epi-model](https://github.com/MESuRS-Lab/aerosol-epi-model/tree/main)
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
