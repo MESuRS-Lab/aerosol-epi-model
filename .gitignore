@@ -51,7 +51,6 @@ fig/network_comparison/unique_contacts_full_notruncation.png
 # Simulated data
 out/final-simulations/
 out/grid-search/
-out/parameters-synthetic*.rda
 out/old/
 
 # Nextflow for cluster calculation
@@ -65,9 +64,6 @@ nextflow_sensitivity/results/simu/
 
 # Codes with paths used on the cluster
 cluster/
-
-# Results
-out/
 
 # Old codes or on another dtaset
 R/i-bird/
