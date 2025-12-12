@@ -35,6 +35,7 @@ rm(list=setdiff(ls(), "ind_numbers"))
 
 # Load functions and dictionaries
 source('R/nodscov2/helper-functions-simulations.R')
+source('R/nodscov2/helper-functions.R')
 source('R/nodscov2/dictionaries.R')
 
 # All conditions
@@ -212,12 +213,12 @@ median_interventions = stats_df %>%
 
 # Plot of the reduction of cumulative incidence for all individuals, patients, and HCWs
 ggplot(median_interventions, aes(x = Pathway, y = estimate, ymin = conf.high, ymax = conf.low, fill = Category)) +
-  geom_hline(yintercept = -1, linetype = "dashed", col = "grey80") +
+  geom_hline(yintercept = -1, linetype = "dashed", col = "grey70") +
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.5) +
   geom_errorbar(position = position_dodge(width = 0.7), width = 0.2) +
   ggh4x::facet_grid2(cols = vars(network), rows = vars(group2)) +
   scale_fill_manual(values = pal) +
-  scale_y_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent, breaks = c(0, -0.25, -0.5, -0.75, -1)) +
   theme_classic() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1),
@@ -227,7 +228,7 @@ ggplot(median_interventions, aes(x = Pathway, y = estimate, ymin = conf.high, ym
         axis.line = element_blank()
   ) +
   guides(fill=guide_legend(title.position="top", position = "bottom", nrow=1)) +
-  labs(fill = "Individual category", y = "Relative cumulative incidence")
+  labs(fill = "Individual category", y = "Relative difference of the cumulative incidence over 90 days")
 # ggplot(median_interventions, aes(x = Pathway, y = m, ymin = m_lwr, ymax = m_upr, fill = Category, col = Category)) +
 #   geom_hline(yintercept = -1, linetype = "dashed", col = "grey80") +
 #   # geom_pointrange(position = position_dodge(width = 1)) +
@@ -260,7 +261,7 @@ p4_patients = median_interventions %>%
   geom_errorbar(position = position_dodge(width = 0.5), width = 0.2) +
   facet_grid(rows = vars(group2)) +
   scale_fill_manual(values = network_pal) +
-  scale_y_continuous(labels = scales::percent) +
+  scale_y_continuous(breaks = c(0, -.25, -.5, -.75, -1), labels = scales::percent) +
   theme_classic() +
   theme(axis.title.x = element_blank(), 
         axis.text.x = element_text(angle = 30, hjust = 1),
@@ -269,7 +270,7 @@ p4_patients = median_interventions %>%
         panel.border = element_rect(linewidth = 1),
         axis.line = element_blank()) +
   guides(fill=guide_legend(title.position="top", position = "bottom", nrow=1)) + 
-  labs(fill = "Network", y = "Relative reduction of cumulative incidence among patients")
+  labs(fill = "Network", y = "Relative difference of the cumulative incidence among patients compared to the no-intervention scenario")
 
 
 # Final figure for paper
@@ -319,7 +320,7 @@ median_interventions %>%
     axis.line = element_blank(),
     axis.text.x = element_text(angle = 30, hjust = 1)
   ) +
-  labs(fill = "Cumulative incidence reduction in all individuals")
+  labs(fill = "Relative difference of the cumulative incidence in all individuals")
 ggsave("fig/interventions/rank_interventions.png", height = 5, width = 8)
 
 ## Impact of interventions on the probability of acquisition across different
@@ -334,16 +335,16 @@ pairs_none = stats_df %>%
 # Relative reduction in scenarios with intervention
 pairs_interventions = stats_df %>%
   pivot_longer(c(I_patient_to_patient, I_patient_to_hcw, I_hcw_to_patient, I_hcw_to_hcw), names_to = "Pair", values_to = "I") %>%
-  group_by(network, Pathway, Pair) %>%
-  wilcox_test(I ~ intervention, ref.group = "None", paired = F, 
-              conf.level = 0.95, alternative = "two.sided", p.adjust.method = "BH",
-              detailed = T) %>% 
-  left_join(., pairs_none, by = c("network", "Pathway", "Pair")) %>%
+  group_by(network, Pathway, intervention, Pair) %>%
+  summarise(med = median(I), .groups = "drop") %>%
+  pivot_wider(names_from = intervention, values_from = med) %>%
+  pivot_longer(c(`Hand hygiene`, `Targeted masking`, `Universal masking`, 
+                 `Ventilation patient rooms`, `Ventilation HCW rooms`,
+                 `Targeted masking +\nVentilation patient rooms`,
+                 `Targeted masking +\nVentilation HCW rooms`
+                 ), names_to = "intervention", values_to = "I") %>%
   mutate(
-    estimate = -estimate/ref,
-    estimate_low = -conf.high/ref,
-    estimate_high = -conf.low/ref,
-    group2 = factor(group2, dict_interventions),
+    estimate = (I-None)/None,
     Pair = case_when(
       Pair == "I_patient_to_patient" ~ "Patient to Patient",
       Pair == "I_patient_to_hcw" ~ "Patient to HCW",
@@ -351,11 +352,7 @@ pairs_interventions = stats_df %>%
       Pair == "I_hcw_to_hcw" ~ "HCW to HCW"
     )
   ) %>%
-  mutate(
-    estimate = ifelse(is.infinite(estimate), NA, estimate),
-    estimate_low = ifelse(is.infinite(estimate_low), NA, estimate_low),
-    estimate_high = ifelse(is.infinite(estimate_high), NA, estimate_high)
-  )
+  mutate(estimate = ifelse(is.infinite(estimate), NA, estimate))
 
 stats_df %>%
   filter(network == "ICU2") %>%
@@ -363,16 +360,17 @@ stats_df %>%
   summarise(median_I = median(I_patient_to_patient), .groups = "drop")
 
 # Plot
-ggplot(pairs_interventions, aes(x = Pathway, y = estimate, ymin = estimate_low, ymax = estimate_high, fill = group2)) +
+ggplot(pairs_interventions, aes(x = Pathway, y = estimate, fill = intervention)) +
+  geom_hline(yintercept = -1, linetype = "dashed", color = "grey70") +
   geom_bar(stat = "identity", position = position_dodge(width = 0.6), width = 0.5) +
-  geom_errorbar(position = position_dodge(width = 0.6), width = 0.3) +
   facet_grid(cols = vars(network), rows = vars(Pair)) +
   scale_fill_manual(values = intervention_pal) + 
-  scale_y_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent, breaks = c(0, -0.25, -0.5, -0.75, -1)) +
   theme_classic() +
   theme(axis.title.x = element_blank(), axis.text.x = element_text(angle = 30, hjust = 1),
         legend.position = "bottom", panel.grid.major = element_line(linewidth = 11/22, color = "grey90"),
         panel.border = element_rect(linewidth = 1),
         axis.line = element_blank()) +
-  labs(y = "Relative reduction of cumulative incidence", fill = "Intervention")
+  labs(y = "Relative difference of the median cumulative incidence", fill = "Intervention") +
+  expand_limits(y = c(0,-1.2))
 ggsave("fig/interventions/cum_incidence_transmission_pairs.png", height = 8, width = 8)

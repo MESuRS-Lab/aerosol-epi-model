@@ -254,7 +254,7 @@ bind_rows(
     axis.line = element_blank(),
     axis.text.x = element_text(angle = 30, hjust = 1)
   ) +
-  labs(fill = "Cumulative incidence reduction in all individuals")
+  labs(fill = "Relative difference of the cumulative incidence in all individuals")
 ggsave("fig/sensitivity_analysis/rank_sensitivity_hand-hygiene.png", height = 8, width = 6)
 
 # Mask wearing
@@ -291,7 +291,7 @@ bind_rows(
     axis.line = element_blank(),
     axis.text.x = element_text(angle = 30, hjust = 1)
   ) +
-  labs(fill = "Cumulative incidence reduction in all individuals")
+  labs(fill = "Relative difference of the cumulative incidence in all individuals")
 ggsave("fig/sensitivity_analysis/rank_sensitivity_mask-wearing.png", height = 8, width = 6)
 
 # Ventilation
@@ -328,7 +328,7 @@ bind_rows(
     axis.line = element_blank(),
     axis.text.x = element_text(angle = 30, hjust = 1)
   ) +
-  labs(fill = "Cumulative incidence reduction in all individuals")
+  labs(fill = "Relative difference of the cumulative incidence in all individuals")
 ggsave("fig/sensitivity_analysis/rank_sensitivity_ventilation.png", height = 8, width = 6)
 
 ## Plot final figures for the effect of exhalation and aerostability------------
