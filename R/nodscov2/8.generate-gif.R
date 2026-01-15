@@ -8,6 +8,8 @@ rm(list = ls())
 
 # Libraries
 library(ggplot2)
+library(lubridate)
+library(hms)
 library(gganimate)
 library(gifski)
 library(dplyr)
@@ -94,15 +96,15 @@ rooms_coords <- rooms %>%
 # new_end_date <- new_begin_date + (24*60*60)
 # print(new_end_date - new_begin_date)
 t_begin <- 1 #5*60*2 ## OFFSET t
-t_end <- (t_begin + 24*60*2) - 1 #as.numeric(difftime(end_date, begin_date, units = "secs"))/30
+t_end <- (t_begin + 24*60*2) #as.numeric(difftime(end_date, begin_date, units = "secs"))/30
 
 # Get location data
 data <- #do.call(rbind, global_location) %>%
   #filter(between(time, t_begin, t_end)) %>%
   # filter(time < 620) %>%
   data.frame(paths) %>% 
-  slice(1:t_end) %>% 
   mutate(time = 1:n()) %>% 
+  slice(seq(1, t_end, by = 20)) %>% 
   pivot_longer(-time, values_to = "location", names_to = "id") %>%
   filter(location != -1) %>%
   mutate(id = gsub("\\.", "-", id)) %>%
@@ -137,7 +139,7 @@ segments_data <- data %>%
 p <- ggplot() +
   geom_rect(data = rooms_coords, aes(xmin = x - 0.5, xmax = x + 0.5, ymin = y - 0.5, ymax = y + 0.5), color = "black", fill = NA) +
   geom_text(data = rooms_coords, aes(x = x, y = (y + 0.6), label = room), size = 10) +
-  labs(title = 'Individual position at time: {begin_date + (frame_time * 30)},  at time step: {frame_time}') +
+  labs(title = 'Individual position at time: {as_hms(begin_date + frame_time * 30)}') +
   theme_minimal() +
   theme(
     plot.title = element_text(size = 45, hjust = 0.5),
@@ -165,30 +167,3 @@ animate(animation, renderer = gifski_renderer("fig/loc-reconstruction/trajectori
 
 ## .mp4 conversion with ffmpeg
 ## ffmpeg -i trajectories-gif.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" trajectories.mp4
-
-############ OLD #########
-
-## OLD VERSION FOR ROOMS COORDINATES
-# rooms_coords <- rooms %>%
-#   mutate(
-#     x = case_when(
-#       grepl("001", id) ~ id_room,
-#       grepl("Corridor", room) ~ 1,
-#       room == "Office" ~ 1,
-#       room == "Nursing station" ~ 3,
-#       room == "Medical Restroom"~ 1,
-#       room == "Paramedical Restroom"~ 3,
-#       TRUE ~ NA_real_
-#     ),
-#     y = case_when(
-#       grepl("001", id) ~ 1,
-#       grepl("Corridor", room) ~ 2,
-#       room == "Office" ~ 3,
-#       room == "Nursing station" ~ 3,
-#       grepl("Restroom", room) ~ 4,
-#       TRUE ~ NA_real_
-#     )
-#   ) %>%
-#   mutate(location = id_room) %>%
-#   distinct(id_room, .keep_all = TRUE) %>%
-#   select(location, x, y)
