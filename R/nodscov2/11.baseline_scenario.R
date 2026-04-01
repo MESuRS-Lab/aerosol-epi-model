@@ -48,7 +48,7 @@ source("R/nodscov2/helper-functions.R")
 source('R/nodscov2/dictionaries.R')
 
 # Epidemics for all conditions
-stats_df = read.csv2("nextflow_interventions/resu_interventions_all.txt", header = T) %>%
+stats_df = read.csv2("nextflow_interventions/results/resu_interventions_all.txt", header = T) %>%
   filter(model == "linear", threshold == 60, intervention == "None") %>%
   mutate(
     beta_e = factor(gsub("-", "/", beta_e), c('1/150', '1/100', '1/70', '1/60', '1/45')),
@@ -127,8 +127,8 @@ p1 = individual_paths %>%
     )) %>%
     filter(!is.na(xstart)) %>%
   ggplot(., aes(x = xstart, xend = xend, y = loc, col = cat)) +
-    geom_point(aes(x=xend, y=loc), size = 0.5, shape = 20) +
-    geom_point(aes(x=xstart, y=loc), size = 0.5, shape = 20) +
+    geom_point(aes(x=xend, y=loc), size = 1.6, shape = "l") +
+    geom_point(aes(x=xstart, y=loc), size = 1.6, shape = "l") +
     geom_segment(linewidth = 2) +
   facet_wrap(facets = vars(id), ncol = 1, scales = "free_x") + 
   scale_color_manual(values = pal) +
@@ -310,6 +310,7 @@ p_final = ggarrange(p1, p2, p3, ncol = 3, labels = c("A", "B", "C"),
                     widths = c(1, 0.5, 0.5))
 p_final
 ggsave("fig/paper/figure2.png", p_final, height = 8, width = 12)
+ggsave("fig/paper/figure2.tif", p_final, height = 8, width = 12)
 
 ## Plot SAR for baseline scenario without interventions-------------------------
 # Network ICU1
