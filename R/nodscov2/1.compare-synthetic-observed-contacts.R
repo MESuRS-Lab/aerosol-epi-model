@@ -302,39 +302,3 @@ n_in_contact %>%
   geom_point() +
   facet_grid(rows = vars(net), scales = "free_y") +
   theme_bw()
-
-# # Compute recurrence probability on the data by hour
-# all_recurrence_prob = data.frame()
-# for (net in networks) {
-#   all_recurrence_prob = bind_rows(
-#     all_recurrence_prob, 
-#     get_recurrence_proba(interaction_real[[net]], schedule_original[[net]]) %>%
-#       mutate(net = net, db_type = 'Observed') %>%
-#       left_join(., admission[[net]] %>% select(id, cat), by = "id"),
-#     interaction_synthetic[[net]] %>%
-#       mutate(n = net, db_type = paste("Synthetic", nSim)) %>%
-#       nest(.by = c(db_type, n)) %>%
-#       mutate(data = map(data, get_recurrence_proba, sensor = schedule_original[[net]])) %>%
-#       unnest(data) %>%
-#       rename(net = n) %>%
-#       left_join(., admission[[net]] %>% select(id, cat), by = "id")
-#   )
-# }
-# 
-# all_recurrence_prob %>% 
-#   mutate(db_type = factor(db_type, c("Observed", paste("Synthetic", 1:10)))) %>%
-#   ggplot(., aes(x = db_type, fill = net, y = pind)) +
-#   geom_boxplot(position = position_dodge()) +
-#   geom_jitter(position = position_jitterdodge()) +
-#   facet_grid(rows = vars(cat)) +
-#   theme_bw() +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-#         axis.title.x = element_blank(),
-#         legend.title = element_blank()) +
-#   labs(y = "Probability of recurring contacts (by hour)")
-# 
-# all_recurrence_prob %>% 
-#   mutate(db_type = ifelse(db_type == "Observed", db_type, "Simulated")) %>%
-#   group_by(db_type, cat, net) %>%
-#   summarise(m = mean(pind), .groups = "drop") %>%
-#   pivot_wider(names_from = db_type, values_from = m)

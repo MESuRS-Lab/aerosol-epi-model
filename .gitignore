@@ -28,7 +28,13 @@ cpp/old/
 cpp/*.o
 
 # Data from other studies
-data/data-nodscov2/
+data/data-nodscov2/loc/
+data/data-nodscov2/raw/
+data/data-nodscov2/recurring_contacts/
+data/data-nodscov2/symmetrisation/
+data/data-nodscov2/clean/interaction_cleaned_icu1_article.csv
+data/data-nodscov2/clean/interaction_cleaned_icu2_article.csv
+
 data/data-synthetic-graphs/input/example/
 data/data-synthetic-graphs/loc/*observed*.rda
 data/data-synthetic-graphs/input/interactions_icu1_article.csv
