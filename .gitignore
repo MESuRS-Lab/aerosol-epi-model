@@ -28,9 +28,7 @@ cpp/old/
 cpp/*.o
 
 # Data from other studies
-data/data-i-bird/
 data/data-nodscov2/
-data/data-synthetic-graphs/old/
 data/data-synthetic-graphs/biased/
 data/data-synthetic-graphs/full/icu1/mat*
 data/data-synthetic-graphs/full/icu1/truncated_data_2.csv
@@ -54,6 +52,8 @@ data/data-synthetic-graphs/full/icu2/truncated_data_9.csv
 data/data-synthetic-graphs/full/icu2/truncated_data_10.csv
 data/data-synthetic-graphs/input/example/
 data/data-synthetic-graphs/loc/*observed*.rda
+data/data-synthetic-graphs/input/interactions_icu1_article.csv
+data/data-synthetic-graphs/input/interactions_icu2_article.csv
 
 # Figures
 fig/loc-reconstruction/trajectories-gif.gif
@@ -89,8 +89,8 @@ R/i-bird/
 R/fig-qleclerc/
 R/nodscov2/deprecated/
 R/nodscov2/dictionaries_hospitals.R
-R/nodscov2/1.compare_processed_data.R
-R/nodscov2/2.generate-data.R
+R/nodscov2/0.compare_processed_data.R
+R/nodscov2/0bis.generate-data.R
 R/nodscov2/launch-simulation-example.R
 R/nodscov2/scenarios-analysis.R
 R/nodscov2/scenarios-figures.R

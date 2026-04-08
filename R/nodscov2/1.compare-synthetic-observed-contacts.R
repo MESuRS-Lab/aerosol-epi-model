@@ -37,14 +37,14 @@ for (net in networks) {
       lastDate = as_date(lastDate)
     )
   
-  # Schedule of healthcare workers
+  # Schedule of healthcare workers in the simulated data
   schedule[[net]] = read.csv2(paste0("data/data-synthetic-graphs/input/agenda_", tolower(net), ".csv")) %>%
     mutate(
       firstDate = as_datetime(firstDate),
       lastDate = as_datetime(lastDate)
     )
   
-  # Schedule of all individuals from the original dta 
+  # Schedule of all individuals from the original data 
   schedule_original[[net]] = read.csv2(paste0("data/data-nodscov2/clean/sensor_cleaned_", tolower(net), ".csv")) %>%
     mutate(
       DATEREMISE = as_datetime(DATEREMISE),

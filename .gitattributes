@@ -1,0 +1,7 @@
+data/data-synthetic-graphs/full/icu1/*.csv filter=lfs diff=lfs merge=lfs -text
+data/data-synthetic-graphs/full/icu2/*.csv filter=lfs diff=lfs merge=lfs -text
+
+data/data-synthetic-graphs/biased/icu1/*.csv filter=lfs diff=lfs merge=lfs -text
+data/data-synthetic-graphs/biased/icu2/*.csv filter=lfs diff=lfs merge=lfs -text
+
+data/data-synthetic-graphs/loc/*.rda filter=lfs diff=lfs merge=lfs -text
