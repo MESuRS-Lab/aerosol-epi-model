@@ -29,27 +29,6 @@ cpp/*.o
 
 # Data from other studies
 data/data-nodscov2/
-data/data-synthetic-graphs/biased/
-data/data-synthetic-graphs/full/icu1/mat*
-data/data-synthetic-graphs/full/icu1/truncated_data_2.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_3.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_4.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_5.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_6.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_7.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_8.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_9.csv
-data/data-synthetic-graphs/full/icu1/truncated_data_10.csv
-data/data-synthetic-graphs/full/icu2/mat*
-data/data-synthetic-graphs/full/icu2/truncated_data_2.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_3.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_4.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_5.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_6.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_7.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_8.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_9.csv
-data/data-synthetic-graphs/full/icu2/truncated_data_10.csv
 data/data-synthetic-graphs/input/example/
 data/data-synthetic-graphs/loc/*observed*.rda
 data/data-synthetic-graphs/input/interactions_icu1_article.csv
