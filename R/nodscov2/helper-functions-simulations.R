@@ -58,7 +58,7 @@ chisq_test_df = function(df) {
   
   df_p = df %>%
     pivot_wider(names_from = Extinction, values_from = n) %>%
-    rename(group1= Pathway) %>%
+    rename(group1= Scheme) %>%
     mutate(y1 = Yes/(Yes+No), y2 = Yes/(Yes+No), group2 = group1) %>%
     expand(nesting(group1, y1), nesting(group2, y2)) %>%
     filter(group1 != group2) %>%
@@ -76,7 +76,7 @@ chisq_test_df = function(df) {
 # Jonckheere Terpsta test for trend
 jonckheere_test = function(df) {
   out = data.frame(
-    p = JonckheereTerpstraTest(split(df$SAR, df$Pathway), alternative = "two.sided", exact = F)$p.value
+    p = JonckheereTerpstraTest(split(df$SAR, df$Scheme), alternative = "two.sided", exact = F)$p.value
   )
   return(out)
 }

@@ -109,6 +109,13 @@ RcppExport Rcpp::IntegerVector Get_status_t(
     const int& t
 );
 
+RcppExport Rcpp::IntegerVector Get_status_t_variant(
+    const Rcpp::DataFrame& global_status,
+    const Rcpp::StringVector& ids,
+    const int& t,
+    const std::string& index_patient
+);
+
 RcppExport int Get_status_j(
     const Rcpp::String& id,
     const Rcpp::DataFrame& global_status,

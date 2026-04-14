@@ -21,21 +21,15 @@ library(ggnetwork)
 source('R/nodscov2/helper-functions-simulations.R')
 source('R/nodscov2/dictionaries.R')
 
-# Concatenation of the results when multiple nextflow rounds-------------------
-# f_final = lapply(list.files("grid_search/unique_files", pattern = "summary.*.csv", full.names = T),
-# function(f_name) { read.csv2(f_name, header = T)})
-# f_final = do.call("bind_rows", f_final)
-# f_final %>% count(beta_e, beta_c, network) %>% nrow()
-# write.csv2(f_final, "grid_search/resu_simu_all.txt", row.names = F)
-
 ## Load data--------------------------------------------------------------------
 # All conditions
-stats = read.csv2("grid_search/resu_simu_all.txt", header = T) %>%
+stats = read.csv2("nextflow_grid_search/results/resu_simu_all.txt", header = T) %>%
   mutate(
     network = ifelse(network == "icu1", "ICU1", "ICU2"),
     beta_e = factor(
       ifelse(beta_e == 0, "0", paste0("1/", gsub(" ", "", format(round(1/beta_e), scientific = F)))), 
-      c('0', '1/200', '1/150', '1/100', '1/90', '1/80', '1/70', '1/60', '1/50', '1/45', '1/40', '1/30', '1/20', '1/10')))
+      c('0', '1/200', '1/150', '1/100', '1/90', '1/80', '1/70', '1/60', '1/50', '1/45', '1/40', '1/30', '1/20', '1/10'))
+    )
 head(stats)
 nrow(stats)
 
@@ -45,16 +39,16 @@ stats %>% count(beta_e, beta_c) %>% filter(n != 200)
 # Sub-selection corresponding to studied scenarios
 stats_sub = stats %>%
   mutate(
-    Pathway = case_when(
-      beta_e == "1/45" & beta_c == 0.75 ~ "Pathway 1",
-      beta_e == "1/60" & beta_c == 1 ~ "Pathway 2",
-      beta_e == "1/70" & beta_c == 1.25 ~ "Pathway 3",
-      beta_e == "1/100" & beta_c == 1.5 ~ "Pathway 4",
-      beta_e == "1/150" & beta_c == 1.75 ~ "Pathway 5",
+    Scheme = case_when(
+      beta_e == "1/45" & beta_c == 0.75 ~ "Scheme 1",
+      beta_e == "1/60" & beta_c == 1 ~ "Scheme 2",
+      beta_e == "1/70" & beta_c == 1.25 ~ "Scheme 3",
+      beta_e == "1/100" & beta_c == 1.5 ~ "Scheme 4",
+      beta_e == "1/150" & beta_c == 1.75 ~ "Scheme 5",
       .default = NA
     )
   ) %>%
-  filter(!is.na(Pathway))
+  filter(!is.na(Scheme))
 
 stats_sub_principal = stats_sub %>%
   filter(model == "linear", threshold == 60)
@@ -96,7 +90,7 @@ ggsave("fig/grid_search/grid-search.png", width = 8, height = 5)
   # by individual category
 pa = stats_sub_principal %>%
   pivot_longer(c(Patient, Paramedical, Medical), names_to = "Category", values_to = "SAR") %>%
-  ggplot(., aes(x = Pathway, y = SAR, group = interaction(Pathway, Category))) +
+  ggplot(., aes(x = Scheme, y = SAR, group = interaction(Scheme, Category))) +
   geom_boxplot(position = position_dodge(width = 0.7), width = 0.4, outliers = F) +
   geom_jitter(position = position_jitterdodge(dodge.width = 0.7, jitter.width = 0.1, jitter.height = 0), aes(col = Category), alpha = 0.5) +
   scale_color_manual(values = pal) +
@@ -109,7 +103,7 @@ pa = stats_sub_principal %>%
 pb = stats_sub_principal %>%
   pivot_longer(c(Contact, Environment), names_to = "Route", values_to = "SAR") %>%
   mutate(Route = ifelse(Route == "Contact", "Short-range", "Long-range")) %>%
-  ggplot(., aes(x = Pathway, y = SAR, group = interaction(Pathway, Route))) +
+  ggplot(., aes(x = Scheme, y = SAR, group = interaction(Scheme, Route))) +
   geom_boxplot(position = position_dodge(width = 0.7), width = 0.4, outliers = ) +
   geom_jitter(aes(col = Route), position = position_jitterdodge(dodge.width = 0.7, jitter.width = 0.1, jitter.height = 0), alpha = 0.5) +
   facet_grid(cols = vars(network)) +
@@ -124,9 +118,9 @@ ggsave("fig/grid_search/sar_stratified.png", p_all, height = 6, width = 8)
 
 # SAR by transmission route and individual category
 p_jonc = stats_sub_principal %>%
-  select(network, Pathway, matches("[A-Z][a-z]+_Contact|[A-Z][a-z]+_Environment")) %>%
+  select(network, Scheme, matches("[A-Z][a-z]+_Contact|[A-Z][a-z]+_Environment")) %>%
   pivot_longer(matches(".*_Contact|.*_Environment"), names_to = c("Category", "Route"), names_pattern = "(.*)_(.*)", values_to = "SAR") %>%
-  arrange(network, Category, Route, Pathway) %>%
+  arrange(network, Category, Route, Scheme) %>%
   nest(.by = c("network", "Category", "Route")) %>%
   mutate(data = map(data, jonckheere_test)) %>%
   unnest(data) %>%
@@ -134,12 +128,12 @@ p_jonc = stats_sub_principal %>%
   mutate(p = paste0("trend p-value=", base::signif(p, digits = 1)),
          Route = ifelse(Route == "Contact", "Close proximity", "Long-distance"), 
          SAR = 1, 
-         Pathway = NA)
+         Scheme = NA)
 
 stats_sub_principal %>%
   pivot_longer(matches("Patient_|Paramedical_|Medical_"), names_to = c("Category", "Route"), names_pattern = "(.*)_(.*)", values_to = "SAR") %>%
   mutate(Route = ifelse(Route == "Contact", "Close proximity", "Long-distance")) %>%
-  ggplot(., aes(x = Route, y = SAR, group = interaction(Category, Route, Pathway))) +
+  ggplot(., aes(x = Route, y = SAR, group = interaction(Category, Route, Scheme))) +
   geom_boxplot(position = position_dodge(width = 0.7), width = 0.4, outlier.shape = NA) +
   geom_jitter(position = position_jitterdodge(dodge.width = 0.7, jitter.width = 0.05, jitter.height = 0), 
               alpha = 0.5, aes(col = Category)) +
@@ -203,12 +197,12 @@ p2 = ggplot(ggnetwork(graph_example, layout = igraph::layout_with_kk(graph_examp
 # Global SAR
 p_sar = stats_sub_principal %>%
   group_by(network) %>%
-  wilcox_test(Global ~ Pathway, p.adjust.method = "BH") %>%
-  add_xy_position(x = "Pathway") %>%
+  wilcox_test(Global ~ Scheme, p.adjust.method = "BH") %>%
+  add_xy_position(x = "Scheme") %>%
   filter(p.adj <= 0.05)
 p3 = stats_sub_principal %>%
-  arrange(network, Pathway) %>%
-  ggboxplot(., x = "Pathway", y = "Global", width = 0.4, outlier.shape = NA) +
+  arrange(network, Scheme) %>%
+  ggboxplot(., x = "Scheme", y = "Global", width = 0.4, outlier.shape = NA) +
   stat_pvalue_manual(p_sar, label = "p.adj.signif") +
   geom_jitter(width = 0.2, height = 0, alpha = 0.5, aes(col = network)) +
   facet_grid(cols = vars(network)) +
@@ -222,7 +216,7 @@ p3 = stats_sub_principal %>%
 p4 = stats_sub_principal %>%
   pivot_longer(c(Contact, Environment), names_to = "Route", values_to = "SAR") %>%
   mutate(Route = ifelse(Route == "Contact", "Short-range", "Long-range")) %>%
-  ggplot(., aes(x = Pathway, y = SAR, group = interaction(Pathway, Route))) +
+  ggplot(., aes(x = Scheme, y = SAR, group = interaction(Scheme, Route))) +
   geom_boxplot(position = position_dodge(width = 0.7), width = 0.4, outliers = ) +
   geom_jitter(aes(col = Route), position = position_jitterdodge(dodge.width = 0.7, jitter.width = 0.1, jitter.height = 0), 
               alpha = 0.5) +
@@ -245,18 +239,18 @@ ggsave("fig/grid_search/figure3_on_grid_search_simulations.png", p_all, height =
 # Extinction probability
 p_proba = stats_sub_principal %>%
   mutate(Extinction = ifelse(Global == 0, "Yes", "No")) %>%
-  count(Pathway, network, Extinction) %>%
+  count(Scheme, network, Extinction) %>%
   nest(.by = network) %>%
   mutate(data = map(data, chisq_test_df)) %>%
   unnest(data) %>%
   mutate(y = y+0.05) %>%
   filter(p.adj <= 0.05)
 stats_ext = stats_sub_principal %>% 
-  group_by(network, Pathway) %>% 
+  group_by(network, Scheme) %>% 
   summarise(prop = sum(Global == 0) / n(), .groups = "drop") %>%
   mutate(Category = rep(names(pal)[1:3], n())[1:n()])
 p1 = ggplot(stats_ext) +
-  geom_bar(stat = "identity", aes(x = Pathway, y = prop, fill = network), width = 0.4) +
+  geom_bar(stat = "identity", aes(x = Scheme, y = prop, fill = network), width = 0.4) +
   geom_point(x = 0, y = 0, aes(col = Category)) +
   stat_pvalue_manual(p_proba, label = "p.adj.signif", y.position = "y") +
   facet_grid(cols = vars(network)) +
@@ -274,13 +268,13 @@ p1 = ggplot(stats_ext) +
 # Epidemic duration
 p_duration = stats_sub_principal %>%
   group_by(network) %>%
-  wilcox_test(Epidemic_duration ~ Pathway, p.adjust.method = "BH") %>%
-  add_xy_position(x = "Pathway") %>%
+  wilcox_test(Epidemic_duration ~ Scheme, p.adjust.method = "BH") %>%
+  add_xy_position(x = "Scheme") %>%
   filter(p.adj <= 0.05)
 p2 = stats_sub_principal %>%
   filter(!is.na(Epidemic_duration)) %>%
-  arrange(network, Pathway) %>%
-  ggboxplot(., x = "Pathway", y = "Epidemic_duration", width = 0.4, outlier.shape = NA) +
+  arrange(network, Scheme) %>%
+  ggboxplot(., x = "Scheme", y = "Epidemic_duration", width = 0.4, outlier.shape = NA) +
   stat_pvalue_manual(p_duration, label = "p.adj.signif") +
   geom_jitter(width = 0.2, height = 0, alpha = 0.5, aes(col = network)) +  
   facet_grid(cols = vars(network)) +
@@ -293,13 +287,13 @@ p2 = stats_sub_principal %>%
 # Time to the peak with statistical tests
 p_peak = stats_sub_principal %>%
   group_by(network) %>%
-  wilcox_test(Time_to_peak ~ Pathway, p.adjust.method = "BH") %>%
-  add_xy_position(x = "Pathway") %>%
+  wilcox_test(Time_to_peak ~ Scheme, p.adjust.method = "BH") %>%
+  add_xy_position(x = "Scheme") %>%
   filter(p.adj <= 0.05)
 p3 = stats_sub_principal %>%
-  arrange(network, Pathway) %>%
+  arrange(network, Scheme) %>%
   filter(!is.na(Time_to_peak)) %>%
-  ggboxplot(., x = "Pathway", y = "Time_to_peak", width = 0.4, outlier.shape = NA) +
+  ggboxplot(., x = "Scheme", y = "Time_to_peak", width = 0.4, outlier.shape = NA) +
   stat_pvalue_manual(p_peak, label = "p.adj.signif") +
   geom_jitter(width = 0.2, height = 0, alpha = 0.5, aes(col = network)) +
   facet_grid(cols = vars(network)) +
@@ -312,9 +306,9 @@ p3 = stats_sub_principal %>%
 # SAR difference between the two routes for the different individual categories
 p4 = stats_sub_principal %>%
   pivot_longer(matches("[A-Z][a-z]+_Environment|[A-Z][a-z]+_Contact"), names_to = c("Category", "Route"), names_pattern = "(.*)_(.*)", values_to = "SAR") %>%
-  group_by(Pathway, network, Category) %>%
+  group_by(Scheme, network, Category) %>%
   wilcox_test(SAR ~ Route, paired = T, ref.group = "Contact", alternative = "two.sided", detailed = T) %>%
-  ggplot(., aes(x = Pathway, y = estimate, ymin = conf.low, ymax = conf.high, fill = Category)) +
+  ggplot(., aes(x = Scheme, y = estimate, ymin = conf.low, ymax = conf.high, fill = Category)) +
   geom_bar(stat = "identity", position = "dodge", width = 0.4) +
   geom_errorbar(position = "dodge", width = 0.4) +
   facet_grid(cols = vars(network)) +
@@ -335,11 +329,11 @@ ggsave("fig/grid_search/figure4_on_grid_search_data.png", p_all, height = 6, wid
 # Comparison of basic epidemic metrics
 tab_global = stats_sub_principal %>%
   mutate(Extinction = ifelse(Global == 0, 1, 0)) %>%
-  distinct(network, nSim, Pathway, Extinction, Global, Epidemic_duration, Time_to_peak) %>%
+  distinct(network, nSim, Scheme, Extinction, Global, Epidemic_duration, Time_to_peak) %>%
   pivot_wider(names_from = network, values_from = c(Extinction, Global, Epidemic_duration, Time_to_peak)) %>%
-  select(Pathway, matches("_ICU1"), matches("_ICU2")) %>%
+  select(Scheme, matches("_ICU1"), matches("_ICU2")) %>%
   tbl_summary(
-    by = Pathway, 
+    by = Scheme, 
     missing = "no",
     list(
       Global_ICU1 ~ "Global SAR (in %)",
@@ -366,32 +360,32 @@ gt::gtsave(as_gt(tab_global), "fig/grid_search/tab_global_metrics.png")
 for (n in c("ICU1", "ICU2")) {
   out = stats_sub_principal %>%
     filter(network == n) %>%
-    select(matches("[A-Z].+_Contact|[A-Z].+_Environment"), Pathway, nSim) %>%
+    select(matches("[A-Z].+_Contact|[A-Z].+_Environment"), Scheme, nSim) %>%
     distinct() %>%
     pivot_longer(dplyr::matches("_Contact|_Environment"), names_to = c("Category", "Route"), names_pattern = "(.*)_(.*)", values_to = "SAR") %>%
-    arrange(Pathway, nSim, Category) %>%
-    mutate(Pathway_Category = paste0(gsub(" ", "", Pathway), "_", Category)) %>%
-    dplyr::select(-c(Pathway, Category)) %>%
-    pivot_wider(names_from = Pathway_Category, values_from = SAR) %>%
+    arrange(Scheme, nSim, Category) %>%
+    mutate(Scheme_Category = paste0(gsub(" ", "", Scheme), "_", Category)) %>%
+    dplyr::select(-c(Scheme, Category)) %>%
+    pivot_wider(names_from = Scheme_Category, values_from = SAR) %>%
     select(nSim, Route, ends_with("_Medical"), ends_with("_Paramedical"), ends_with("_Patient")) %>%
     tbl_summary(
       by = Route, 
       include = -nSim,
-      label = list(Pathway1_Patient = "Pathway 1",
-                   Pathway1_Medical = "Pathway 1",
-                   Pathway1_Paramedical = "Pathway 1",
-                   Pathway2_Patient = "Pathway 2",
-                   Pathway2_Medical = "Pathway 2",
-                   Pathway2_Paramedical = "Pathway 2",
-                   Pathway3_Patient = "Pathway 3",
-                   Pathway3_Medical = "Pathway 3",
-                   Pathway3_Paramedical = "Pathway 3",
-                   Pathway4_Patient = "Pathway 4",
-                   Pathway4_Medical = "Pathway 4",
-                   Pathway4_Paramedical = "Pathway 4",
-                   Pathway5_Patient = "Pathway 5",
-                   Pathway5_Medical = "Pathway 5",
-                   Pathway5_Paramedical = "Pathway 5")
+      label = list(Scheme1_Patient = "Scheme 1",
+                   Scheme1_Medical = "Scheme 1",
+                   Scheme1_Paramedical = "Scheme 1",
+                   Scheme2_Patient = "Scheme 2",
+                   Scheme2_Medical = "Scheme 2",
+                   Scheme2_Paramedical = "Scheme 2",
+                   Scheme3_Patient = "Scheme 3",
+                   Scheme3_Medical = "Scheme 3",
+                   Scheme3_Paramedical = "Scheme 3",
+                   Scheme4_Patient = "Scheme 4",
+                   Scheme4_Medical = "Scheme 4",
+                   Scheme4_Paramedical = "Scheme 4",
+                   Scheme5_Patient = "Scheme 5",
+                   Scheme5_Medical = "Scheme 5",
+                   Scheme5_Paramedical = "Scheme 5")
     ) %>%
     add_variable_group_header(header = "Medical staff", variables = ends_with("Medical")) %>%
     add_variable_group_header(header = "Paramedical staff", variables = ends_with("Paramedical")) %>%
@@ -403,39 +397,3 @@ for (n in c("ICU1", "ICU2")) {
   gt::gtsave(as_gt(out), paste0("fig/grid_search/tab_stratified_", tolower(n), ".png"))
   print(as_gt(out))
 }
-
-# # Sensitivity analyses on the dose-response function----------------------------
-# # Dose-response model (linear, log-linear, exponential) and time spent out of the 
-# # ward (60, 120, 180 minutes)
-# stats_sub %>%
-#   filter(model == "linear") %>%
-#   mutate(threshold = factor(threshold, c("60", "120", "180"))) %>%
-#   ggplot(., aes(x=Pathway, y=Global, group = interaction(Pathway, model, threshold))) +
-#   geom_boxplot(position = position_dodge(width = 0.7), width = 0.4, outliers = F) +
-#   geom_jitter(aes(col = threshold), alpha = 0.2, position = position_jitterdodge(jitter.width = 0.1, jitter.height = 0, dodge.width = 0.7)) +
-#   facet_grid(rows = vars(network), cols = vars(model)) +
-#   scale_color_manual(values = threshold_pal) + 
-#   theme_bw() +
-#   expand_limits(y = c(0,1)) +
-#   theme(axis.title.x = element_blank(), axis.text.x = element_text(angle = 25, hjust = 1), legend.position = "bottom") +
-#   labs(y = "SAR", col = "Threshold before leaving the ward (in min)")
-# ggsave("fig/grid_search/sensitivity.png", height = 5, width = 6)
-# 
-# # Does the threshold changes the results when stratified by individual 
-# # category
-# stats_sub %>%
-#   filter(model == "linear") %>%
-#   pivot_longer(matches("Patient_|Paramedical_|Medical_"), names_to = c("Category", "Route"), names_pattern = "(.*)_(.*)", values_to = "SAR") %>%
-#   mutate(Route = ifelse(Route == "Contact", "Close proximity", "Long-distance"),
-#          threshold = factor(threshold, c("60", "120", "180"))) %>%
-#   ggplot(., aes(x = Route, y = SAR, group = interaction(Category, threshold, Route, Pathway))) +
-#   geom_boxplot(position = position_dodge(width = 0.7), width = 0.4, outlier.shape = NA) +
-#   geom_jitter(position = position_jitterdodge(dodge.width = 0.7, jitter.width = 0.05, jitter.height = 0), 
-#               alpha = 0.5, aes(col = threshold)) +
-#   facet_grid(cols = vars(network), rows = vars(Category)) +
-#   scale_color_manual(values = threshold_pal) +
-#   expand_limits(y = c(0,1)) +
-#   theme_bw() +
-#   theme(legend.position = "bottom", axis.title.x = element_blank()) +
-#   labs(col = "Threshold before leaving the ward (in min)")
-# 

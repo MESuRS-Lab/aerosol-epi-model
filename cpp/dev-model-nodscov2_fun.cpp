@@ -40,7 +40,7 @@ Function do_sample = base["sample"];
     // 3 = Symptomatic and infectious
     // 4 = Recovered
 
-
+//////////////////////////////////////////////
 // [[Rcpp::export]]
 Rcpp::IntegerVector Get_status_t(
     const Rcpp::DataFrame& global_status,
@@ -57,6 +57,7 @@ Rcpp::IntegerVector Get_status_t(
     Rcpp::IntegerVector status_ti(n_ind_ti, -1);
     
     for(int j = 0; j < n_ind_ti; j++) {
+
         Rcpp::String id_j = ids_ti[j];
         int index_id = -1;
         // Find the index in global_status where the 'id' matches
@@ -70,6 +71,7 @@ Rcpp::IntegerVector Get_status_t(
         if (index_id == -1) {
             // Identifier not found in global_status, handle as needed
             status_ti[j] = -1; // Example: Set status to -1 for not found
+        
         } else {
             // Determine status based on t_inf, t_incub, t_recover
             if (t_inf[index_id] != -1 && (t+1) >= t_inf[index_id] && (t+1) <= t_incub[index_id] && t_infectious_start[index_id] > (t+1)) {
@@ -80,6 +82,60 @@ Rcpp::IntegerVector Get_status_t(
                 status_ti[j] = 3; // individual j is SYMPTOMATIC and INFECTIOUS
             } else if (t_inf[index_id] != -1 && (t+1) > t_recover[index_id]) {
                 status_ti[j] = 4; // individual j is RECOVERED
+            } else {
+                status_ti[j] = 0; // individual j is SUSCEPTIBLE
+            }
+        }
+    }
+
+    return status_ti;
+}
+
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+Rcpp::IntegerVector Get_status_t_variant(
+    const Rcpp::DataFrame& global_status,
+    const Rcpp::StringVector& ids_ti,
+    const int& t,
+    const std::string& index_patient
+) {
+    Rcpp::IntegerVector t_inf = global_status["t_inf"];
+    Rcpp::IntegerVector t_incub = global_status["t_incub"];
+    Rcpp::IntegerVector t_infectious_start = global_status["t_infectious_start"];
+    Rcpp::IntegerVector t_recover = global_status["t_recover"];
+    Rcpp::CharacterVector ids_status = global_status["id"];
+    
+    int n_ind_ti = ids_ti.size();
+    Rcpp::IntegerVector status_ti(n_ind_ti, -1);
+    
+    for(int j = 0; j < n_ind_ti; j++) {
+
+        Rcpp::String id_j = ids_ti[j];
+        int index_id = -1;
+        // Find the index in global_status where the 'id' matches
+        for (int k = 0; k < t_inf.size(); k++) {
+            if (id_j == ids_status[k]) {
+                index_id = k;
+                break;
+            }
+        }
+    
+        if (index_id == -1) {
+            // Identifier not found in global_status, handle as needed
+            status_ti[j] = -1; // Example: Set status to -1 for not found
+
+        } else {
+            // Determine status based on t_inf, t_incub, t_recover
+            if (t_inf[index_id] != -1 && ids_status[index_id] != index_patient) {
+                status_ti[j] = 4; // individual j is RECOVERED
+            
+            } else if (t_inf[index_id] != -1 && ids_status[index_id] == index_patient && (t+1) >= t_incub[index_id] && (t+1) <= t_recover[index_id]) {
+                status_ti[j] = 3; // individual j is SYMPTOMATIC and INFECTIOUS
+
+            } else if (t_inf[index_id] != -1 && ids_status[index_id] == index_patient && (t+1) > t_recover[index_id]) {
+                status_ti[j] = 4; // individual j is RECOVERED
+
             } else {
                 status_ti[j] = 0; // individual j is SUSCEPTIBLE
             }
@@ -112,12 +168,16 @@ int Get_status_j(
     if (index_j != -1){
         if (t_inf[index_j] != -1 && (t+1) >= t_inf[index_j] && (t+1) <= t_incub[index_j] && t_infectious_start[index_j] > (t+1)){
             status_j = 1; // individual j is EXPOSED and NON INFECTIOUS
+
         } else if (t_inf[index_j] != -1 && (t+1) >= t_inf[index_j] && (t+1) <= t_incub[index_j] && t_infectious_start[index_j] <= (t+1)) {
             status_j = 2; // individual j is EXPOSED and INFECTIOUS
+
         } else if (t_inf[index_j] != -1 && (t+1) > t_incub[index_j] && (t+1) <= t_recover[index_j]){ //cpp index begins at 0 & R's at 1, we chose to use R's index for time
             status_j = 3; // individual j is INFECTIOUS and SYMPTOMATIC
+
         } else if (t_inf[index_j] != -1 && (t+1) > t_recover[index_j]){
             status_j = 4; // individual j is RECOVERED
+
         } else{
             status_j = 0; // individual j is SUSCEPTIBLE
         }
@@ -220,12 +280,11 @@ Rcpp::DataFrame Update_status_bis(
     Rcpp::IntegerVector t_recover_ti = clone(t_recover_tim1);
     Rcpp::CharacterVector inf_by_ti = clone(inf_by_tim1);
     Rcpp::IntegerVector inf_room_ti = clone(inf_room_tim1);
-    
+
     Rcpp::NumericVector FOI(lambda_c_ti.size(), 1);
     
     for (int k=0; k<lambda_c_ti.size(); k++) {
       if (Rcpp::traits::is_infinite<REALSXP>(lambda_e_ti[k]) == 0) {
-        //Rcout << lambda_e_ti[k] << " " << FOI[k] << std::endl;
         FOI[k] += -exp(- (lambda_c_ti[k]  + lambda_e_ti[k]));
       }
     }
