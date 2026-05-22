@@ -11,7 +11,7 @@ params1 = expand.grid(
   sim = nSim,
   pathway = pathways,
   network = networks,
-  sensitivity =  c("low-nu", "high-nu", "low-mu", "high-mu", "low-hh", "high-hh")
+  sensitivity =  c("low-hh", "high-hh") #c("low-nu", "high-nu", "low-mu", "high-mu", "low-hh", "high-hh")
   ) %>%
   mutate(
       intervention = case_when(
@@ -38,7 +38,7 @@ params_ventilation = expand.grid(
   )
 
 
-params = bind_rows(params1, params_masks, params_ventilation) %>%
+params = params1 %>% #bind_rows(params1, params_masks, params_ventilation) %>%
   mutate(
     beta_c = case_when(
       pathway == 1 ~ "0.75",

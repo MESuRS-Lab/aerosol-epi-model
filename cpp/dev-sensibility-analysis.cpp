@@ -18,6 +18,7 @@ Rcpp::DataFrame simulation(
     double B,
     double nu,
     double mu,
+    String pathogen,
     String env_model,
     double dt,
     std::string intervention,
@@ -88,6 +89,7 @@ Rcpp::DataFrame simulation(
 
     // Display simulation configuration
     Rcout << "-----------Simulation configuration-----------" << std::endl;
+    Rcout << "Pathogen: " << std::string(pathogen) << std::endl;
     Rcout << "Intervention: " << intervention << std::endl;
     Rcout << "Shedding rate: " << nu << std::endl;
     Rcout << "Modified shedding rate: " << nu_int << std::endl; 
@@ -97,7 +99,9 @@ Rcpp::DataFrame simulation(
 
 
     // Parameters for the discretized gamma distribution
-    Rcpp::List params = param_gamma_discretized();
+    Rcpp::List params;
+    if (pathogen == "sars-cov-2") params = param_gamma_discretized();
+    if (pathogen == "influenza") params = param_lognormal_discretized();
 
     ///////////////
     // R's t = 1 //
@@ -168,6 +172,7 @@ Rcpp::DataFrame simulation(
           interaction_ti, 
           location_ti, 
           params,
+          pathogen,
           t);
         global_status = clone(temp);
     }

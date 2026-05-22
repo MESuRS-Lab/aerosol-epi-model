@@ -6,8 +6,8 @@ using namespace std;
 
 // [[Rcpp::plugins(cpp11)]]
 const int z = 10;
-const double mIncub = (1.63) * (24 * 60 * 2); // * z;
-const double sdIncub = (0.5) * (24 * 60 * 2); // * z;
+const double meanlog = (0.6648589) * (24 * 60 * 2); // * z;
+const double sdlog = (0.1996451) * (24 * 60 * 2); // * z;
 
 const double m_incub_g = (4.07) * (24 * 60 * 2); // * z;
 const double sd_incub_g = (2.12) * (24 * 60 * 2); // * z;
@@ -27,8 +27,6 @@ const double scale_inf_g = pow(sd_inf_g, 2) / m_inf_g;
 Rcpp::Environment base("package:base");
 Function do_unique = base["unique"];
 Function do_sample = base["sample"];
-
-
 
 // info 
     // 1 = HCW
@@ -261,6 +259,7 @@ Rcpp::DataFrame Update_status_bis(
     const Rcpp::DataFrame& interactions_ti,
     const Rcpp::IntegerVector& location_ti,
     const Rcpp::List& params,
+    const Rcpp::String& pathogen,
     const int& t
 ) {
     Rcpp::CharacterVector ids_total = global_status["id"];
@@ -283,12 +282,32 @@ Rcpp::DataFrame Update_status_bis(
 
     Rcpp::NumericVector FOI(lambda_c_ti.size(), 1);
     
+    // Pathogen-specific distributions
+    int lower_inf, upper_inf, presymptomatic_period;
+    Rcpp::NumericVector probs;
+      
+    if (pathogen == "sars-cov-2") {
+      lower_inf = 3 * 24 * 60 * 2;
+      upper_inf = 7 * 24 * 60 * 2;
+      probs = Rcpp::NumericVector::create(0.2, 0.8);
+      presymptomatic_period = 3 * 24 * 60 * 2;
+    }
+    
+    if (pathogen == "influenza") {
+      lower_inf = 1 * 24 * 60 * 2;
+      upper_inf = 3 * 24 * 60 * 2;
+      probs = Rcpp::NumericVector::create(0.16, 0.84);
+      presymptomatic_period = 0.7 * 24 * 60 * 2;
+    }
+    
+    // Compute FOI
     for (int k=0; k<lambda_c_ti.size(); k++) {
       if (Rcpp::traits::is_infinite<REALSXP>(lambda_e_ti[k]) == 0) {
         FOI[k] += -exp(- (lambda_c_ti[k]  + lambda_e_ti[k]));
       }
     }
-
+    
+    // Update individual status
     for (int j=0; j < ids_ti.size(); j++){
         Rcpp::String id_j = ids_ti[j];
         int index_j = -1;
@@ -300,22 +319,21 @@ Rcpp::DataFrame Update_status_bis(
 
         if (status_tim1[j] == 0 && R::runif(0, 1) <= FOI[j]){
             t_inf_ti[index_j] = t+1; // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
-            t_incub_ti[index_j] = t_inf_ti[index_j] + Incub_period_gamma_discretized(params);
+            t_incub_ti[index_j] = t_inf_ti[index_j] + Incub_period_discretized(params);
             
-            // Presymptomatic acquisition 
+            // Pre-symptomatic acquisition 
             LogicalVector x={true, false};
-            NumericVector probs={0.2, 0.8};
             presymp_trans_ti[index_j] = false + sample(x, 1, false, probs)[0];
 
             if (presymp_trans_ti[index_j]) {
-                int min_start = t_incub_ti[index_j] - 3 * 24 * 60 * 2;
+                int min_start = t_incub_ti[index_j] - presymptomatic_period;
                 t_infectious_start_ti[index_j] = runif_int(max({min_start, t_inf_ti[index_j]}), t_incub_ti[index_j]-1);
             } else {
                 t_infectious_start_ti[index_j] = t_incub_ti[index_j];
             }
 
             // End of infectious period
-            t_recover_ti[index_j] = t_infectious_start_ti[index_j] + runif_int(3, 7) * 24 * 60 * 2; // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
+            t_recover_ti[index_j] = t_infectious_start_ti[index_j] + runif_int(lower_inf, upper_inf); // C++ INDEX BEGINS AT 0 / R BEGINS AT 1
 
             // ROOM WHERE j IS INFECTED //
             inf_room_ti[index_j] = location_ti[j];
@@ -538,9 +556,10 @@ Rcpp::NumericVector Lambda_c(
                                                                                              // 3 = INFECTIOUS symptomatic
 
                     bool infector_patient = id_r.find("PA") != std::string::npos;
+                    bool hcw_patient = (!infector_patient && infectee_patient) || (infector_patient && !infectee_patient);
                     bool hcw_to_patient = !infector_patient && infectee_patient;
 
-                    if ( intervention == "Hand hygiene" && hcw_to_patient ) { // HCWs wash their hands when in interaction with patients (does not depend on symptom status)
+                    if ( intervention == "Hand hygiene" && hcw_patient ) { // HCWs wash their hands when in interaction with patients (does not depend on symptom status)
                         nb_inf_r += rel_trans_risk; 
 
                     } else if ( (intervention == "Mixed1" || intervention == "Mixed2" || intervention == "Symptomatic masking") && hcw_to_patient) {  // HCWs wear a mask when in interaction with patients (does not depend on symptom status)
@@ -624,16 +643,6 @@ Rcpp::NumericVector Lambda_e(
         return lambda_e_ti;  
     };
 
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-int Incub_period_gamma() {
-    // Incubation period -> Gamma distribution (shape,scale)
-    double incubation_period_seconds = R::rgamma(shape_incub_g, scale_incub_g);
-    int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
-    
-    return incubation_period_subdivisions;
-};
-
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
@@ -656,8 +665,29 @@ Rcpp::List param_gamma_discretized() {
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
-int Incub_period_gamma_discretized(Rcpp::List params) {
-    // Incubation period -> Gamma distribution (shape,scale)
+Rcpp::List param_lognormal_discretized() {
+    int max_time = 4 * 24 * 60 * 2; // Max incubation duration : 4 days
+    IntegerVector to_sample_from;
+    for (int k=0; k<max_time+1; k++) to_sample_from.push_back(k);
+    
+    NumericVector probs = Rcpp::plnorm(to_sample_from, meanlog, sdlog, true, false);
+    probs.push_front(0.0);
+    probs = diff(probs);
+    double norm_cons = R::plnorm(max_time, meanlog, sdlog, true, false);
+    for (int k=0; k < probs.size(); k++) probs[k] /= norm_cons;
+
+    Rcpp::List params = List::create(Named("to_sample_from") = to_sample_from, _["probs"] = probs);
+
+    return params;
+}
+
+
+//////////////////////////////////////////////
+// [[Rcpp::export]]
+int Incub_period_discretized(const Rcpp::List& params) {
+    // Incubation period 
+    //              Gamma distribution (shape,scale)
+    //              Lognormal distribution (meanlog, sdlog)
     // double incubation_period_seconds = R::rgamma(shape_incub_g, scale_incub_g);
     //int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
     // return incubation_period_subdivisions;
@@ -667,57 +697,8 @@ int Incub_period_gamma_discretized(Rcpp::List params) {
     int incub_period = sample(to_sample_from, 1, false, probs)[0];
 
     return incub_period;
-};
+}
 
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-int Incub_period_lognormal() {
-    // Incubation period -> Log-normal distribution (meanlog, sdlog)
-    double incubation_period_seconds = R::rlnorm(mIncub, sd_incub_g);
-    int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
-    
-    return incubation_period_subdivisions;
-};
-
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-int Inf_period_gamma() {
-    // Infection period -> Gamma distribution (shape,scale)
-    double infection_period_seconds = R::rgamma(shape_inf_g, scale_inf_g);
-    int infection_period_subdivisions = static_cast<int>(infection_period_seconds / 30.0);
-    
-    return infection_period_subdivisions;
-};
-
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-int Inf_period_lognormal() {
-    // Infection period -> Log-normal distribution (meanlog, sdlog)
-    double infection_period_seconds = R::rlnorm(mInf, sd_inf_g);
-    int infection_period_subdivisions = static_cast<int>(infection_period_seconds / 30.0);
-    
-    return infection_period_subdivisions;
-};
-
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-int Inf_period_uniform() {
-    // Infection period -> Uniform distribution
-    double infection_period_days = R::runif(3, 7);
-    int infection_period_subdivisions = static_cast<int>( (infection_period_days * 3600*24) / 30.0);
-    
-    return infection_period_subdivisions;
-};
-
-//////////////////////////////////////////////
-// [[Rcpp::export]]
-int Incub_period_uniform() {
-    // Incub period -> Uniform distribution
-    double incubation_period_days = R::runif(1, 3);
-    int incubation_period_subdivisions = static_cast<int>( (incubation_period_days * 3600*24) / 30.0);
-    
-    return incubation_period_subdivisions;
-};
 
 //////////////////////////////////////////////
 // [[Rcpp::export]]
@@ -752,3 +733,66 @@ int Get_loc_j(
     }
     return location_ti[index_j];
 }
+
+
+
+// //////////////////////////////////////////////
+// // [[Rcpp::export]]
+// int Incub_period_uniform() {
+//     // Incub period -> Uniform distribution
+//     double incubation_period_days = R::runif(1, 3);
+//     int incubation_period_subdivisions = static_cast<int>( (incubation_period_days * 3600*24) / 30.0);
+    
+//     return incubation_period_subdivisions;
+// }
+
+
+// //////////////////////////////////////////////
+// // [[Rcpp::export]]
+// int Incub_period_gamma() {
+//     // Incubation period -> Gamma distribution (shape,scale)
+//     double incubation_period_seconds = R::rgamma(shape_incub_g, scale_incub_g);
+//     int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
+    
+//     return incubation_period_subdivisions;
+// }
+
+// //////////////////////////////////////////////
+// // [[Rcpp::export]]
+// int Incub_period_lognormal() {
+//     // Incubation period -> Log-normal distribution (meanlog, sdlog)
+//     double incubation_period_seconds = R::rlnorm(mIncub, sd_incub_g);
+//     int incubation_period_subdivisions = static_cast<int>(incubation_period_seconds / 30.0);
+    
+//     return incubation_period_subdivisions;
+// }
+
+// //////////////////////////////////////////////
+// // [[Rcpp::export]]
+// int Inf_period_gamma() {
+//     // Infection period -> Gamma distribution (shape,scale)
+//     double infection_period_seconds = R::rgamma(shape_inf_g, scale_inf_g);
+//     int infection_period_subdivisions = static_cast<int>(infection_period_seconds / 30.0);
+    
+//     return infection_period_subdivisions;
+// }
+
+// //////////////////////////////////////////////
+// // [[Rcpp::export]]
+// int Inf_period_lognormal() {
+//     // Infection period -> Log-normal distribution (meanlog, sdlog)
+//     double infection_period_seconds = R::rlnorm(mInf, sd_inf_g);
+//     int infection_period_subdivisions = static_cast<int>(infection_period_seconds / 30.0);
+    
+//     return infection_period_subdivisions;
+// }
+
+// //////////////////////////////////////////////
+// // [[Rcpp::export]]
+// int Inf_period_uniform() {
+//     // Infection period -> Uniform distribution
+//     double infection_period_days = R::runif(3, 7);
+//     int infection_period_subdivisions = static_cast<int>( (infection_period_days * 3600*24) / 30.0);
+    
+//     return infection_period_subdivisions;
+// }

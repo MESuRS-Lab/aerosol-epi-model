@@ -29,24 +29,27 @@ extern const double shape_inf_g;
 extern const double scale_inf_g;
 
 
-RcppExport int Incub_period_gamma();
+RcppExport int Incub_period_discretized(const Rcpp::List& params);
 
-RcppExport int Incub_period_gamma_discretized(Rcpp::List params);
 RcppExport Rcpp::List param_gamma_discretized();
 
-RcppExport int Incub_period_lognormal();
-
-RcppExport int Inf_period_gamma();
-
-RcppExport int Inf_period_lognormal();
-
-RcppExport int Incub_period_uniform();
-
-RcppExport int Inf_period_uniform();
+RcppExport Rcpp::List param_lognormal_discretized();
 
 RcppExport int runif_int(int lower_value, int upper_value);
 
-    
+// RcppExport int Incub_period_lognormal();
+
+// RcppExport int Incub_period_uniform();
+
+// RcppExport int Incub_period_gamma();
+
+// RcppExport int Inf_period_gamma();
+
+// RcppExport int Inf_period_lognormal();
+
+// RcppExport int Inf_period_uniform();
+
+
 
 RcppExport Rcpp::NumericVector Update_environment(
     const Rcpp::CharacterVector& ids_ti,
@@ -141,6 +144,7 @@ RcppExport Rcpp::DataFrame Update_status_bis(
     const Rcpp::DataFrame& interactions_ti,
     const Rcpp::IntegerVector& location_ti,
     const Rcpp::List& params,
+    const Rcpp::String& pathogen,
     const int& t
 );
 

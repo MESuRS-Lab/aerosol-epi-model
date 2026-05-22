@@ -486,6 +486,7 @@ p2 = stats_df %>%
   filter(!is.na(Epidemic_duration)) %>%
   arrange(network, Scheme) %>%
   ggboxplot(., x = "Scheme", y = "Epidemic_duration", width = 0.4, outlier.shape = NA, col = "network") +
+  # stat_pvalue_manual(p_duration, label = "p.adj.signif") +
   geom_jitter(width = 0.2, height = 0, alpha = 0.1, aes(col = network), size = 0.1) +  
   facet_grid(cols = vars(network)) +
   labs(y = "Epidemic duration (in days)", col = "Network") +
@@ -515,7 +516,7 @@ p3 = stats_df %>%
   arrange(network, Scheme) %>%
   filter(!is.na(Time_to_peak)) %>%
   ggboxplot(., x = "Scheme", y = "Time_to_peak", width = 0.4, outlier.shape = NA, col = "network") +
-  stat_pvalue_manual(p_peak, label = "p.adj.signif") +
+  # stat_pvalue_manual(p_peak, label = "p.adj.signif") +
   geom_jitter(width = 0.2, height = 0, alpha = 0.1, size = 0.1, aes(col = network)) +
   facet_grid(cols = vars(network)) +
   labs(y = "Time to the peak (in days)", col ="Network") +

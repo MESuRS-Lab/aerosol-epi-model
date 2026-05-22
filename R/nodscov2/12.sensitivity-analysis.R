@@ -66,6 +66,7 @@ stats_df = read.csv2("nextflow_sensitivity/results/resu_sensitivity_all.txt", he
     )
   ) 
 head(stats_df)
+count(stats_df, intervention, sensitivity)
 
 # Data from main analysis
 stats_df_main = read.csv2("nextflow_interventions/results/resu_interventions_all.txt", header = T) %>%

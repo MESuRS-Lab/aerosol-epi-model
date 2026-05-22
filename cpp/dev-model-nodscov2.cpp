@@ -18,6 +18,7 @@ Rcpp::List simulation(
     double B,
     double nu,
     double mu,
+    String pathogen,
     String env_model,
     double dt,
     String intervention,
@@ -87,7 +88,9 @@ Rcpp::List simulation(
     }
 
     // Parameters for the discretized gamma distribution
-    Rcpp::List params = param_gamma_discretized();
+    Rcpp::List params;
+    if (pathogen == "sars-cov-2") params = param_gamma_discretized();
+    if (pathogen == "influenza") params = param_lognormal_discretized();
 
     ///////////////
     // R's t = 1 //
@@ -157,6 +160,7 @@ Rcpp::List simulation(
           interaction_ti, 
           location_ti, 
           params,
+          pathogen,
           t);
         global_status = clone(temp);
     }

@@ -27,18 +27,18 @@ b_c_type <- args[5]
 b_c <- as.numeric(args[5])
 b_e_type <- gsub("/", "-", as.character(args[6]))
 b_e <- eval(parse(text=args[6]))
-threshold = as.numeric(args[7])
-network <- args[8]
-model = args[9]
-pathogen = "sars-cov-2"
+network <- args[7]
+threshold = 60
+model = "linear"
+pathogen = "influenza"
 
 # Load synthetic data
 rinput = args[3] # dossier avec les fichiers input
 data = paste0(rinput, "/parameters-synthetic-", network, "-", threshold, ".rda")
 load(data)
 
-# Intervention scenario
-intervention = args[10]
+# Set up intervention
+intervention = args[8]
 mu_int = mu
 nu_int = nu 
 rel_trans_risk = 1.0
@@ -79,10 +79,9 @@ id_medical = admission$id[admission$cat == "Medical"]
 id_patient = admission$id[admission$cat == "Patient"]
 
 ## RANDOM INDEX CASE
-# seed = args[11]
-# set.seed(seed)
 id_index <- sample(x = admission$id[admission$firstDate == as_date(floor_date(begin_date," day")) & 
-  admission$firstDate != admission$lastDate], size = 1)
+                                      admission$firstDate != admission$lastDate], size = 1)
+# id_index <- sample(x= admission %>% filter(id %in% admission$id) %>% distinct(id) %>% pull(), size = 1)
 
 # Update global status (index is infectious when the simulation starts)
 global_status_tmp <- global_status %>%
@@ -133,8 +132,7 @@ stats = compute_SAR(result, id_paramedical, id_medical, id_patient) %>%
     )
 
 write.csv2(stats, 
-           paste0("summary_stat_", model, "_", threshold, "_", network, "_", b_c_type, "_", b_e_type, "_",
-                  tolower(gsub(" ", "-", intervention)),"_", n_sim, ".csv"), 
+           paste0("summary_stat_", network, "_", b_c_type, "_", b_e_type, "_", intervention, "_", n_sim, ".csv"), 
            row.names = F)
 
 

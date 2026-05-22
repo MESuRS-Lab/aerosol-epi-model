@@ -9,7 +9,7 @@ pathways = 1:5
 networks = c("icu1", "icu2")
 threshold = 60
 models = "linear" 
-interventions = c("None", "Hand hygiene", "Symptomatic masking", "Universal masking", "Improved ventilation patients", "Improved ventilation hcws", "Mixed1", "Mixed2")
+interventions = c("Hand hygiene") #"None", "Hand hygiene", "Symptomatic masking", "Universal masking", "Improved ventilation patients", "Improved ventilation hcws", "Mixed1", "Mixed2")
 nSim = 1:500
 
 # Generate random starting seeds and random index cases 

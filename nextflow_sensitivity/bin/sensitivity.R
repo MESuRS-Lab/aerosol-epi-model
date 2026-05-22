@@ -30,6 +30,7 @@ b_e <- eval(parse(text=args[6]))
 network <- args[7]
 threshold = 60
 model = "linear"
+pathogen = "sars-cov-2"
 
 # Load synthetic data
 rinput = args[3] # dossier avec les fichiers input
@@ -43,7 +44,7 @@ nu_int = nu
 rel_trans_risk = 1.0
 
 if (intervention == "Hand hygiene") {
-  rel_trans_risk = 1.0-0.17
+  rel_trans_risk = 1.0-0.14
 }
 
 if (intervention == "Symptomatic masking") {
@@ -82,7 +83,7 @@ if (sensitivity == "low-mu") mu = (log(2)/2.64) * 24
 if (sensitivity == "high-mu") mu = (log(2)/0.64) * 24
 
 if (sensitivity == "low-hh") rel_trans_risk = 1.0 - 0.05
-if (sensitivity == "high-hh") rel_trans_risk = 1.0 - 0.24
+if (sensitivity == "high-hh") rel_trans_risk = 1.0 - 0.42
 
 if (sensitivity == "low-ach") mu_int = (log(100)/(1/2)) * 24
 if (sensitivity == "high-ach") mu_int = (log(100)/(1/15)) * 24
@@ -131,6 +132,7 @@ result <- simulation(global_interaction = global_interaction,
                      B = B,
                      nu = nu,
                      mu = mu,
+		     pathogen = pathogen,
                      env_model = model,
                      dt = dt,
                      intervention = intervention,

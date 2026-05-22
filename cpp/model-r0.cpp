@@ -18,6 +18,7 @@ Rcpp::DataFrame simulation(
     double B,
     double nu,
     double mu,
+    String pathogen,
     String env_model,
     double dt,
     String intervention,
@@ -182,6 +183,7 @@ Rcpp::DataFrame simulation(
           interaction_ti, 
           location_ti, 
           params,
+          pathogen, 
           t);
         global_status = clone(temp);
     }
