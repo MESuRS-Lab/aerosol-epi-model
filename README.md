@@ -9,11 +9,11 @@
 
 ### Context 
 
-Respiratory infections are a major public health issue in hospital settings. They can be transmitted from patient to patient, as well as between patients and healthcare workers, resulting in nosocomial or hospital-acquired infections. These infections contribute to patient aggravation and makre their care more complex.
+Respiratory infections are a major public health issue in hospital settings. They can be transmitted from patient to patient, as well as between patients and healthcare workers, resulting in nosocomial or hospital-acquired infections. These infections contribute to patient aggravation and complexify their care management.
 
 Pathogens can be transmitted in different ways:
 - During close-proximity interactions at short distances;
-- Through Aerosols emitted during breathing, speech, or coughing which can remain suspended in the air and cause long-distance transmission
+- Through aerosols emitted during breathing, speech, or coughing which can remain suspended in the air and cause long-distance transmission.
 
 A thorough understanding of the respective roles of these transmission modes is essential for developing effective strategies to prevent nosocomial respiratory infections. To date, no model simultaneously integrates these two modes of transmission, and the relative importance of each remains to be evaluated.
 
@@ -60,7 +60,7 @@ The project is divided into numbered R scripts available in the `R/nodscov2/` di
   <summary> 3.compare_synthetic_contacts.R : compare network metrics and structure in the observed Nodscov2 data and in the synthetic temporal networks. </summary>
 
   This script loads Nods-Cov-2 local data (private), filters it to keep only intensive care units, then does an analysis of the distribution of individuals' categories, type of interactions etc.
-  this script led us to choose (for now) Raymond Poincaré hospital's intensive care unit (Garches, France).
+  this script led us to choose (for now) two adult hospital's intensive care units in France.
   
   An analysis on healthcare worker cumulative time spent interacting with patients is also done.
 

@@ -21,7 +21,7 @@ source("R/nodscov2/helper-functions.R")
 source("R/nodscov2/dictionaries.R")
 
 # Load data 
-loc_path <- "data/data-synthetic-graphs/loc/icu1-observed-reconstructed-locations-60.rda"
+loc_path <- "data/data-synthetic-graphs/loc/icu2-observed-reconstructed-locations-60.rda"
 load(loc_path)
 
 # Create room coordinates
@@ -91,10 +91,7 @@ rooms_coords <- rooms %>%
   distinct(id_room, .keep_all = TRUE) %>%
   select(location, x, y, room)
 
-#
-# new_begin_date <- begin_date + (5*60*60) ## OFFSET TO START THE DAY AT 12AM
-# new_end_date <- new_begin_date + (24*60*60)
-# print(new_end_date - new_begin_date)
+# Start and end times of the video
 t_begin <- 1 #5*60*2 ## OFFSET t
 t_end <- (t_begin + 24*60*2) #as.numeric(difftime(end_date, begin_date, units = "secs"))/30
 
