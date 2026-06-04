@@ -59,7 +59,8 @@ out/old/
 
 # Nextflow for cluster calculation
 grid_search/
-nextflow_grid_search/
+nextflow_grid_search/nextflow.sh
+nextflow_grid_search/clean.sh
 nextflow_interventions/merge.sh
 nextflow_interventions/results/simu/
 nextflow_interventions/clean.sh
